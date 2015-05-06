@@ -2,7 +2,7 @@
 namespace galaxy {
 namespace ins {
 
-InsNodeImpl::InsNodeImpl () {
+InsNodeImpl::InsNodeImpl () : current_term_(0) {
 
 }
 
@@ -26,6 +26,23 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* controller,
     done->Run();
     return;
 }
+
+void InsNodeImpl::Put(::google::protobuf::RpcController* controller,
+                      const ::galaxy::ins::PutRequest* request,
+                      ::galaxy::ins::PutResponse* response,
+                      ::google::protobuf::Closure* done) {
+    done->Run();
+    return;
+}
+
+void InsNodeImpl::Get(::google::protobuf::RpcController* controller,
+                      const ::galaxy::ins::GetRequest* request,
+                      ::galaxy::ins::GetResponse* response,
+                      ::google::protobuf::Closure* done) {
+    done->Run();
+    return;
+}
+
 
 } //namespace ins
 } //namespace galaxy

@@ -39,6 +39,10 @@ class AppendEntriesRequest;
 class AppendEntriesResponse;
 class VoteRequest;
 class VoteResponse;
+class PutRequest;
+class PutResponse;
+class GetRequest;
+class GetResponse;
 
 // ===================================================================
 
@@ -579,6 +583,370 @@ class VoteResponse : public ::google::protobuf::Message {
   void InitAsDefaultInstance();
   static VoteResponse* default_instance_;
 };
+// -------------------------------------------------------------------
+
+class PutRequest : public ::google::protobuf::Message {
+ public:
+  PutRequest();
+  virtual ~PutRequest();
+  
+  PutRequest(const PutRequest& from);
+  
+  inline PutRequest& operator=(const PutRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+  
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+  
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const PutRequest& default_instance();
+  
+  void Swap(PutRequest* other);
+  
+  // implements Message ----------------------------------------------
+  
+  PutRequest* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const PutRequest& from);
+  void MergeFrom(const PutRequest& from);
+  void Clear();
+  bool IsInitialized() const;
+  
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  
+  ::google::protobuf::Metadata GetMetadata() const;
+  
+  // nested types ----------------------------------------------------
+  
+  // accessors -------------------------------------------------------
+  
+  // required string key = 1;
+  inline bool has_key() const;
+  inline void clear_key();
+  static const int kKeyFieldNumber = 1;
+  inline const ::std::string& key() const;
+  inline void set_key(const ::std::string& value);
+  inline void set_key(const char* value);
+  inline void set_key(const char* value, size_t size);
+  inline ::std::string* mutable_key();
+  inline ::std::string* release_key();
+  
+  // required string value = 2;
+  inline bool has_value() const;
+  inline void clear_value();
+  static const int kValueFieldNumber = 2;
+  inline const ::std::string& value() const;
+  inline void set_value(const ::std::string& value);
+  inline void set_value(const char* value);
+  inline void set_value(const char* value, size_t size);
+  inline ::std::string* mutable_value();
+  inline ::std::string* release_value();
+  
+  // @@protoc_insertion_point(class_scope:galaxy.ins.PutRequest)
+ private:
+  inline void set_has_key();
+  inline void clear_has_key();
+  inline void set_has_value();
+  inline void clear_has_value();
+  
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+  
+  ::std::string* key_;
+  ::std::string* value_;
+  
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  
+  friend void  protobuf_AddDesc_ins_5fnode_2eproto();
+  friend void protobuf_AssignDesc_ins_5fnode_2eproto();
+  friend void protobuf_ShutdownFile_ins_5fnode_2eproto();
+  
+  void InitAsDefaultInstance();
+  static PutRequest* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class PutResponse : public ::google::protobuf::Message {
+ public:
+  PutResponse();
+  virtual ~PutResponse();
+  
+  PutResponse(const PutResponse& from);
+  
+  inline PutResponse& operator=(const PutResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+  
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+  
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const PutResponse& default_instance();
+  
+  void Swap(PutResponse* other);
+  
+  // implements Message ----------------------------------------------
+  
+  PutResponse* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const PutResponse& from);
+  void MergeFrom(const PutResponse& from);
+  void Clear();
+  bool IsInitialized() const;
+  
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  
+  ::google::protobuf::Metadata GetMetadata() const;
+  
+  // nested types ----------------------------------------------------
+  
+  // accessors -------------------------------------------------------
+  
+  // required bool success = 1;
+  inline bool has_success() const;
+  inline void clear_success();
+  static const int kSuccessFieldNumber = 1;
+  inline bool success() const;
+  inline void set_success(bool value);
+  
+  // @@protoc_insertion_point(class_scope:galaxy.ins.PutResponse)
+ private:
+  inline void set_has_success();
+  inline void clear_has_success();
+  
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+  
+  bool success_;
+  
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+  
+  friend void  protobuf_AddDesc_ins_5fnode_2eproto();
+  friend void protobuf_AssignDesc_ins_5fnode_2eproto();
+  friend void protobuf_ShutdownFile_ins_5fnode_2eproto();
+  
+  void InitAsDefaultInstance();
+  static PutResponse* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class GetRequest : public ::google::protobuf::Message {
+ public:
+  GetRequest();
+  virtual ~GetRequest();
+  
+  GetRequest(const GetRequest& from);
+  
+  inline GetRequest& operator=(const GetRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+  
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+  
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const GetRequest& default_instance();
+  
+  void Swap(GetRequest* other);
+  
+  // implements Message ----------------------------------------------
+  
+  GetRequest* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const GetRequest& from);
+  void MergeFrom(const GetRequest& from);
+  void Clear();
+  bool IsInitialized() const;
+  
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  
+  ::google::protobuf::Metadata GetMetadata() const;
+  
+  // nested types ----------------------------------------------------
+  
+  // accessors -------------------------------------------------------
+  
+  // required string key = 1;
+  inline bool has_key() const;
+  inline void clear_key();
+  static const int kKeyFieldNumber = 1;
+  inline const ::std::string& key() const;
+  inline void set_key(const ::std::string& value);
+  inline void set_key(const char* value);
+  inline void set_key(const char* value, size_t size);
+  inline ::std::string* mutable_key();
+  inline ::std::string* release_key();
+  
+  // @@protoc_insertion_point(class_scope:galaxy.ins.GetRequest)
+ private:
+  inline void set_has_key();
+  inline void clear_has_key();
+  
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+  
+  ::std::string* key_;
+  
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+  
+  friend void  protobuf_AddDesc_ins_5fnode_2eproto();
+  friend void protobuf_AssignDesc_ins_5fnode_2eproto();
+  friend void protobuf_ShutdownFile_ins_5fnode_2eproto();
+  
+  void InitAsDefaultInstance();
+  static GetRequest* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class GetResponse : public ::google::protobuf::Message {
+ public:
+  GetResponse();
+  virtual ~GetResponse();
+  
+  GetResponse(const GetResponse& from);
+  
+  inline GetResponse& operator=(const GetResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+  
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+  
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const GetResponse& default_instance();
+  
+  void Swap(GetResponse* other);
+  
+  // implements Message ----------------------------------------------
+  
+  GetResponse* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const GetResponse& from);
+  void MergeFrom(const GetResponse& from);
+  void Clear();
+  bool IsInitialized() const;
+  
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  
+  ::google::protobuf::Metadata GetMetadata() const;
+  
+  // nested types ----------------------------------------------------
+  
+  // accessors -------------------------------------------------------
+  
+  // required bool hit = 1;
+  inline bool has_hit() const;
+  inline void clear_hit();
+  static const int kHitFieldNumber = 1;
+  inline bool hit() const;
+  inline void set_hit(bool value);
+  
+  // required string value = 2;
+  inline bool has_value() const;
+  inline void clear_value();
+  static const int kValueFieldNumber = 2;
+  inline const ::std::string& value() const;
+  inline void set_value(const ::std::string& value);
+  inline void set_value(const char* value);
+  inline void set_value(const char* value, size_t size);
+  inline ::std::string* mutable_value();
+  inline ::std::string* release_value();
+  
+  // @@protoc_insertion_point(class_scope:galaxy.ins.GetResponse)
+ private:
+  inline void set_has_hit();
+  inline void clear_has_hit();
+  inline void set_has_value();
+  inline void clear_has_value();
+  
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+  
+  ::std::string* value_;
+  bool hit_;
+  
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  
+  friend void  protobuf_AddDesc_ins_5fnode_2eproto();
+  friend void protobuf_AssignDesc_ins_5fnode_2eproto();
+  friend void protobuf_ShutdownFile_ins_5fnode_2eproto();
+  
+  void InitAsDefaultInstance();
+  static GetResponse* default_instance_;
+};
 // ===================================================================
 
 class InsNode_Stub;
@@ -601,6 +969,14 @@ class InsNode : public ::google::protobuf::Service {
   virtual void Vote(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::VoteRequest* request,
                        ::galaxy::ins::VoteResponse* response,
+                       ::google::protobuf::Closure* done);
+  virtual void Put(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::PutRequest* request,
+                       ::galaxy::ins::PutResponse* response,
+                       ::google::protobuf::Closure* done);
+  virtual void Get(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::GetRequest* request,
+                       ::galaxy::ins::GetResponse* response,
                        ::google::protobuf::Closure* done);
   
   // implements Service ----------------------------------------------
@@ -638,6 +1014,14 @@ class InsNode_Stub : public InsNode {
   void Vote(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::VoteRequest* request,
                        ::galaxy::ins::VoteResponse* response,
+                       ::google::protobuf::Closure* done);
+  void Put(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::PutRequest* request,
+                       ::galaxy::ins::PutResponse* response,
+                       ::google::protobuf::Closure* done);
+  void Get(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::GetRequest* request,
+                       ::galaxy::ins::GetResponse* response,
                        ::google::protobuf::Closure* done);
  private:
   ::google::protobuf::RpcChannel* channel_;
@@ -1166,6 +1550,298 @@ inline bool VoteResponse::vote_granted() const {
 inline void VoteResponse::set_vote_granted(bool value) {
   set_has_vote_granted();
   vote_granted_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// PutRequest
+
+// required string key = 1;
+inline bool PutRequest::has_key() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void PutRequest::set_has_key() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void PutRequest::clear_has_key() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void PutRequest::clear_key() {
+  if (key_ != &::google::protobuf::internal::kEmptyString) {
+    key_->clear();
+  }
+  clear_has_key();
+}
+inline const ::std::string& PutRequest::key() const {
+  return *key_;
+}
+inline void PutRequest::set_key(const ::std::string& value) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(value);
+}
+inline void PutRequest::set_key(const char* value) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(value);
+}
+inline void PutRequest::set_key(const char* value, size_t size) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* PutRequest::mutable_key() {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  return key_;
+}
+inline ::std::string* PutRequest::release_key() {
+  clear_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = key_;
+    key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
+// required string value = 2;
+inline bool PutRequest::has_value() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void PutRequest::set_has_value() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void PutRequest::clear_has_value() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void PutRequest::clear_value() {
+  if (value_ != &::google::protobuf::internal::kEmptyString) {
+    value_->clear();
+  }
+  clear_has_value();
+}
+inline const ::std::string& PutRequest::value() const {
+  return *value_;
+}
+inline void PutRequest::set_value(const ::std::string& value) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(value);
+}
+inline void PutRequest::set_value(const char* value) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(value);
+}
+inline void PutRequest::set_value(const char* value, size_t size) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* PutRequest::mutable_value() {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  return value_;
+}
+inline ::std::string* PutRequest::release_value() {
+  clear_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = value_;
+    value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
+// -------------------------------------------------------------------
+
+// PutResponse
+
+// required bool success = 1;
+inline bool PutResponse::has_success() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void PutResponse::set_has_success() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void PutResponse::clear_has_success() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void PutResponse::clear_success() {
+  success_ = false;
+  clear_has_success();
+}
+inline bool PutResponse::success() const {
+  return success_;
+}
+inline void PutResponse::set_success(bool value) {
+  set_has_success();
+  success_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// GetRequest
+
+// required string key = 1;
+inline bool GetRequest::has_key() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void GetRequest::set_has_key() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void GetRequest::clear_has_key() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void GetRequest::clear_key() {
+  if (key_ != &::google::protobuf::internal::kEmptyString) {
+    key_->clear();
+  }
+  clear_has_key();
+}
+inline const ::std::string& GetRequest::key() const {
+  return *key_;
+}
+inline void GetRequest::set_key(const ::std::string& value) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(value);
+}
+inline void GetRequest::set_key(const char* value) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(value);
+}
+inline void GetRequest::set_key(const char* value, size_t size) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* GetRequest::mutable_key() {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  return key_;
+}
+inline ::std::string* GetRequest::release_key() {
+  clear_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = key_;
+    key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
+// -------------------------------------------------------------------
+
+// GetResponse
+
+// required bool hit = 1;
+inline bool GetResponse::has_hit() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void GetResponse::set_has_hit() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void GetResponse::clear_has_hit() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void GetResponse::clear_hit() {
+  hit_ = false;
+  clear_has_hit();
+}
+inline bool GetResponse::hit() const {
+  return hit_;
+}
+inline void GetResponse::set_hit(bool value) {
+  set_has_hit();
+  hit_ = value;
+}
+
+// required string value = 2;
+inline bool GetResponse::has_value() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void GetResponse::set_has_value() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void GetResponse::clear_has_value() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void GetResponse::clear_value() {
+  if (value_ != &::google::protobuf::internal::kEmptyString) {
+    value_->clear();
+  }
+  clear_has_value();
+}
+inline const ::std::string& GetResponse::value() const {
+  return *value_;
+}
+inline void GetResponse::set_value(const ::std::string& value) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(value);
+}
+inline void GetResponse::set_value(const char* value) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(value);
+}
+inline void GetResponse::set_value(const char* value, size_t size) {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  value_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* GetResponse::mutable_value() {
+  set_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    value_ = new ::std::string;
+  }
+  return value_;
+}
+inline ::std::string* GetResponse::release_value() {
+  clear_has_value();
+  if (value_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = value_;
+    value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
 }
 
 
