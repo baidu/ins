@@ -28,9 +28,12 @@ LDFLAGS('-lpthread -lcrypto -lrt')
 
 #ÒÀÀµÄ£¿é
 CONFIGS('public/sofa-pbrpc@trunk@comake')
+CONFIGS('third-64/gtest@1.6.0.100')
+CONFIGS('third-64/gflags@gflags_2-0-0-100_PD_BL')
 
 INCPATHS('. ./src ./output/include')
 
-ins_sources = 'server/ins_main.cc server/ins_node_impl.cc proto/ins_node.proto'
+ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc common/logging.cc proto/ins_node.proto'
 
 Application('ins', Sources(ins_sources))
+
