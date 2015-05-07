@@ -4,3 +4,4 @@
 *.SCM
 ins
 output/*
+sandbox/data/

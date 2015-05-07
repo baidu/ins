@@ -1,8 +1,13 @@
 #include "ins_node_impl.h"
 
 #include <sys/utsname.h>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <gflags/gflags.h>
+#include "storage/meta.h"
+
+DECLARE_string(ins_data_dir);
 
 namespace galaxy {
 namespace ins {
@@ -18,14 +23,20 @@ void GetHostName(std::string* hostname) {
 InsNodeImpl::InsNodeImpl (std::string& server_id) : self_id_(server_id),
                                                     current_term_(0),
                                                     status_(kFollower),
-                                                    heartbeat_count_(0) {
+                                                    heartbeat_count_(0),
+                                                    meta_(NULL) {
     srand(time(NULL));
+    std::string sub_dir = self_id_;
+    boost::replace_all(sub_dir, ":", "_");
+    meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
+    current_term_ = meta_->ReadCurrentTerm();
+    meta_->ReadVotedFor(voted_for_);
     MutexLock lock(&mu_);
     CheckLeaderCrash();
 }
 
 InsNodeImpl::~InsNodeImpl() {
-
+    delete meta_;
 }
 
 int64_t InsNodeImpl::GetRandomTimeout() {
@@ -58,6 +69,7 @@ void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* re
                 current_term_, response->current_term());
             status_ = kFollower;
             current_term_ = response->current_term();
+            meta_->WriteCurrentTerm(current_term_);
         }
         else {
             LOG(INFO, "I am the leader at term: %ld", current_term_);
@@ -119,6 +131,7 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
                 LOG(INFO, "VoteCallback, my term is outdated(%ld < %ld), trans to follower",
                     current_term_, their_term);
                 current_term_ = their_term;
+                meta_->WriteCurrentTerm(current_term_);
                 status_ =  kFollower;
             }
         }
@@ -144,8 +157,10 @@ void InsNodeImpl::TryToBeLeader() {
         return;
     }
     current_term_++;
+    meta_->WriteCurrentTerm(current_term_);
     status_ =  kCandidate;
     voted_for_[current_term_] = self_id_;
+    meta_->WriteVotedFor(current_term_, self_id_);
     vote_grant_[current_term_] ++;
     std::vector<std::string>::iterator it = members_.begin();
     LOG(INFO, "broad cast vote request to cluster, new term: %ld", current_term_);
@@ -177,6 +192,10 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
     MutexLock lock(&mu_);
     if (request->term() >= current_term_) {
         status_ = kFollower;
+        if (request->term() > current_term_) {
+            meta_->WriteCurrentTerm(request->term());
+        }
+        current_term_ = request->term();
     } else {
         response->set_current_term(current_term_);
         response->set_success(false);
@@ -185,7 +204,6 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
     }
     if (status_ == kFollower) {
         current_leader_ = request->leader_id();
-        current_term_ = request->term();
         heartbeat_count_++;
         response->set_current_term(current_term_);
         response->set_success(true);
@@ -213,6 +231,7 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* controller,
             current_term_, request->term());
         status_ = kFollower;
         current_term_ = request->term();
+        meta_->WriteCurrentTerm(current_term_);
     }
     if (!voted_for_[current_term_].empty() &&
          voted_for_[current_term_] != request->candidate_id()) {
@@ -222,6 +241,7 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* controller,
         return;
     }
     voted_for_[current_term_] = request->candidate_id();
+    meta_->WriteVotedFor(current_term_, request->candidate_id());
     response->set_vote_granted(true);
     response->set_term(current_term_);
     done->Run();

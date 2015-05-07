@@ -54,7 +54,7 @@ CCP_FLAGS=
 
 
 #COMAKE UUID
-COMAKE_MD5=997438edb9184a899983d6f944b8684d  COMAKE
+COMAKE_MD5=6090f5dd5aca652fe11ed3ce93e69b22  COMAKE
 
 
 .PHONY:all
@@ -83,6 +83,7 @@ clean:ccpclean
 	rm -rf server/ins_ins_main.o
 	rm -rf server/ins_ins_node_impl.o
 	rm -rf server/ins_flags.o
+	rm -rf storage/ins_meta.o
 	rm -rf common/ins_logging.o
 	rm -rf proto/ins_node.pb.cc
 	rm -rf proto/ins_node.pb.h
@@ -108,12 +109,14 @@ love:
 ins:server/ins_ins_main.o \
   server/ins_ins_node_impl.o \
   server/ins_flags.o \
+  storage/ins_meta.o \
   common/ins_logging.o \
   proto/ins_ins_node.pb.o
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mins[0m']"
 	$(CXX) server/ins_ins_main.o \
   server/ins_ins_node_impl.o \
   server/ins_flags.o \
+  storage/ins_meta.o \
   common/ins_logging.o \
   proto/ins_ins_node.pb.o -Xlinker "-("  ../../../public/sofa-pbrpc/libsofa-pbrpc.a \
   ../../../third-64/boost/lib/libboost_atomic.a \
@@ -163,19 +166,41 @@ ins:server/ins_ins_main.o \
 server/ins_ins_main.o:server/ins_main.cc \
   common/logging.h \
   server/ins_node_impl.h \
-  proto/ins_node.pb.h
+  proto/ins_node.pb.h \
+  common/mutex.h \
+  common/timer.h \
+  common/thread_pool.h \
+  common/mutex.h \
+  rpc/rpc_client.h \
+  common/mutex.h \
+  common/thread_pool.h \
+  common/logging.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_ins_main.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_ins_main.o server/ins_main.cc
 
 server/ins_ins_node_impl.o:server/ins_node_impl.cc \
   server/ins_node_impl.h \
-  proto/ins_node.pb.h
+  proto/ins_node.pb.h \
+  common/mutex.h \
+  common/timer.h \
+  common/thread_pool.h \
+  common/mutex.h \
+  rpc/rpc_client.h \
+  common/mutex.h \
+  common/thread_pool.h \
+  common/logging.h \
+  storage/meta.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_ins_node_impl.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_ins_node_impl.o server/ins_node_impl.cc
 
 server/ins_flags.o:server/flags.cc
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_flags.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_flags.o server/flags.cc
+
+storage/ins_meta.o:storage/meta.cc \
+  storage/meta.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/ins_meta.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/ins_meta.o storage/meta.cc
 
 common/ins_logging.o:common/logging.cc \
   common/logging.h

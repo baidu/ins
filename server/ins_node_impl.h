@@ -1,3 +1,5 @@
+#ifndef GALAXY_INS_INS_NODE_IMPL_H_
+#define GALAXY_INS_INS_NODE_IMPL_H_
 #include "proto/ins_node.pb.h"
 
 #include <stdint.h>
@@ -10,6 +12,8 @@
 
 namespace galaxy {
 namespace ins {
+
+class Meta;
 class InsNodeImpl : public InsNode {
 public:
     enum InsNodeStatus {
@@ -64,6 +68,7 @@ private:
     int64_t elect_leader_task_;
     std::string current_leader_;
     int32_t heartbeat_count_;
+    Meta * meta_;
 };
 
 void GetHostName(std::string* hostname);
@@ -71,3 +76,4 @@ void GetHostName(std::string* hostname);
 } //namespace ins
 } //namespace galaxy
 
+#endif

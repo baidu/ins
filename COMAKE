@@ -33,7 +33,7 @@ CONFIGS('third-64/gflags@gflags_2-0-0-100_PD_BL')
 
 INCPATHS('. ./src ./output/include')
 
-ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc common/logging.cc proto/ins_node.proto'
+ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc storage/meta.cc common/logging.cc proto/ins_node.proto'
 
 Application('ins', Sources(ins_sources))
 

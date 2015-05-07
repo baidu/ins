@@ -5,6 +5,7 @@ option cc_generic_services = true;
 message Entry {
     required string key = 1;
     required string value = 2;
+    required int64 term = 3;
 }
 
 message AppendEntriesRequest {
@@ -40,6 +41,7 @@ message PutRequest {
 
 message PutResponse {
     required bool success = 1;
+    optional string leader_id = 2;
 }
 
 message GetRequest {
@@ -49,6 +51,7 @@ message GetRequest {
 message GetResponse {
     required bool hit = 1;
     required string value = 2;
+    optional string leader_id = 3;
 }
 
 service InsNode {

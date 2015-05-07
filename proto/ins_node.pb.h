@@ -122,20 +122,30 @@ class Entry : public ::google::protobuf::Message {
   inline ::std::string* mutable_value();
   inline ::std::string* release_value();
   
+  // required int64 term = 3;
+  inline bool has_term() const;
+  inline void clear_term();
+  static const int kTermFieldNumber = 3;
+  inline ::google::protobuf::int64 term() const;
+  inline void set_term(::google::protobuf::int64 value);
+  
   // @@protoc_insertion_point(class_scope:galaxy.ins.Entry)
  private:
   inline void set_has_key();
   inline void clear_has_key();
   inline void set_has_value();
   inline void clear_has_value();
+  inline void set_has_term();
+  inline void clear_has_term();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::std::string* key_;
   ::std::string* value_;
+  ::google::protobuf::int64 term_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
   
   friend void  protobuf_AddDesc_ins_5fnode_2eproto();
   friend void protobuf_AssignDesc_ins_5fnode_2eproto();
@@ -746,17 +756,31 @@ class PutResponse : public ::google::protobuf::Message {
   inline bool success() const;
   inline void set_success(bool value);
   
+  // optional string leader_id = 2;
+  inline bool has_leader_id() const;
+  inline void clear_leader_id();
+  static const int kLeaderIdFieldNumber = 2;
+  inline const ::std::string& leader_id() const;
+  inline void set_leader_id(const ::std::string& value);
+  inline void set_leader_id(const char* value);
+  inline void set_leader_id(const char* value, size_t size);
+  inline ::std::string* mutable_leader_id();
+  inline ::std::string* release_leader_id();
+  
   // @@protoc_insertion_point(class_scope:galaxy.ins.PutResponse)
  private:
   inline void set_has_success();
   inline void clear_has_success();
+  inline void set_has_leader_id();
+  inline void clear_has_leader_id();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
+  ::std::string* leader_id_;
   bool success_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
   
   friend void  protobuf_AddDesc_ins_5fnode_2eproto();
   friend void protobuf_AssignDesc_ins_5fnode_2eproto();
@@ -925,20 +949,34 @@ class GetResponse : public ::google::protobuf::Message {
   inline ::std::string* mutable_value();
   inline ::std::string* release_value();
   
+  // optional string leader_id = 3;
+  inline bool has_leader_id() const;
+  inline void clear_leader_id();
+  static const int kLeaderIdFieldNumber = 3;
+  inline const ::std::string& leader_id() const;
+  inline void set_leader_id(const ::std::string& value);
+  inline void set_leader_id(const char* value);
+  inline void set_leader_id(const char* value, size_t size);
+  inline ::std::string* mutable_leader_id();
+  inline ::std::string* release_leader_id();
+  
   // @@protoc_insertion_point(class_scope:galaxy.ins.GetResponse)
  private:
   inline void set_has_hit();
   inline void clear_has_hit();
   inline void set_has_value();
   inline void clear_has_value();
+  inline void set_has_leader_id();
+  inline void clear_has_leader_id();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::std::string* value_;
+  ::std::string* leader_id_;
   bool hit_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
   
   friend void  protobuf_AddDesc_ins_5fnode_2eproto();
   friend void protobuf_AssignDesc_ins_5fnode_2eproto();
@@ -1151,6 +1189,28 @@ inline ::std::string* Entry::release_value() {
     value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
     return temp;
   }
+}
+
+// required int64 term = 3;
+inline bool Entry::has_term() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void Entry::set_has_term() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void Entry::clear_has_term() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void Entry::clear_term() {
+  term_ = GOOGLE_LONGLONG(0);
+  clear_has_term();
+}
+inline ::google::protobuf::int64 Entry::term() const {
+  return term_;
+}
+inline void Entry::set_term(::google::protobuf::int64 value) {
+  set_has_term();
+  term_ = value;
 }
 
 // -------------------------------------------------------------------
@@ -1698,6 +1758,64 @@ inline void PutResponse::set_success(bool value) {
   success_ = value;
 }
 
+// optional string leader_id = 2;
+inline bool PutResponse::has_leader_id() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void PutResponse::set_has_leader_id() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void PutResponse::clear_has_leader_id() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void PutResponse::clear_leader_id() {
+  if (leader_id_ != &::google::protobuf::internal::kEmptyString) {
+    leader_id_->clear();
+  }
+  clear_has_leader_id();
+}
+inline const ::std::string& PutResponse::leader_id() const {
+  return *leader_id_;
+}
+inline void PutResponse::set_leader_id(const ::std::string& value) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(value);
+}
+inline void PutResponse::set_leader_id(const char* value) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(value);
+}
+inline void PutResponse::set_leader_id(const char* value, size_t size) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* PutResponse::mutable_leader_id() {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  return leader_id_;
+}
+inline ::std::string* PutResponse::release_leader_id() {
+  clear_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = leader_id_;
+    leader_id_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
 // -------------------------------------------------------------------
 
 // GetRequest
@@ -1840,6 +1958,64 @@ inline ::std::string* GetResponse::release_value() {
   } else {
     ::std::string* temp = value_;
     value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
+// optional string leader_id = 3;
+inline bool GetResponse::has_leader_id() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void GetResponse::set_has_leader_id() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void GetResponse::clear_has_leader_id() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void GetResponse::clear_leader_id() {
+  if (leader_id_ != &::google::protobuf::internal::kEmptyString) {
+    leader_id_->clear();
+  }
+  clear_has_leader_id();
+}
+inline const ::std::string& GetResponse::leader_id() const {
+  return *leader_id_;
+}
+inline void GetResponse::set_leader_id(const ::std::string& value) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(value);
+}
+inline void GetResponse::set_leader_id(const char* value) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(value);
+}
+inline void GetResponse::set_leader_id(const char* value, size_t size) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* GetResponse::mutable_leader_id() {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  return leader_id_;
+}
+inline ::std::string* GetResponse::release_leader_id() {
+  clear_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = leader_id_;
+    leader_id_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
     return temp;
   }
 }
