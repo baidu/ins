@@ -109,6 +109,7 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
             vote_grant_[current_term_]++;
             if (vote_grant_[current_term_] > (members_.size() / 2)) {
                 status_ = kLeader;
+                current_leader_ = self_id_;
                 LOG(INFO, "I win the election, term:%d", current_term_);
                 heart_beat_pool_.AddTask(
                     boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
@@ -128,6 +129,11 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
 
 void InsNodeImpl::TryToBeLeader() {
     MutexLock lock(&mu_);
+    if (members_.size() == 1) { //single node mode
+        status_ = kLeader;
+        current_leader_ =  self_id_;
+        return;
+    }
     if (status_ == kLeader) {
         CheckLeaderCrash();
         return;
