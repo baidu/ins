@@ -218,21 +218,21 @@ class AppendEntriesRequest : public ::google::protobuf::Message {
   inline ::std::string* mutable_leader_id();
   inline ::std::string* release_leader_id();
   
-  // required int64 prev_log_index = 3;
+  // optional int64 prev_log_index = 3;
   inline bool has_prev_log_index() const;
   inline void clear_prev_log_index();
   static const int kPrevLogIndexFieldNumber = 3;
   inline ::google::protobuf::int64 prev_log_index() const;
   inline void set_prev_log_index(::google::protobuf::int64 value);
   
-  // required int64 prev_log_term = 4;
+  // optional int64 prev_log_term = 4;
   inline bool has_prev_log_term() const;
   inline void clear_prev_log_term();
   static const int kPrevLogTermFieldNumber = 4;
   inline ::google::protobuf::int64 prev_log_term() const;
   inline void set_prev_log_term(::google::protobuf::int64 value);
   
-  // required int64 leader_commit_index = 5;
+  // optional int64 leader_commit_index = 5;
   inline bool has_leader_commit_index() const;
   inline void clear_leader_commit_index();
   static const int kLeaderCommitIndexFieldNumber = 5;
@@ -449,14 +449,14 @@ class VoteRequest : public ::google::protobuf::Message {
   inline ::std::string* mutable_candidate_id();
   inline ::std::string* release_candidate_id();
   
-  // required int64 last_log_index = 3;
+  // optional int64 last_log_index = 3;
   inline bool has_last_log_index() const;
   inline void clear_last_log_index();
   static const int kLastLogIndexFieldNumber = 3;
   inline ::google::protobuf::int64 last_log_index() const;
   inline void set_last_log_index(::google::protobuf::int64 value);
   
-  // required int64 last_log_term = 4;
+  // optional int64 last_log_term = 4;
   inline bool has_last_log_term() const;
   inline void clear_last_log_term();
   static const int kLastLogTermFieldNumber = 4;
@@ -1237,7 +1237,7 @@ inline ::std::string* AppendEntriesRequest::release_leader_id() {
   }
 }
 
-// required int64 prev_log_index = 3;
+// optional int64 prev_log_index = 3;
 inline bool AppendEntriesRequest::has_prev_log_index() const {
   return (_has_bits_[0] & 0x00000004u) != 0;
 }
@@ -1259,7 +1259,7 @@ inline void AppendEntriesRequest::set_prev_log_index(::google::protobuf::int64 v
   prev_log_index_ = value;
 }
 
-// required int64 prev_log_term = 4;
+// optional int64 prev_log_term = 4;
 inline bool AppendEntriesRequest::has_prev_log_term() const {
   return (_has_bits_[0] & 0x00000008u) != 0;
 }
@@ -1281,7 +1281,7 @@ inline void AppendEntriesRequest::set_prev_log_term(::google::protobuf::int64 va
   prev_log_term_ = value;
 }
 
-// required int64 leader_commit_index = 5;
+// optional int64 leader_commit_index = 5;
 inline bool AppendEntriesRequest::has_leader_commit_index() const {
   return (_has_bits_[0] & 0x00000010u) != 0;
 }
@@ -1460,7 +1460,7 @@ inline ::std::string* VoteRequest::release_candidate_id() {
   }
 }
 
-// required int64 last_log_index = 3;
+// optional int64 last_log_index = 3;
 inline bool VoteRequest::has_last_log_index() const {
   return (_has_bits_[0] & 0x00000004u) != 0;
 }
@@ -1482,7 +1482,7 @@ inline void VoteRequest::set_last_log_index(::google::protobuf::int64 value) {
   last_log_index_ = value;
 }
 
-// required int64 last_log_term = 4;
+// optional int64 last_log_term = 4;
 inline bool VoteRequest::has_last_log_term() const {
   return (_has_bits_[0] & 0x00000008u) != 0;
 }

@@ -1,3 +1,3 @@
 #!/bin/bash
-killall ins
+killall -9 ins
 

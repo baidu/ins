@@ -270,13 +270,13 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
     "\n\016ins_node.proto\022\ngalaxy.ins\"#\n\005Entry\022\013\n"
     "\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\"\247\001\n\024AppendEntr"
     "iesRequest\022\014\n\004term\030\001 \002(\003\022\021\n\tleader_id\030\002 "
-    "\002(\t\022\026\n\016prev_log_index\030\003 \002(\003\022\025\n\rprev_log_"
-    "term\030\004 \002(\003\022\033\n\023leader_commit_index\030\005 \002(\003\022"
+    "\002(\t\022\026\n\016prev_log_index\030\003 \001(\003\022\025\n\rprev_log_"
+    "term\030\004 \001(\003\022\033\n\023leader_commit_index\030\005 \001(\003\022"
     "\"\n\007entries\030\006 \003(\0132\021.galaxy.ins.Entry\">\n\025A"
     "ppendEntriesResponse\022\024\n\014current_term\030\001 \002"
     "(\003\022\017\n\007success\030\002 \002(\010\"`\n\013VoteRequest\022\014\n\004te"
     "rm\030\001 \002(\003\022\024\n\014candidate_id\030\002 \002(\t\022\026\n\016last_l"
-    "og_index\030\003 \002(\003\022\025\n\rlast_log_term\030\004 \002(\003\"2\n"
+    "og_index\030\003 \001(\003\022\025\n\rlast_log_term\030\004 \001(\003\"2\n"
     "\014VoteResponse\022\014\n\004term\030\001 \002(\003\022\024\n\014vote_gran"
     "ted\030\002 \002(\010\"(\n\nPutRequest\022\013\n\003key\030\001 \002(\t\022\r\n\005"
     "value\030\002 \002(\t\"\036\n\013PutResponse\022\017\n\007success\030\001 "
@@ -724,7 +724,7 @@ bool AppendEntriesRequest::MergePartialFromCodedStream(
         break;
       }
       
-      // required int64 prev_log_index = 3;
+      // optional int64 prev_log_index = 3;
       case 3: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
@@ -740,7 +740,7 @@ bool AppendEntriesRequest::MergePartialFromCodedStream(
         break;
       }
       
-      // required int64 prev_log_term = 4;
+      // optional int64 prev_log_term = 4;
       case 4: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
@@ -756,7 +756,7 @@ bool AppendEntriesRequest::MergePartialFromCodedStream(
         break;
       }
       
-      // required int64 leader_commit_index = 5;
+      // optional int64 leader_commit_index = 5;
       case 5: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
@@ -819,17 +819,17 @@ void AppendEntriesRequest::SerializeWithCachedSizes(
       2, this->leader_id(), output);
   }
   
-  // required int64 prev_log_index = 3;
+  // optional int64 prev_log_index = 3;
   if (has_prev_log_index()) {
     ::google::protobuf::internal::WireFormatLite::WriteInt64(3, this->prev_log_index(), output);
   }
   
-  // required int64 prev_log_term = 4;
+  // optional int64 prev_log_term = 4;
   if (has_prev_log_term()) {
     ::google::protobuf::internal::WireFormatLite::WriteInt64(4, this->prev_log_term(), output);
   }
   
-  // required int64 leader_commit_index = 5;
+  // optional int64 leader_commit_index = 5;
   if (has_leader_commit_index()) {
     ::google::protobuf::internal::WireFormatLite::WriteInt64(5, this->leader_commit_index(), output);
   }
@@ -863,17 +863,17 @@ void AppendEntriesRequest::SerializeWithCachedSizes(
         2, this->leader_id(), target);
   }
   
-  // required int64 prev_log_index = 3;
+  // optional int64 prev_log_index = 3;
   if (has_prev_log_index()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(3, this->prev_log_index(), target);
   }
   
-  // required int64 prev_log_term = 4;
+  // optional int64 prev_log_term = 4;
   if (has_prev_log_term()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(4, this->prev_log_term(), target);
   }
   
-  // required int64 leader_commit_index = 5;
+  // optional int64 leader_commit_index = 5;
   if (has_leader_commit_index()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(5, this->leader_commit_index(), target);
   }
@@ -910,21 +910,21 @@ int AppendEntriesRequest::ByteSize() const {
           this->leader_id());
     }
     
-    // required int64 prev_log_index = 3;
+    // optional int64 prev_log_index = 3;
     if (has_prev_log_index()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int64Size(
           this->prev_log_index());
     }
     
-    // required int64 prev_log_term = 4;
+    // optional int64 prev_log_term = 4;
     if (has_prev_log_term()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int64Size(
           this->prev_log_term());
     }
     
-    // required int64 leader_commit_index = 5;
+    // optional int64 leader_commit_index = 5;
     if (has_leader_commit_index()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int64Size(
@@ -999,7 +999,7 @@ void AppendEntriesRequest::CopyFrom(const AppendEntriesRequest& from) {
 }
 
 bool AppendEntriesRequest::IsInitialized() const {
-  if ((_has_bits_[0] & 0x0000001f) != 0x0000001f) return false;
+  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
   
   for (int i = 0; i < entries_size(); i++) {
     if (!this->entries(i).IsInitialized()) return false;
@@ -1393,7 +1393,7 @@ bool VoteRequest::MergePartialFromCodedStream(
         break;
       }
       
-      // required int64 last_log_index = 3;
+      // optional int64 last_log_index = 3;
       case 3: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
@@ -1409,7 +1409,7 @@ bool VoteRequest::MergePartialFromCodedStream(
         break;
       }
       
-      // required int64 last_log_term = 4;
+      // optional int64 last_log_term = 4;
       case 4: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
@@ -1457,12 +1457,12 @@ void VoteRequest::SerializeWithCachedSizes(
       2, this->candidate_id(), output);
   }
   
-  // required int64 last_log_index = 3;
+  // optional int64 last_log_index = 3;
   if (has_last_log_index()) {
     ::google::protobuf::internal::WireFormatLite::WriteInt64(3, this->last_log_index(), output);
   }
   
-  // required int64 last_log_term = 4;
+  // optional int64 last_log_term = 4;
   if (has_last_log_term()) {
     ::google::protobuf::internal::WireFormatLite::WriteInt64(4, this->last_log_term(), output);
   }
@@ -1490,12 +1490,12 @@ void VoteRequest::SerializeWithCachedSizes(
         2, this->candidate_id(), target);
   }
   
-  // required int64 last_log_index = 3;
+  // optional int64 last_log_index = 3;
   if (has_last_log_index()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(3, this->last_log_index(), target);
   }
   
-  // required int64 last_log_term = 4;
+  // optional int64 last_log_term = 4;
   if (has_last_log_term()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(4, this->last_log_term(), target);
   }
@@ -1525,14 +1525,14 @@ int VoteRequest::ByteSize() const {
           this->candidate_id());
     }
     
-    // required int64 last_log_index = 3;
+    // optional int64 last_log_index = 3;
     if (has_last_log_index()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int64Size(
           this->last_log_index());
     }
     
-    // required int64 last_log_term = 4;
+    // optional int64 last_log_term = 4;
     if (has_last_log_term()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int64Size(
@@ -1595,7 +1595,7 @@ void VoteRequest::CopyFrom(const VoteRequest& from) {
 }
 
 bool VoteRequest::IsInitialized() const {
-  if ((_has_bits_[0] & 0x0000000f) != 0x0000000f) return false;
+  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
   
   return true;
 }

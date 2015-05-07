@@ -2,3 +2,5 @@
 *.log
 *.dc
 *.SCM
+ins
+output/*
