@@ -105,7 +105,7 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
         int64_t their_term = response->term();
         LOG(INFO, "InsNodeImpl::VoteCallback[%ld], result:%s",
             their_term, response->vote_granted()?"true":"false");
-        if (response->vote_granted()) {
+        if (response->vote_granted() && their_term == current_term_) {
             vote_grant_[current_term_]++;
             if (vote_grant_[current_term_] > (members_.size() / 2)) {
                 status_ = kLeader;
