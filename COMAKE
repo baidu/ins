@@ -33,7 +33,11 @@ CONFIGS('third-64/gflags@gflags_2-0-0-100_PD_BL')
 
 INCPATHS('. ./src ./output/include')
 
-ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc storage/meta.cc common/logging.cc proto/ins_node.proto'
+ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc storage/meta.cc common/logging.cc storage/binlog.cc proto/ins_node.proto'
+
+ins_sdk_sources = 'sdk/ins_sdk.cc proto/ins_node.proto'
+
+ins_cli_sources = 'sdk/ins_sdk.cc proto/ins_node.proto sdk/ins_cli.cc'
 
 Application('ins', Sources(ins_sources))
-
+StaticLibrary('ins_sdk', Sources(ins_sdk_sources))

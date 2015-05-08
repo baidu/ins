@@ -2,6 +2,13 @@ package galaxy.ins;
 
 option cc_generic_services = true;
 
+enum NodeStatus {
+    kLeader = 0;
+    kCandidate = 1; 
+    kFollower = 2;
+    kOffline = 3;  
+}
+
 message Entry {
     required string key = 1;
     required string value = 2;
@@ -54,10 +61,20 @@ message GetResponse {
     optional string leader_id = 3;
 }
 
+message ShowStatusRequest {
+    
+}
+
+message ShowStatusResponse {
+    required NodeStatus status = 1;    
+    required int64 term = 2;
+}
+
 service InsNode {
     rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse);
     rpc Vote(VoteRequest) returns (VoteResponse);
     rpc Put(PutRequest) returns (PutResponse);
     rpc Get(GetRequest) returns (GetResponse);
+    rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
 }
 

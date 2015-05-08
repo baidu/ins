@@ -6,6 +6,7 @@
 #include <boost/function.hpp>
 #include <gflags/gflags.h>
 #include "storage/meta.h"
+#include "storage/binlog.h"
 
 DECLARE_string(ins_data_dir);
 
@@ -24,7 +25,8 @@ InsNodeImpl::InsNodeImpl (std::string& server_id) : self_id_(server_id),
                                                     current_term_(0),
                                                     status_(kFollower),
                                                     heartbeat_count_(0),
-                                                    meta_(NULL) {
+                                                    meta_(NULL),
+                                                    binlogger_(NULL) {
     srand(time(NULL));
     std::string sub_dir = self_id_;
     boost::replace_all(sub_dir, ":", "_");

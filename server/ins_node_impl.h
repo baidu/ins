@@ -14,6 +14,8 @@ namespace galaxy {
 namespace ins {
 
 class Meta;
+class BinLogger;
+
 class InsNodeImpl : public InsNode {
 public:
     enum InsNodeStatus {
@@ -69,6 +71,7 @@ private:
     std::string current_leader_;
     int32_t heartbeat_count_;
     Meta * meta_;
+    BinLogger* binlogger_;
 };
 
 void GetHostName(std::string* hostname);

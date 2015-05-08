@@ -43,7 +43,30 @@ class PutRequest;
 class PutResponse;
 class GetRequest;
 class GetResponse;
+class ShowStatusRequest;
+class ShowStatusResponse;
 
+enum NodeStatus {
+  kLeader = 0,
+  kCandidate = 1,
+  kFollower = 2,
+  kOffline = 3
+};
+bool NodeStatus_IsValid(int value);
+const NodeStatus NodeStatus_MIN = kLeader;
+const NodeStatus NodeStatus_MAX = kOffline;
+const int NodeStatus_ARRAYSIZE = NodeStatus_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* NodeStatus_descriptor();
+inline const ::std::string& NodeStatus_Name(NodeStatus value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    NodeStatus_descriptor(), value);
+}
+inline bool NodeStatus_Parse(
+    const ::std::string& name, NodeStatus* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<NodeStatus>(
+    NodeStatus_descriptor(), name, value);
+}
 // ===================================================================
 
 class Entry : public ::google::protobuf::Message {
@@ -985,6 +1008,170 @@ class GetResponse : public ::google::protobuf::Message {
   void InitAsDefaultInstance();
   static GetResponse* default_instance_;
 };
+// -------------------------------------------------------------------
+
+class ShowStatusRequest : public ::google::protobuf::Message {
+ public:
+  ShowStatusRequest();
+  virtual ~ShowStatusRequest();
+  
+  ShowStatusRequest(const ShowStatusRequest& from);
+  
+  inline ShowStatusRequest& operator=(const ShowStatusRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+  
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+  
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const ShowStatusRequest& default_instance();
+  
+  void Swap(ShowStatusRequest* other);
+  
+  // implements Message ----------------------------------------------
+  
+  ShowStatusRequest* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const ShowStatusRequest& from);
+  void MergeFrom(const ShowStatusRequest& from);
+  void Clear();
+  bool IsInitialized() const;
+  
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  
+  ::google::protobuf::Metadata GetMetadata() const;
+  
+  // nested types ----------------------------------------------------
+  
+  // accessors -------------------------------------------------------
+  
+  // @@protoc_insertion_point(class_scope:galaxy.ins.ShowStatusRequest)
+ private:
+  
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+  
+  
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[1];
+  
+  friend void  protobuf_AddDesc_ins_5fnode_2eproto();
+  friend void protobuf_AssignDesc_ins_5fnode_2eproto();
+  friend void protobuf_ShutdownFile_ins_5fnode_2eproto();
+  
+  void InitAsDefaultInstance();
+  static ShowStatusRequest* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class ShowStatusResponse : public ::google::protobuf::Message {
+ public:
+  ShowStatusResponse();
+  virtual ~ShowStatusResponse();
+  
+  ShowStatusResponse(const ShowStatusResponse& from);
+  
+  inline ShowStatusResponse& operator=(const ShowStatusResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+  
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+  
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const ShowStatusResponse& default_instance();
+  
+  void Swap(ShowStatusResponse* other);
+  
+  // implements Message ----------------------------------------------
+  
+  ShowStatusResponse* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const ShowStatusResponse& from);
+  void MergeFrom(const ShowStatusResponse& from);
+  void Clear();
+  bool IsInitialized() const;
+  
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  
+  ::google::protobuf::Metadata GetMetadata() const;
+  
+  // nested types ----------------------------------------------------
+  
+  // accessors -------------------------------------------------------
+  
+  // required .galaxy.ins.NodeStatus status = 1;
+  inline bool has_status() const;
+  inline void clear_status();
+  static const int kStatusFieldNumber = 1;
+  inline galaxy::ins::NodeStatus status() const;
+  inline void set_status(galaxy::ins::NodeStatus value);
+  
+  // required int64 term = 2;
+  inline bool has_term() const;
+  inline void clear_term();
+  static const int kTermFieldNumber = 2;
+  inline ::google::protobuf::int64 term() const;
+  inline void set_term(::google::protobuf::int64 value);
+  
+  // @@protoc_insertion_point(class_scope:galaxy.ins.ShowStatusResponse)
+ private:
+  inline void set_has_status();
+  inline void clear_has_status();
+  inline void set_has_term();
+  inline void clear_has_term();
+  
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+  
+  ::google::protobuf::int64 term_;
+  int status_;
+  
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  
+  friend void  protobuf_AddDesc_ins_5fnode_2eproto();
+  friend void protobuf_AssignDesc_ins_5fnode_2eproto();
+  friend void protobuf_ShutdownFile_ins_5fnode_2eproto();
+  
+  void InitAsDefaultInstance();
+  static ShowStatusResponse* default_instance_;
+};
 // ===================================================================
 
 class InsNode_Stub;
@@ -1015,6 +1202,10 @@ class InsNode : public ::google::protobuf::Service {
   virtual void Get(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::GetRequest* request,
                        ::galaxy::ins::GetResponse* response,
+                       ::google::protobuf::Closure* done);
+  virtual void ShowStatus(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::ShowStatusRequest* request,
+                       ::galaxy::ins::ShowStatusResponse* response,
                        ::google::protobuf::Closure* done);
   
   // implements Service ----------------------------------------------
@@ -1060,6 +1251,10 @@ class InsNode_Stub : public InsNode {
   void Get(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::GetRequest* request,
                        ::galaxy::ins::GetResponse* response,
+                       ::google::protobuf::Closure* done);
+  void ShowStatus(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::ShowStatusRequest* request,
+                       ::galaxy::ins::ShowStatusResponse* response,
                        ::google::protobuf::Closure* done);
  private:
   ::google::protobuf::RpcChannel* channel_;
@@ -2020,6 +2215,59 @@ inline ::std::string* GetResponse::release_leader_id() {
   }
 }
 
+// -------------------------------------------------------------------
+
+// ShowStatusRequest
+
+// -------------------------------------------------------------------
+
+// ShowStatusResponse
+
+// required .galaxy.ins.NodeStatus status = 1;
+inline bool ShowStatusResponse::has_status() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void ShowStatusResponse::set_has_status() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void ShowStatusResponse::clear_has_status() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void ShowStatusResponse::clear_status() {
+  status_ = 0;
+  clear_has_status();
+}
+inline galaxy::ins::NodeStatus ShowStatusResponse::status() const {
+  return static_cast< galaxy::ins::NodeStatus >(status_);
+}
+inline void ShowStatusResponse::set_status(galaxy::ins::NodeStatus value) {
+  GOOGLE_DCHECK(galaxy::ins::NodeStatus_IsValid(value));
+  set_has_status();
+  status_ = value;
+}
+
+// required int64 term = 2;
+inline bool ShowStatusResponse::has_term() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void ShowStatusResponse::set_has_term() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void ShowStatusResponse::clear_has_term() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void ShowStatusResponse::clear_term() {
+  term_ = GOOGLE_LONGLONG(0);
+  clear_has_term();
+}
+inline ::google::protobuf::int64 ShowStatusResponse::term() const {
+  return term_;
+}
+inline void ShowStatusResponse::set_term(::google::protobuf::int64 value) {
+  set_has_term();
+  term_ = value;
+}
+
 
 // @@protoc_insertion_point(namespace_scope)
 
@@ -2030,6 +2278,10 @@ inline ::std::string* GetResponse::release_leader_id() {
 namespace google {
 namespace protobuf {
 
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< galaxy::ins::NodeStatus>() {
+  return galaxy::ins::NodeStatus_descriptor();
+}
 
 }  // namespace google
 }  // namespace protobuf

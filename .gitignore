@@ -2,6 +2,7 @@
 *.log
 *.dc
 *.SCM
+*.a
 ins
 output/*
 sandbox/data/

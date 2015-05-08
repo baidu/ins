@@ -54,11 +54,11 @@ CCP_FLAGS=
 
 
 #COMAKE UUID
-COMAKE_MD5=6090f5dd5aca652fe11ed3ce93e69b22  COMAKE
+COMAKE_MD5=ce4e684b3e9425eb76ff9427128288b0  COMAKE
 
 
 .PHONY:all
-all:comake2_makefile_check ins 
+all:comake2_makefile_check ins libins_sdk.a 
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mall[0m']"
 	@echo "make all done"
 
@@ -80,14 +80,21 @@ clean:ccpclean
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mclean[0m']"
 	rm -rf ins
 	rm -rf ./output/bin/ins
+	rm -rf libins_sdk.a
+	rm -rf ./output/lib/libins_sdk.a
 	rm -rf server/ins_ins_main.o
 	rm -rf server/ins_ins_node_impl.o
 	rm -rf server/ins_flags.o
 	rm -rf storage/ins_meta.o
 	rm -rf common/ins_logging.o
+	rm -rf storage/ins_binlog.o
 	rm -rf proto/ins_node.pb.cc
 	rm -rf proto/ins_node.pb.h
 	rm -rf proto/ins_ins_node.pb.o
+	rm -rf sdk/ins_sdk_ins_sdk.o
+	rm -rf proto/ins_node.pb.cc
+	rm -rf proto/ins_node.pb.h
+	rm -rf proto/ins_sdk_ins_node.pb.o
 
 .PHONY:dist
 dist:
@@ -111,6 +118,7 @@ ins:server/ins_ins_main.o \
   server/ins_flags.o \
   storage/ins_meta.o \
   common/ins_logging.o \
+  storage/ins_binlog.o \
   proto/ins_ins_node.pb.o
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mins[0m']"
 	$(CXX) server/ins_ins_main.o \
@@ -118,6 +126,7 @@ ins:server/ins_ins_main.o \
   server/ins_flags.o \
   storage/ins_meta.o \
   common/ins_logging.o \
+  storage/ins_binlog.o \
   proto/ins_ins_node.pb.o -Xlinker "-("  ../../../public/sofa-pbrpc/libsofa-pbrpc.a \
   ../../../third-64/boost/lib/libboost_atomic.a \
   ../../../third-64/boost/lib/libboost_chrono.a \
@@ -163,6 +172,14 @@ ins:server/ins_ins_main.o \
 	mkdir -p ./output/bin
 	cp -f --link ins ./output/bin
 
+libins_sdk.a:sdk/ins_sdk_ins_sdk.o \
+  proto/ins_sdk_ins_node.pb.o
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mlibins_sdk.a[0m']"
+	ar crs libins_sdk.a sdk/ins_sdk_ins_sdk.o \
+  proto/ins_sdk_ins_node.pb.o
+	mkdir -p ./output/lib
+	cp -f --link libins_sdk.a ./output/lib
+
 server/ins_ins_main.o:server/ins_main.cc \
   common/logging.h \
   server/ins_node_impl.h \
@@ -189,7 +206,8 @@ server/ins_ins_node_impl.o:server/ins_node_impl.cc \
   common/mutex.h \
   common/thread_pool.h \
   common/logging.h \
-  storage/meta.h
+  storage/meta.h \
+  storage/binlog.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_ins_node_impl.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_ins_node_impl.o server/ins_node_impl.cc
 
@@ -198,7 +216,8 @@ server/ins_flags.o:server/flags.cc
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_flags.o server/flags.cc
 
 storage/ins_meta.o:storage/meta.cc \
-  storage/meta.h
+  storage/meta.h \
+  common/logging.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/ins_meta.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/ins_meta.o storage/meta.cc
 
@@ -206,6 +225,11 @@ common/ins_logging.o:common/logging.cc \
   common/logging.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcommon/ins_logging.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/ins_logging.o common/logging.cc
+
+storage/ins_binlog.o:storage/binlog.cc \
+  storage/binlog.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/ins_binlog.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/ins_binlog.o storage/binlog.cc
 
 proto/ins_node.pb.cc \
   proto/ins_node.pb.h:proto/ins_node.proto
@@ -221,6 +245,17 @@ proto/ins_ins_node.pb.o:proto/ins_node.pb.cc \
   proto/ins_node.pb.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_ins_node.pb.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/ins_ins_node.pb.o proto/ins_node.pb.cc
+
+sdk/ins_sdk_ins_sdk.o:sdk/ins_sdk.cc \
+  sdk/ins_sdk.h \
+  proto/ins_node.pb.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msdk/ins_sdk_ins_sdk.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o sdk/ins_sdk_ins_sdk.o sdk/ins_sdk.cc
+
+proto/ins_sdk_ins_node.pb.o:proto/ins_node.pb.cc \
+  proto/ins_node.pb.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_sdk_ins_node.pb.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/ins_sdk_ins_node.pb.o proto/ins_node.pb.cc
 
 endif #ifeq ($(shell uname -m),x86_64)
 
