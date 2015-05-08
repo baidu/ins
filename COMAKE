@@ -35,9 +35,10 @@ INCPATHS('. ./src ./output/include')
 
 ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc storage/meta.cc common/logging.cc storage/binlog.cc proto/ins_node.proto'
 
-ins_sdk_sources = 'sdk/ins_sdk.cc proto/ins_node.proto'
+ins_sdk_sources = 'sdk/ins_sdk.cc common/logging.cc proto/ins_node.proto'
 
-ins_cli_sources = 'sdk/ins_sdk.cc proto/ins_node.proto sdk/ins_cli.cc'
+ins_cli_sources = 'sdk/ins_sdk.cc proto/ins_node.proto common/logging.cc sdk/ins_cli.cc server/flags.cc'
 
 Application('ins', Sources(ins_sources))
+Application('ins_cli', Sources(ins_cli_sources))
 StaticLibrary('ins_sdk', Sources(ins_sdk_sources))

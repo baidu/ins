@@ -3,17 +3,14 @@
 
 #include <vector>
 #include <string>
+#include "common/event.h"
+#include "common/mutex.h"
+#include "rpc/rpc_client.h"
+#include "proto/ins_node.pb.h"
 
 namespace galaxy {
 namespace ins {
 namespace sdk {
-
-enum NodeStatus{
-    kLeader = 0,
-    kCandidate = 1, 
-    kFollower = 2,
-    kOffline = 3
-};
 
 enum SDKError {
     kOK = 0,
@@ -22,21 +19,23 @@ enum SDKError {
     kTimeout = 3
 };
 
-struct ClusterInfo {
+struct ClusterNodeInfo {
     std::string server_id;
-    NodeStatus status;
+    galaxy::ins::NodeStatus status;
     int64_t term;
 };
 
 class InsSDK {
 public:
     InsSDK(const std::vector<std::string>& members);
-    bool ShowCluster(std::vector<ClusterInfo>* cluster_info);
+    bool ShowCluster(std::vector<ClusterNodeInfo>* cluster_info);
     bool Put(const std::string& key, const std::string& value, SDKError* error);
     bool Get(const std::string& key, std::string* value, SDKError* error);
+    static std::string StatusToString(galaxy::ins::NodeStatus status);
 private:
     std::string leader_id_;
     std::vector<std::string> members_;
+    galaxy::RpcClient rpc_client_;
 };
 
 } //namespace sdk

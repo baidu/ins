@@ -56,6 +56,15 @@ void InsNodeImpl::CheckLeaderCrash() {
     //LOG(INFO, "InsNodeImpl::CheckLeaderCrash, elect_leader_task_:%d", elect_leader_task_);
 }
 
+void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* controller,
+                             const ::galaxy::ins::ShowStatusRequest* request,
+                             ::galaxy::ins::ShowStatusResponse* response,
+                             ::google::protobuf::Closure* done) {
+    MutexLock lock(&mu_);
+    response->set_status(status_);
+    response->set_term(current_term_);    
+    done->Run();
+}
 
 void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* request,
                                   ::galaxy::ins::AppendEntriesResponse* response,

@@ -54,11 +54,11 @@ CCP_FLAGS=
 
 
 #COMAKE UUID
-COMAKE_MD5=ce4e684b3e9425eb76ff9427128288b0  COMAKE
+COMAKE_MD5=9d454b9bee8e11395b82e58150d02942  COMAKE
 
 
 .PHONY:all
-all:comake2_makefile_check ins libins_sdk.a 
+all:comake2_makefile_check ins ins_cli libins_sdk.a 
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mall[0m']"
 	@echo "make all done"
 
@@ -80,6 +80,8 @@ clean:ccpclean
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mclean[0m']"
 	rm -rf ins
 	rm -rf ./output/bin/ins
+	rm -rf ins_cli
+	rm -rf ./output/bin/ins_cli
 	rm -rf libins_sdk.a
 	rm -rf ./output/lib/libins_sdk.a
 	rm -rf server/ins_ins_main.o
@@ -91,7 +93,15 @@ clean:ccpclean
 	rm -rf proto/ins_node.pb.cc
 	rm -rf proto/ins_node.pb.h
 	rm -rf proto/ins_ins_node.pb.o
+	rm -rf sdk/ins_cli_ins_sdk.o
+	rm -rf proto/ins_node.pb.cc
+	rm -rf proto/ins_node.pb.h
+	rm -rf proto/ins_cli_ins_node.pb.o
+	rm -rf common/ins_cli_logging.o
+	rm -rf sdk/ins_cli_ins_cli.o
+	rm -rf server/ins_cli_flags.o
 	rm -rf sdk/ins_sdk_ins_sdk.o
+	rm -rf common/ins_sdk_logging.o
 	rm -rf proto/ins_node.pb.cc
 	rm -rf proto/ins_node.pb.h
 	rm -rf proto/ins_sdk_ins_node.pb.o
@@ -172,10 +182,67 @@ ins:server/ins_ins_main.o \
 	mkdir -p ./output/bin
 	cp -f --link ins ./output/bin
 
+ins_cli:sdk/ins_cli_ins_sdk.o \
+  proto/ins_cli_ins_node.pb.o \
+  common/ins_cli_logging.o \
+  sdk/ins_cli_ins_cli.o \
+  server/ins_cli_flags.o
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mins_cli[0m']"
+	$(CXX) sdk/ins_cli_ins_sdk.o \
+  proto/ins_cli_ins_node.pb.o \
+  common/ins_cli_logging.o \
+  sdk/ins_cli_ins_cli.o \
+  server/ins_cli_flags.o -Xlinker "-("  ../../../public/sofa-pbrpc/libsofa-pbrpc.a \
+  ../../../third-64/boost/lib/libboost_atomic.a \
+  ../../../third-64/boost/lib/libboost_chrono.a \
+  ../../../third-64/boost/lib/libboost_container.a \
+  ../../../third-64/boost/lib/libboost_context.a \
+  ../../../third-64/boost/lib/libboost_coroutine.a \
+  ../../../third-64/boost/lib/libboost_date_time.a \
+  ../../../third-64/boost/lib/libboost_exception.a \
+  ../../../third-64/boost/lib/libboost_filesystem.a \
+  ../../../third-64/boost/lib/libboost_graph.a \
+  ../../../third-64/boost/lib/libboost_locale.a \
+  ../../../third-64/boost/lib/libboost_log_setup.a \
+  ../../../third-64/boost/lib/libboost_math_c99.a \
+  ../../../third-64/boost/lib/libboost_math_c99f.a \
+  ../../../third-64/boost/lib/libboost_math_c99l.a \
+  ../../../third-64/boost/lib/libboost_math_tr1.a \
+  ../../../third-64/boost/lib/libboost_math_tr1f.a \
+  ../../../third-64/boost/lib/libboost_math_tr1l.a \
+  ../../../third-64/boost/lib/libboost_prg_exec_monitor.a \
+  ../../../third-64/boost/lib/libboost_program_options.a \
+  ../../../third-64/boost/lib/libboost_python.a \
+  ../../../third-64/boost/lib/libboost_random.a \
+  ../../../third-64/boost/lib/libboost_regex.a \
+  ../../../third-64/boost/lib/libboost_serialization.a \
+  ../../../third-64/boost/lib/libboost_signals.a \
+  ../../../third-64/boost/lib/libboost_system.a \
+  ../../../third-64/boost/lib/libboost_test_exec_monitor.a \
+  ../../../third-64/boost/lib/libboost_thread.a \
+  ../../../third-64/boost/lib/libboost_timer.a \
+  ../../../third-64/boost/lib/libboost_unit_test_framework.a \
+  ../../../third-64/boost/lib/libboost_wave.a \
+  ../../../third-64/boost/lib/libboost_wserialization.a \
+  ../../../third-64/gflags/lib/libgflags.a \
+  ../../../third-64/gflags/lib/libgflags_nothreads.a \
+  ../../../third-64/gtest/lib/libgtest.a \
+  ../../../third-64/gtest/lib/libgtest_main.a \
+  ../../../third-64/protobuf/lib/libprotobuf-lite.a \
+  ../../../third-64/protobuf/lib/libprotobuf.a \
+  ../../../third-64/protobuf/lib/libprotoc.a \
+  ../../../third-64/snappy/lib/libsnappy.a -lpthread \
+  -lcrypto \
+  -lrt -Xlinker "-)" -o ins_cli
+	mkdir -p ./output/bin
+	cp -f --link ins_cli ./output/bin
+
 libins_sdk.a:sdk/ins_sdk_ins_sdk.o \
+  common/ins_sdk_logging.o \
   proto/ins_sdk_ins_node.pb.o
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mlibins_sdk.a[0m']"
 	ar crs libins_sdk.a sdk/ins_sdk_ins_sdk.o \
+  common/ins_sdk_logging.o \
   proto/ins_sdk_ins_node.pb.o
 	mkdir -p ./output/lib
 	cp -f --link libins_sdk.a ./output/lib
@@ -246,11 +313,68 @@ proto/ins_ins_node.pb.o:proto/ins_node.pb.cc \
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_ins_node.pb.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/ins_ins_node.pb.o proto/ins_node.pb.cc
 
+sdk/ins_cli_ins_sdk.o:sdk/ins_sdk.cc \
+  sdk/ins_sdk.h \
+  common/event.h \
+  common/mutex.h \
+  common/timer.h \
+  common/mutex.h \
+  rpc/rpc_client.h \
+  common/mutex.h \
+  common/thread_pool.h \
+  common/logging.h \
+  proto/ins_node.pb.h \
+  common/asm_atomic.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msdk/ins_cli_ins_sdk.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o sdk/ins_cli_ins_sdk.o sdk/ins_sdk.cc
+
+proto/ins_cli_ins_node.pb.o:proto/ins_node.pb.cc \
+  proto/ins_node.pb.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_cli_ins_node.pb.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/ins_cli_ins_node.pb.o proto/ins_node.pb.cc
+
+common/ins_cli_logging.o:common/logging.cc \
+  common/logging.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcommon/ins_cli_logging.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/ins_cli_logging.o common/logging.cc
+
+sdk/ins_cli_ins_cli.o:sdk/ins_cli.cc \
+  sdk/ins_sdk.h \
+  common/event.h \
+  common/mutex.h \
+  common/timer.h \
+  common/mutex.h \
+  rpc/rpc_client.h \
+  common/mutex.h \
+  common/thread_pool.h \
+  common/logging.h \
+  proto/ins_node.pb.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msdk/ins_cli_ins_cli.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o sdk/ins_cli_ins_cli.o sdk/ins_cli.cc
+
+server/ins_cli_flags.o:server/flags.cc
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_cli_flags.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_cli_flags.o server/flags.cc
+
 sdk/ins_sdk_ins_sdk.o:sdk/ins_sdk.cc \
   sdk/ins_sdk.h \
-  proto/ins_node.pb.h
+  common/event.h \
+  common/mutex.h \
+  common/timer.h \
+  common/mutex.h \
+  rpc/rpc_client.h \
+  common/mutex.h \
+  common/thread_pool.h \
+  common/logging.h \
+  proto/ins_node.pb.h \
+  common/asm_atomic.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msdk/ins_sdk_ins_sdk.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o sdk/ins_sdk_ins_sdk.o sdk/ins_sdk.cc
+
+common/ins_sdk_logging.o:common/logging.cc \
+  common/logging.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcommon/ins_sdk_logging.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/ins_sdk_logging.o common/logging.cc
 
 proto/ins_sdk_ins_node.pb.o:proto/ins_node.pb.cc \
   proto/ins_node.pb.h
