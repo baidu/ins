@@ -34,8 +34,8 @@ private:
     void DumpLogEntry(const LogEntry& log_entry, std::string* buf);
     void LoadLogEntry(const std::string& buf, LogEntry* log_entry);
 private:
-    FILE* log_file_;
-    int64_t slot_count_;
+    FILE* log_data_file_;
+    FILE* log_index_file_;
 };
 
 } //namespace ins 

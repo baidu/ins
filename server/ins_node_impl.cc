@@ -32,6 +32,7 @@ InsNodeImpl::InsNodeImpl (std::string& server_id) : self_id_(server_id),
     std::string sub_dir = self_id_;
     boost::replace_all(sub_dir, ":", "_");
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
+    binlogger_ = new BinLogger(FLAGS_ins_data_dir + "/" + sub_dir);
     current_term_ = meta_->ReadCurrentTerm();
     meta_->ReadVotedFor(voted_for_);
     MutexLock lock(&mu_);
@@ -40,6 +41,7 @@ InsNodeImpl::InsNodeImpl (std::string& server_id) : self_id_(server_id),
 
 InsNodeImpl::~InsNodeImpl() {
     delete meta_;
+    delete binlogger_;
 }
 
 int64_t InsNodeImpl::GetRandomTimeout() {
@@ -264,6 +266,16 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* controller,
                       const ::galaxy::ins::PutRequest* request,
                       ::galaxy::ins::PutResponse* response,
                       ::google::protobuf::Closure* done) {
+    const std::string& key = request->key();
+    const std::string& value = request->value();
+    MutexLock lock(&mu_);
+    LogEntry log_entry;
+    log_entry.key = key;
+    log_entry.value = value;
+    log_entry.term = current_term_;
+    log_entry.op = kPut;
+    binlogger_->AppendEntry(log_entry);
+    done->Run();
     return;
 }
 
