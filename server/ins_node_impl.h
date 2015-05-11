@@ -37,6 +37,10 @@ public:
              const ::galaxy::ins::GetRequest* request,
              ::galaxy::ins::GetResponse* response,
              ::google::protobuf::Closure* done);
+    void Delete(::google::protobuf::RpcController* controller,
+                const ::galaxy::ins::DelRequest* request,
+                ::galaxy::ins::DelResponse* response,
+                ::google::protobuf::Closure* done);
     void ShowStatus(::google::protobuf::RpcController* controller,
                     const ::galaxy::ins::ShowStatusRequest* request,
                     ::galaxy::ins::ShowStatusResponse* response,
@@ -58,7 +62,7 @@ private:
     std::string self_id_;
     int64_t current_term_;
     std::map<int64_t, std::string> voted_for_;
-    std::map<int64_t, int32_t> vote_grant_;
+    std::map<int64_t, uint32_t> vote_grant_;
     std::vector<galaxy::ins::Entry> binlog_;
     std::map<std::string, std::string> states_; 
     galaxy::RpcClient rpc_client_;

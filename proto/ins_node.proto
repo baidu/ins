@@ -61,6 +61,15 @@ message GetResponse {
     optional string leader_id = 3;
 }
 
+message DelRequest {
+    required string key = 1;    
+}
+
+message DelResponse {
+    required bool success = 1;
+    optional string leader_id = 2;
+}
+
 message ShowStatusRequest {
     
 }
@@ -75,6 +84,7 @@ service InsNode {
     rpc Vote(VoteRequest) returns (VoteResponse);
     rpc Put(PutRequest) returns (PutResponse);
     rpc Get(GetRequest) returns (GetResponse);
+    rpc Delete(DelRequest) returns (DelResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
 }
 

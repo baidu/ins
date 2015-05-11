@@ -45,6 +45,12 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* GetResponse_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   GetResponse_reflection_ = NULL;
+const ::google::protobuf::Descriptor* DelRequest_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  DelRequest_reflection_ = NULL;
+const ::google::protobuf::Descriptor* DelResponse_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  DelResponse_reflection_ = NULL;
 const ::google::protobuf::Descriptor* ShowStatusRequest_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   ShowStatusRequest_reflection_ = NULL;
@@ -214,7 +220,38 @@ void protobuf_AssignDesc_ins_5fnode_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GetResponse));
-  ShowStatusRequest_descriptor_ = file->message_type(9);
+  DelRequest_descriptor_ = file->message_type(9);
+  static const int DelRequest_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DelRequest, key_),
+  };
+  DelRequest_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      DelRequest_descriptor_,
+      DelRequest::default_instance_,
+      DelRequest_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DelRequest, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DelRequest, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(DelRequest));
+  DelResponse_descriptor_ = file->message_type(10);
+  static const int DelResponse_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DelResponse, success_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DelResponse, leader_id_),
+  };
+  DelResponse_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      DelResponse_descriptor_,
+      DelResponse::default_instance_,
+      DelResponse_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DelResponse, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(DelResponse, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(DelResponse));
+  ShowStatusRequest_descriptor_ = file->message_type(11);
   static const int ShowStatusRequest_offsets_[1] = {
   };
   ShowStatusRequest_reflection_ =
@@ -228,7 +265,7 @@ void protobuf_AssignDesc_ins_5fnode_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ShowStatusRequest));
-  ShowStatusResponse_descriptor_ = file->message_type(10);
+  ShowStatusResponse_descriptor_ = file->message_type(12);
   static const int ShowStatusResponse_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ShowStatusResponse, status_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ShowStatusResponse, term_),
@@ -277,6 +314,10 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     GetResponse_descriptor_, &GetResponse::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    DelRequest_descriptor_, &DelRequest::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    DelResponse_descriptor_, &DelResponse::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ShowStatusRequest_descriptor_, &ShowStatusRequest::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     ShowStatusResponse_descriptor_, &ShowStatusResponse::default_instance());
@@ -303,6 +344,10 @@ void protobuf_ShutdownFile_ins_5fnode_2eproto() {
   delete GetRequest_reflection_;
   delete GetResponse::default_instance_;
   delete GetResponse_reflection_;
+  delete DelRequest::default_instance_;
+  delete DelRequest_reflection_;
+  delete DelResponse::default_instance_;
+  delete DelResponse_reflection_;
   delete ShowStatusRequest::default_instance_;
   delete ShowStatusRequest_reflection_;
   delete ShowStatusResponse::default_instance_;
@@ -332,20 +377,23 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
     "\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001(\t\"\031\n\n"
     "GetRequest\022\013\n\003key\030\001 \002(\t\"<\n\013GetResponse\022\013"
     "\n\003hit\030\001 \002(\010\022\r\n\005value\030\002 \002(\t\022\021\n\tleader_id\030"
-    "\003 \001(\t\"\023\n\021ShowStatusRequest\"J\n\022ShowStatus"
-    "Response\022&\n\006status\030\001 \002(\0162\026.galaxy.ins.No"
-    "deStatus\022\014\n\004term\030\002 \002(\003*F\n\nNodeStatus\022\013\n\007"
-    "kLeader\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollower\020\002"
-    "\022\014\n\010kOffline\020\0032\327\002\n\007InsNode\022T\n\rAppendEntr"
-    "ies\022 .galaxy.ins.AppendEntriesRequest\032!."
-    "galaxy.ins.AppendEntriesResponse\0229\n\004Vote"
-    "\022\027.galaxy.ins.VoteRequest\032\030.galaxy.ins.V"
-    "oteResponse\0226\n\003Put\022\026.galaxy.ins.PutReque"
-    "st\032\027.galaxy.ins.PutResponse\0226\n\003Get\022\026.gal"
-    "axy.ins.GetRequest\032\027.galaxy.ins.GetRespo"
-    "nse\022K\n\nShowStatus\022\035.galaxy.ins.ShowStatu"
-    "sRequest\032\036.galaxy.ins.ShowStatusResponse"
-    "B\003\200\001\001", 1165);
+    "\003 \001(\t\"\031\n\nDelRequest\022\013\n\003key\030\001 \002(\t\"1\n\013DelR"
+    "esponse\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 "
+    "\001(\t\"\023\n\021ShowStatusRequest\"J\n\022ShowStatusRe"
+    "sponse\022&\n\006status\030\001 \002(\0162\026.galaxy.ins.Node"
+    "Status\022\014\n\004term\030\002 \002(\003*F\n\nNodeStatus\022\013\n\007kL"
+    "eader\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollower\020\002\022\014"
+    "\n\010kOffline\020\0032\222\003\n\007InsNode\022T\n\rAppendEntrie"
+    "s\022 .galaxy.ins.AppendEntriesRequest\032!.ga"
+    "laxy.ins.AppendEntriesResponse\0229\n\004Vote\022\027"
+    ".galaxy.ins.VoteRequest\032\030.galaxy.ins.Vot"
+    "eResponse\0226\n\003Put\022\026.galaxy.ins.PutRequest"
+    "\032\027.galaxy.ins.PutResponse\0226\n\003Get\022\026.galax"
+    "y.ins.GetRequest\032\027.galaxy.ins.GetRespons"
+    "e\0229\n\006Delete\022\026.galaxy.ins.DelRequest\032\027.ga"
+    "laxy.ins.DelResponse\022K\n\nShowStatus\022\035.gal"
+    "axy.ins.ShowStatusRequest\032\036.galaxy.ins.S"
+    "howStatusResponseB\003\200\001\001", 1302);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "ins_node.proto", &protobuf_RegisterTypes);
   Entry::default_instance_ = new Entry();
@@ -357,6 +405,8 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
   PutResponse::default_instance_ = new PutResponse();
   GetRequest::default_instance_ = new GetRequest();
   GetResponse::default_instance_ = new GetResponse();
+  DelRequest::default_instance_ = new DelRequest();
+  DelResponse::default_instance_ = new DelResponse();
   ShowStatusRequest::default_instance_ = new ShowStatusRequest();
   ShowStatusResponse::default_instance_ = new ShowStatusResponse();
   Entry::default_instance_->InitAsDefaultInstance();
@@ -368,6 +418,8 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
   PutResponse::default_instance_->InitAsDefaultInstance();
   GetRequest::default_instance_->InitAsDefaultInstance();
   GetResponse::default_instance_->InitAsDefaultInstance();
+  DelRequest::default_instance_->InitAsDefaultInstance();
+  DelResponse::default_instance_->InitAsDefaultInstance();
   ShowStatusRequest::default_instance_->InitAsDefaultInstance();
   ShowStatusResponse::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_ins_5fnode_2eproto);
@@ -3077,6 +3129,494 @@ void GetResponse::Swap(GetResponse* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int DelRequest::kKeyFieldNumber;
+#endif  // !_MSC_VER
+
+DelRequest::DelRequest()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void DelRequest::InitAsDefaultInstance() {
+}
+
+DelRequest::DelRequest(const DelRequest& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void DelRequest::SharedCtor() {
+  _cached_size_ = 0;
+  key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+DelRequest::~DelRequest() {
+  SharedDtor();
+}
+
+void DelRequest::SharedDtor() {
+  if (key_ != &::google::protobuf::internal::kEmptyString) {
+    delete key_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void DelRequest::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* DelRequest::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return DelRequest_descriptor_;
+}
+
+const DelRequest& DelRequest::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_ins_5fnode_2eproto();  return *default_instance_;
+}
+
+DelRequest* DelRequest::default_instance_ = NULL;
+
+DelRequest* DelRequest::New() const {
+  return new DelRequest;
+}
+
+void DelRequest::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (has_key()) {
+      if (key_ != &::google::protobuf::internal::kEmptyString) {
+        key_->clear();
+      }
+    }
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool DelRequest::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required string key = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_key()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->key().data(), this->key().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+      
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void DelRequest::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required string key = 1;
+  if (has_key()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->key().data(), this->key().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      1, this->key(), output);
+  }
+  
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* DelRequest::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required string key = 1;
+  if (has_key()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->key().data(), this->key().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->key(), target);
+  }
+  
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int DelRequest::ByteSize() const {
+  int total_size = 0;
+  
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required string key = 1;
+    if (has_key()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->key());
+    }
+    
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void DelRequest::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const DelRequest* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const DelRequest*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void DelRequest::MergeFrom(const DelRequest& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_key()) {
+      set_key(from.key());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void DelRequest::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void DelRequest::CopyFrom(const DelRequest& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool DelRequest::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+  
+  return true;
+}
+
+void DelRequest::Swap(DelRequest* other) {
+  if (other != this) {
+    std::swap(key_, other->key_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata DelRequest::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = DelRequest_descriptor_;
+  metadata.reflection = DelRequest_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int DelResponse::kSuccessFieldNumber;
+const int DelResponse::kLeaderIdFieldNumber;
+#endif  // !_MSC_VER
+
+DelResponse::DelResponse()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void DelResponse::InitAsDefaultInstance() {
+}
+
+DelResponse::DelResponse(const DelResponse& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void DelResponse::SharedCtor() {
+  _cached_size_ = 0;
+  success_ = false;
+  leader_id_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+DelResponse::~DelResponse() {
+  SharedDtor();
+}
+
+void DelResponse::SharedDtor() {
+  if (leader_id_ != &::google::protobuf::internal::kEmptyString) {
+    delete leader_id_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void DelResponse::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* DelResponse::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return DelResponse_descriptor_;
+}
+
+const DelResponse& DelResponse::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_ins_5fnode_2eproto();  return *default_instance_;
+}
+
+DelResponse* DelResponse::default_instance_ = NULL;
+
+DelResponse* DelResponse::New() const {
+  return new DelResponse;
+}
+
+void DelResponse::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    success_ = false;
+    if (has_leader_id()) {
+      if (leader_id_ != &::google::protobuf::internal::kEmptyString) {
+        leader_id_->clear();
+      }
+    }
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool DelResponse::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // required bool success = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
+                 input, &success_)));
+          set_has_success();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(18)) goto parse_leader_id;
+        break;
+      }
+      
+      // optional string leader_id = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_leader_id:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_leader_id()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->leader_id().data(), this->leader_id().length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+      
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void DelResponse::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // required bool success = 1;
+  if (has_success()) {
+    ::google::protobuf::internal::WireFormatLite::WriteBool(1, this->success(), output);
+  }
+  
+  // optional string leader_id = 2;
+  if (has_leader_id()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->leader_id().data(), this->leader_id().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      2, this->leader_id(), output);
+  }
+  
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* DelResponse::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // required bool success = 1;
+  if (has_success()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(1, this->success(), target);
+  }
+  
+  // optional string leader_id = 2;
+  if (has_leader_id()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->leader_id().data(), this->leader_id().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        2, this->leader_id(), target);
+  }
+  
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int DelResponse::ByteSize() const {
+  int total_size = 0;
+  
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // required bool success = 1;
+    if (has_success()) {
+      total_size += 1 + 1;
+    }
+    
+    // optional string leader_id = 2;
+    if (has_leader_id()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->leader_id());
+    }
+    
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void DelResponse::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const DelResponse* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const DelResponse*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void DelResponse::MergeFrom(const DelResponse& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_success()) {
+      set_success(from.success());
+    }
+    if (from.has_leader_id()) {
+      set_leader_id(from.leader_id());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void DelResponse::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void DelResponse::CopyFrom(const DelResponse& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool DelResponse::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+  
+  return true;
+}
+
+void DelResponse::Swap(DelResponse* other) {
+  if (other != this) {
+    std::swap(success_, other->success_);
+    std::swap(leader_id_, other->leader_id_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata DelResponse::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = DelResponse_descriptor_;
+  metadata.reflection = DelResponse_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
 #endif  // !_MSC_VER
 
 ShowStatusRequest::ShowStatusRequest()
@@ -3529,6 +4069,14 @@ void InsNode::Get(::google::protobuf::RpcController* controller,
   done->Run();
 }
 
+void InsNode::Delete(::google::protobuf::RpcController* controller,
+                         const ::galaxy::ins::DelRequest*,
+                         ::galaxy::ins::DelResponse*,
+                         ::google::protobuf::Closure* done) {
+  controller->SetFailed("Method Delete() not implemented.");
+  done->Run();
+}
+
 void InsNode::ShowStatus(::google::protobuf::RpcController* controller,
                          const ::galaxy::ins::ShowStatusRequest*,
                          ::galaxy::ins::ShowStatusResponse*,
@@ -3569,6 +4117,12 @@ void InsNode::CallMethod(const ::google::protobuf::MethodDescriptor* method,
              done);
       break;
     case 4:
+      Delete(controller,
+             ::google::protobuf::down_cast<const ::galaxy::ins::DelRequest*>(request),
+             ::google::protobuf::down_cast< ::galaxy::ins::DelResponse*>(response),
+             done);
+      break;
+    case 5:
       ShowStatus(controller,
              ::google::protobuf::down_cast<const ::galaxy::ins::ShowStatusRequest*>(request),
              ::google::protobuf::down_cast< ::galaxy::ins::ShowStatusResponse*>(response),
@@ -3593,6 +4147,8 @@ const ::google::protobuf::Message& InsNode::GetRequestPrototype(
     case 3:
       return ::galaxy::ins::GetRequest::default_instance();
     case 4:
+      return ::galaxy::ins::DelRequest::default_instance();
+    case 5:
       return ::galaxy::ins::ShowStatusRequest::default_instance();
     default:
       GOOGLE_LOG(FATAL) << "Bad method index; this should never happen.";
@@ -3613,6 +4169,8 @@ const ::google::protobuf::Message& InsNode::GetResponsePrototype(
     case 3:
       return ::galaxy::ins::GetResponse::default_instance();
     case 4:
+      return ::galaxy::ins::DelResponse::default_instance();
+    case 5:
       return ::galaxy::ins::ShowStatusResponse::default_instance();
     default:
       GOOGLE_LOG(FATAL) << "Bad method index; this should never happen.";
@@ -3659,11 +4217,18 @@ void InsNode_Stub::Get(::google::protobuf::RpcController* controller,
   channel_->CallMethod(descriptor()->method(3),
                        controller, request, response, done);
 }
+void InsNode_Stub::Delete(::google::protobuf::RpcController* controller,
+                              const ::galaxy::ins::DelRequest* request,
+                              ::galaxy::ins::DelResponse* response,
+                              ::google::protobuf::Closure* done) {
+  channel_->CallMethod(descriptor()->method(4),
+                       controller, request, response, done);
+}
 void InsNode_Stub::ShowStatus(::google::protobuf::RpcController* controller,
                               const ::galaxy::ins::ShowStatusRequest* request,
                               ::galaxy::ins::ShowStatusResponse* response,
                               ::google::protobuf::Closure* done) {
-  channel_->CallMethod(descriptor()->method(4),
+  channel_->CallMethod(descriptor()->method(5),
                        controller, request, response, done);
 }
 

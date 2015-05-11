@@ -43,6 +43,8 @@ class PutRequest;
 class PutResponse;
 class GetRequest;
 class GetResponse;
+class DelRequest;
+class DelResponse;
 class ShowStatusRequest;
 class ShowStatusResponse;
 
@@ -1010,6 +1012,188 @@ class GetResponse : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
+class DelRequest : public ::google::protobuf::Message {
+ public:
+  DelRequest();
+  virtual ~DelRequest();
+  
+  DelRequest(const DelRequest& from);
+  
+  inline DelRequest& operator=(const DelRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+  
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+  
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DelRequest& default_instance();
+  
+  void Swap(DelRequest* other);
+  
+  // implements Message ----------------------------------------------
+  
+  DelRequest* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DelRequest& from);
+  void MergeFrom(const DelRequest& from);
+  void Clear();
+  bool IsInitialized() const;
+  
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  
+  ::google::protobuf::Metadata GetMetadata() const;
+  
+  // nested types ----------------------------------------------------
+  
+  // accessors -------------------------------------------------------
+  
+  // required string key = 1;
+  inline bool has_key() const;
+  inline void clear_key();
+  static const int kKeyFieldNumber = 1;
+  inline const ::std::string& key() const;
+  inline void set_key(const ::std::string& value);
+  inline void set_key(const char* value);
+  inline void set_key(const char* value, size_t size);
+  inline ::std::string* mutable_key();
+  inline ::std::string* release_key();
+  
+  // @@protoc_insertion_point(class_scope:galaxy.ins.DelRequest)
+ private:
+  inline void set_has_key();
+  inline void clear_has_key();
+  
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+  
+  ::std::string* key_;
+  
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+  
+  friend void  protobuf_AddDesc_ins_5fnode_2eproto();
+  friend void protobuf_AssignDesc_ins_5fnode_2eproto();
+  friend void protobuf_ShutdownFile_ins_5fnode_2eproto();
+  
+  void InitAsDefaultInstance();
+  static DelRequest* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class DelResponse : public ::google::protobuf::Message {
+ public:
+  DelResponse();
+  virtual ~DelResponse();
+  
+  DelResponse(const DelResponse& from);
+  
+  inline DelResponse& operator=(const DelResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+  
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+  
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DelResponse& default_instance();
+  
+  void Swap(DelResponse* other);
+  
+  // implements Message ----------------------------------------------
+  
+  DelResponse* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DelResponse& from);
+  void MergeFrom(const DelResponse& from);
+  void Clear();
+  bool IsInitialized() const;
+  
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  
+  ::google::protobuf::Metadata GetMetadata() const;
+  
+  // nested types ----------------------------------------------------
+  
+  // accessors -------------------------------------------------------
+  
+  // required bool success = 1;
+  inline bool has_success() const;
+  inline void clear_success();
+  static const int kSuccessFieldNumber = 1;
+  inline bool success() const;
+  inline void set_success(bool value);
+  
+  // optional string leader_id = 2;
+  inline bool has_leader_id() const;
+  inline void clear_leader_id();
+  static const int kLeaderIdFieldNumber = 2;
+  inline const ::std::string& leader_id() const;
+  inline void set_leader_id(const ::std::string& value);
+  inline void set_leader_id(const char* value);
+  inline void set_leader_id(const char* value, size_t size);
+  inline ::std::string* mutable_leader_id();
+  inline ::std::string* release_leader_id();
+  
+  // @@protoc_insertion_point(class_scope:galaxy.ins.DelResponse)
+ private:
+  inline void set_has_success();
+  inline void clear_has_success();
+  inline void set_has_leader_id();
+  inline void clear_has_leader_id();
+  
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+  
+  ::std::string* leader_id_;
+  bool success_;
+  
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  
+  friend void  protobuf_AddDesc_ins_5fnode_2eproto();
+  friend void protobuf_AssignDesc_ins_5fnode_2eproto();
+  friend void protobuf_ShutdownFile_ins_5fnode_2eproto();
+  
+  void InitAsDefaultInstance();
+  static DelResponse* default_instance_;
+};
+// -------------------------------------------------------------------
+
 class ShowStatusRequest : public ::google::protobuf::Message {
  public:
   ShowStatusRequest();
@@ -1203,6 +1387,10 @@ class InsNode : public ::google::protobuf::Service {
                        const ::galaxy::ins::GetRequest* request,
                        ::galaxy::ins::GetResponse* response,
                        ::google::protobuf::Closure* done);
+  virtual void Delete(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::DelRequest* request,
+                       ::galaxy::ins::DelResponse* response,
+                       ::google::protobuf::Closure* done);
   virtual void ShowStatus(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::ShowStatusRequest* request,
                        ::galaxy::ins::ShowStatusResponse* response,
@@ -1251,6 +1439,10 @@ class InsNode_Stub : public InsNode {
   void Get(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::GetRequest* request,
                        ::galaxy::ins::GetResponse* response,
+                       ::google::protobuf::Closure* done);
+  void Delete(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::DelRequest* request,
+                       ::galaxy::ins::DelResponse* response,
                        ::google::protobuf::Closure* done);
   void ShowStatus(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::ShowStatusRequest* request,
@@ -2205,6 +2397,152 @@ inline ::std::string* GetResponse::mutable_leader_id() {
   return leader_id_;
 }
 inline ::std::string* GetResponse::release_leader_id() {
+  clear_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = leader_id_;
+    leader_id_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
+// -------------------------------------------------------------------
+
+// DelRequest
+
+// required string key = 1;
+inline bool DelRequest::has_key() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void DelRequest::set_has_key() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void DelRequest::clear_has_key() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void DelRequest::clear_key() {
+  if (key_ != &::google::protobuf::internal::kEmptyString) {
+    key_->clear();
+  }
+  clear_has_key();
+}
+inline const ::std::string& DelRequest::key() const {
+  return *key_;
+}
+inline void DelRequest::set_key(const ::std::string& value) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(value);
+}
+inline void DelRequest::set_key(const char* value) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(value);
+}
+inline void DelRequest::set_key(const char* value, size_t size) {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  key_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* DelRequest::mutable_key() {
+  set_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    key_ = new ::std::string;
+  }
+  return key_;
+}
+inline ::std::string* DelRequest::release_key() {
+  clear_has_key();
+  if (key_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = key_;
+    key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
+// -------------------------------------------------------------------
+
+// DelResponse
+
+// required bool success = 1;
+inline bool DelResponse::has_success() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void DelResponse::set_has_success() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void DelResponse::clear_has_success() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void DelResponse::clear_success() {
+  success_ = false;
+  clear_has_success();
+}
+inline bool DelResponse::success() const {
+  return success_;
+}
+inline void DelResponse::set_success(bool value) {
+  set_has_success();
+  success_ = value;
+}
+
+// optional string leader_id = 2;
+inline bool DelResponse::has_leader_id() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void DelResponse::set_has_leader_id() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void DelResponse::clear_has_leader_id() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void DelResponse::clear_leader_id() {
+  if (leader_id_ != &::google::protobuf::internal::kEmptyString) {
+    leader_id_->clear();
+  }
+  clear_has_leader_id();
+}
+inline const ::std::string& DelResponse::leader_id() const {
+  return *leader_id_;
+}
+inline void DelResponse::set_leader_id(const ::std::string& value) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(value);
+}
+inline void DelResponse::set_leader_id(const char* value) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(value);
+}
+inline void DelResponse::set_leader_id(const char* value, size_t size) {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  leader_id_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* DelResponse::mutable_leader_id() {
+  set_has_leader_id();
+  if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
+    leader_id_ = new ::std::string;
+  }
+  return leader_id_;
+}
+inline ::std::string* DelResponse::release_leader_id() {
   clear_has_leader_id();
   if (leader_id_ == &::google::protobuf::internal::kEmptyString) {
     return NULL;

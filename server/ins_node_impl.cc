@@ -4,6 +4,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <gflags/gflags.h>
 #include "storage/meta.h"
 #include "storage/binlog.h"
@@ -70,24 +71,24 @@ void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* re
                                   ::galaxy::ins::AppendEntriesResponse* response,
                                   bool failed, int error) {
     MutexLock lock(&mu_);
+    boost::scoped_ptr<const galaxy::ins::AppendEntriesRequest> request_ptr(request);
+    boost::scoped_ptr<galaxy::ins::AppendEntriesResponse> response_ptr(response);
     if (status_ != kLeader) {
         LOG(INFO, "outdated HearBeatCallback, I am no longer leader now.");
         return ;
     }
     if (!failed) {
-        if (response->current_term() > current_term_) {
+        if (response_ptr->current_term() > current_term_) {
             LOG(INFO, "HearBeatCallback, my term is outdated(%ld < %ld), trans to follower",
                 current_term_, response->current_term());
             status_ = kFollower;
-            current_term_ = response->current_term();
+            current_term_ = response_ptr->current_term();
             meta_->WriteCurrentTerm(current_term_);
         }
         else {
-            LOG(INFO, "I am the leader at term: %ld", current_term_);
+            //LOG(INFO, "I am the leader at term: %ld", current_term_);
         }
-    }
-    delete request;
-    delete response;    
+    }  
 }
 
 void InsNodeImpl::BroadCastHeartBeat() {
@@ -124,11 +125,13 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
                                ::galaxy::ins::VoteResponse* response,
                                bool failed, int error) {
     MutexLock lock(&mu_);
+    boost::scoped_ptr<const galaxy::ins::VoteRequest> request_ptr(request);
+    boost::scoped_ptr<galaxy::ins::VoteResponse> response_ptr(response);
     if (!failed && status_ == kCandidate) {
-        int64_t their_term = response->term();
+        int64_t their_term = response_ptr->term();
         LOG(INFO, "InsNodeImpl::VoteCallback[%ld], result:%s",
-            their_term, response->vote_granted()?"true":"false");
-        if (response->vote_granted() && their_term == current_term_) {
+            their_term, response_ptr->vote_granted()?"true":"false");
+        if (response_ptr->vote_granted() && their_term == current_term_) {
             vote_grant_[current_term_]++;
             if (vote_grant_[current_term_] > (members_.size() / 2)) {
                 status_ = kLeader;
@@ -147,8 +150,6 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
             }
         }
     }
-    delete request;
-    delete response;
 }
 
 void InsNodeImpl::TryToBeLeader() {
@@ -244,8 +245,8 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* controller,
         current_term_ = request->term();
         meta_->WriteCurrentTerm(current_term_);
     }
-    if (!voted_for_[current_term_].empty() &&
-         voted_for_[current_term_] != request->candidate_id()) {
+    if (voted_for_.find(current_term_) != voted_for_.end() &&
+        voted_for_[current_term_] != request->candidate_id()) {
         response->set_vote_granted(false);
         response->set_term(current_term_);
         done->Run();
@@ -274,6 +275,13 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* controller,
     return;
 }
 
+void InsNodeImpl::Delete(::google::protobuf::RpcController* controller,
+                        const ::galaxy::ins::DelRequest* request,
+                        ::galaxy::ins::DelResponse* response,
+                        ::google::protobuf::Closure* done) {
+    done->Run();
+    return;
+}
 
 } //namespace ins
 } //namespace galaxy
