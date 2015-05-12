@@ -55,7 +55,7 @@ private:
     void BroadCastHeartBeat();
     void CheckLeaderCrash();
     void TryToBeLeader();
-    int64_t GetRandomTimeout();
+    int32_t GetRandomTimeout();
 public:
     std::vector<std::string> members_;
 private:
