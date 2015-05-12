@@ -58,29 +58,42 @@ TEST(BinLogTest, SlotReadTest) {
     }
 }
 
+static int idx = 1;
+
 static void ReadUntilTest(const LogEntry& log_entry) {
-    static int i = 1;
     char key_buf[1024] = {'\0'};
     char value_buf[1024] = {'\0'};
-    snprintf(key_buf, sizeof(key_buf), "key_%d", i);
-    snprintf(value_buf, sizeof(value_buf), "value_%d", i);
+    snprintf(key_buf, sizeof(key_buf), "key_%d", idx);
+    snprintf(value_buf, sizeof(value_buf), "value_%d", idx);
     EXPECT_EQ(log_entry.key, std::string(key_buf));
     EXPECT_EQ(log_entry.value, std::string(value_buf));
-    EXPECT_EQ(log_entry.term, i);
-    EXPECT_EQ(log_entry.op, (i % 2 == 0) ? kPut : kDel);
-    i++;
+    EXPECT_EQ(log_entry.term, idx);
+    EXPECT_EQ(log_entry.op, (idx % 2 == 0) ? kPut : kDel);
+    idx++;
 }
 
 TEST(BinLogTest, SlotReadUntil) {
     BinLogger bin_logger("/tmp/");
+    idx = 1;
     bool not_beyond = bin_logger.ReadUntil(99, boost::bind(ReadUntilTest, _1));
     EXPECT_TRUE(not_beyond);
 }
 
 TEST(BinLogTest, SlotReadBeyond) {
     BinLogger bin_logger("/tmp/");
+    idx = 1;
     bool not_beyond = bin_logger.ReadUntil(100, boost::bind(ReadUntilTest, _1));
     EXPECT_FALSE(not_beyond);
+}
+
+TEST(BinLogTest, SlotTruncate) {
+    BinLogger bin_logger("/tmp/");
+    idx = 1;
+    EXPECT_EQ( bin_logger.GetLength(), 100 );
+    bin_logger.Truncate(49);
+    EXPECT_EQ( bin_logger.GetLength(), 50);
+    bool not_beyond = bin_logger.ReadUntil(49, boost::bind(ReadUntilTest, _1));
+    EXPECT_TRUE(not_beyond);
 }
 
 int main(int argc, char* argv[]) {
