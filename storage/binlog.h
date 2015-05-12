@@ -29,8 +29,7 @@ public:
     bool ReadUntil(int64_t end_slot_index, boost::function<void (const LogEntry& log_entry)>);
     bool ReadSlot(int64_t slot_index, LogEntry* log_entry);
     void AppendEntry(const LogEntry& log_entry);
-    void Truncate(int64_t start_slot_index);
-private:
+    void Truncate(int64_t trunc_slot_index);
     void DumpLogEntry(const LogEntry& log_entry, std::string* buf);
     void LoadLogEntry(const std::string& buf, LogEntry* log_entry);
 private:

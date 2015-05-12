@@ -266,16 +266,30 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* controller,
                       const ::galaxy::ins::PutRequest* request,
                       ::galaxy::ins::PutResponse* response,
                       ::google::protobuf::Closure* done) {
+    MutexLock lock(&mu_);
+    if (status_ == kFollower) {
+        response->set_success(false);
+        response->set_leader_id(current_leader_);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kCandidate) {
+        response->set_success(false);
+        response->set_leader_id("");
+        done->Run();
+        return;
+    }
+    
     const std::string& key = request->key();
     const std::string& value = request->value();
-    MutexLock lock(&mu_);
     LogEntry log_entry;
     log_entry.key = key;
     log_entry.value = value;
     log_entry.term = current_term_;
     log_entry.op = kPut;
-    binlogger_->AppendEntry(log_entry);
-    done->Run();
+    //binlogger_->AppendEntry(log_entry);
+    //done->Run();
     return;
 }
 

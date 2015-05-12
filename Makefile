@@ -54,11 +54,11 @@ CCP_FLAGS=
 
 
 #COMAKE UUID
-COMAKE_MD5=9d454b9bee8e11395b82e58150d02942  COMAKE
+COMAKE_MD5=948b245146b120530f5887c62356b57e  COMAKE
 
 
 .PHONY:all
-all:comake2_makefile_check ins ins_cli libins_sdk.a 
+all:comake2_makefile_check ins ins_cli libins_sdk.a binlog_test 
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mall[0m']"
 	@echo "make all done"
 
@@ -84,6 +84,8 @@ clean:ccpclean
 	rm -rf ./output/bin/ins_cli
 	rm -rf libins_sdk.a
 	rm -rf ./output/lib/libins_sdk.a
+	rm -rf binlog_test
+	rm -rf ./output/bin/binlog_test
 	rm -rf server/ins_ins_main.o
 	rm -rf server/ins_ins_node_impl.o
 	rm -rf server/ins_flags.o
@@ -105,6 +107,9 @@ clean:ccpclean
 	rm -rf proto/ins_node.pb.cc
 	rm -rf proto/ins_node.pb.h
 	rm -rf proto/ins_sdk_ins_node.pb.o
+	rm -rf storage/binlog_test_binlog.o
+	rm -rf storage/binlog_test_binlog_test.o
+	rm -rf common/binlog_test_logging.o
 
 .PHONY:dist
 dist:
@@ -247,6 +252,57 @@ libins_sdk.a:sdk/ins_sdk_ins_sdk.o \
 	mkdir -p ./output/lib
 	cp -f --link libins_sdk.a ./output/lib
 
+binlog_test:storage/binlog_test_binlog.o \
+  storage/binlog_test_binlog_test.o \
+  common/binlog_test_logging.o
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mbinlog_test[0m']"
+	$(CXX) storage/binlog_test_binlog.o \
+  storage/binlog_test_binlog_test.o \
+  common/binlog_test_logging.o -Xlinker "-("  ../../../public/sofa-pbrpc/libsofa-pbrpc.a \
+  ../../../third-64/boost/lib/libboost_atomic.a \
+  ../../../third-64/boost/lib/libboost_chrono.a \
+  ../../../third-64/boost/lib/libboost_container.a \
+  ../../../third-64/boost/lib/libboost_context.a \
+  ../../../third-64/boost/lib/libboost_coroutine.a \
+  ../../../third-64/boost/lib/libboost_date_time.a \
+  ../../../third-64/boost/lib/libboost_exception.a \
+  ../../../third-64/boost/lib/libboost_filesystem.a \
+  ../../../third-64/boost/lib/libboost_graph.a \
+  ../../../third-64/boost/lib/libboost_locale.a \
+  ../../../third-64/boost/lib/libboost_log_setup.a \
+  ../../../third-64/boost/lib/libboost_math_c99.a \
+  ../../../third-64/boost/lib/libboost_math_c99f.a \
+  ../../../third-64/boost/lib/libboost_math_c99l.a \
+  ../../../third-64/boost/lib/libboost_math_tr1.a \
+  ../../../third-64/boost/lib/libboost_math_tr1f.a \
+  ../../../third-64/boost/lib/libboost_math_tr1l.a \
+  ../../../third-64/boost/lib/libboost_prg_exec_monitor.a \
+  ../../../third-64/boost/lib/libboost_program_options.a \
+  ../../../third-64/boost/lib/libboost_python.a \
+  ../../../third-64/boost/lib/libboost_random.a \
+  ../../../third-64/boost/lib/libboost_regex.a \
+  ../../../third-64/boost/lib/libboost_serialization.a \
+  ../../../third-64/boost/lib/libboost_signals.a \
+  ../../../third-64/boost/lib/libboost_system.a \
+  ../../../third-64/boost/lib/libboost_test_exec_monitor.a \
+  ../../../third-64/boost/lib/libboost_thread.a \
+  ../../../third-64/boost/lib/libboost_timer.a \
+  ../../../third-64/boost/lib/libboost_unit_test_framework.a \
+  ../../../third-64/boost/lib/libboost_wave.a \
+  ../../../third-64/boost/lib/libboost_wserialization.a \
+  ../../../third-64/gflags/lib/libgflags.a \
+  ../../../third-64/gflags/lib/libgflags_nothreads.a \
+  ../../../third-64/gtest/lib/libgtest.a \
+  ../../../third-64/gtest/lib/libgtest_main.a \
+  ../../../third-64/protobuf/lib/libprotobuf-lite.a \
+  ../../../third-64/protobuf/lib/libprotobuf.a \
+  ../../../third-64/protobuf/lib/libprotoc.a \
+  ../../../third-64/snappy/lib/libsnappy.a -lpthread \
+  -lcrypto \
+  -lrt -Xlinker "-)" -o binlog_test
+	mkdir -p ./output/bin
+	cp -f --link binlog_test ./output/bin
+
 server/ins_ins_main.o:server/ins_main.cc \
   common/logging.h \
   server/ins_node_impl.h \
@@ -294,7 +350,9 @@ common/ins_logging.o:common/logging.cc \
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/ins_logging.o common/logging.cc
 
 storage/ins_binlog.o:storage/binlog.cc \
-  storage/binlog.h
+  storage/binlog.h \
+  common/asm_atomic.h \
+  common/logging.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/ins_binlog.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/ins_binlog.o storage/binlog.cc
 
@@ -380,6 +438,23 @@ proto/ins_sdk_ins_node.pb.o:proto/ins_node.pb.cc \
   proto/ins_node.pb.h
 	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_sdk_ins_node.pb.o[0m']"
 	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/ins_sdk_ins_node.pb.o proto/ins_node.pb.cc
+
+storage/binlog_test_binlog.o:storage/binlog.cc \
+  storage/binlog.h \
+  common/asm_atomic.h \
+  common/logging.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/binlog_test_binlog.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/binlog_test_binlog.o storage/binlog.cc
+
+storage/binlog_test_binlog_test.o:storage/binlog_test.cc \
+  storage/binlog.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/binlog_test_binlog_test.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/binlog_test_binlog_test.o storage/binlog_test.cc
+
+common/binlog_test_logging.o:common/logging.cc \
+  common/logging.h
+	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcommon/binlog_test_logging.o[0m']"
+	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/binlog_test_logging.o common/logging.cc
 
 endif #ifeq ($(shell uname -m),x86_64)
 
