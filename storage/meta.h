@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
+#include <stdint.h>
 
 namespace galaxy {
 namespace ins {
