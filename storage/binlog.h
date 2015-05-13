@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <boost/function.hpp>
+#include "common/mutex.h"
 
 namespace galaxy {
 namespace ins {
@@ -36,6 +37,7 @@ public:
 private:
     FILE* log_data_file_;
     FILE* log_index_file_;
+    Mutex mu_;
 };
 
 } //namespace ins 

@@ -50,12 +50,14 @@ bool BinLogger::ReadUntil(int64_t end_slot_index,
 }
 
 int64_t BinLogger::GetLength() {
+    MutexLock lock(&mu_);
     fseek(log_index_file_, 0 , SEEK_END);
     int64_t index_file_size = ftell(log_index_file_);
     return index_file_size / sizeof(int64_t);
 }
 
 bool BinLogger::ReadSlot(int64_t slot_index, LogEntry* log_entry) {
+    MutexLock lock(&mu_);
     int64_t offset = slot_index * sizeof(int64_t);
     if (fseek(log_index_file_, offset, SEEK_SET) < 0) {
         LOG(FATAL, "seek file failed: %s", log_index_file_name.c_str());
@@ -86,6 +88,7 @@ bool BinLogger::ReadSlot(int64_t slot_index, LogEntry* log_entry) {
 }
 
 void BinLogger::AppendEntry(const LogEntry& log_entry) {
+    MutexLock lock(&mu_);
     std::string buf;
     DumpLogEntry(log_entry, &buf);
     int64_t entry_len = buf.size();

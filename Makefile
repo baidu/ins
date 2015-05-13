@@ -54,7 +54,7 @@ CCP_FLAGS=
 
 
 #COMAKE UUID
-COMAKE_MD5=948b245146b120530f5887c62356b57e  COMAKE
+COMAKE_MD5=669ea953df45924325145f40a5db7993  COMAKE
 
 
 .PHONY:all
@@ -183,7 +183,8 @@ ins:server/ins_ins_main.o \
   ../../../third-64/protobuf/lib/libprotoc.a \
   ../../../third-64/snappy/lib/libsnappy.a -lpthread \
   -lcrypto \
-  -lrt -Xlinker "-)" -o ins
+  -lrt \
+  -lz -Xlinker "-)" -o ins
 	mkdir -p ./output/bin
 	cp -f --link ins ./output/bin
 
@@ -238,7 +239,8 @@ ins_cli:sdk/ins_cli_ins_sdk.o \
   ../../../third-64/protobuf/lib/libprotoc.a \
   ../../../third-64/snappy/lib/libsnappy.a -lpthread \
   -lcrypto \
-  -lrt -Xlinker "-)" -o ins_cli
+  -lrt \
+  -lz -Xlinker "-)" -o ins_cli
 	mkdir -p ./output/bin
 	cp -f --link ins_cli ./output/bin
 
@@ -299,7 +301,8 @@ binlog_test:storage/binlog_test_binlog.o \
   ../../../third-64/protobuf/lib/libprotoc.a \
   ../../../third-64/snappy/lib/libsnappy.a -lpthread \
   -lcrypto \
-  -lrt -Xlinker "-)" -o binlog_test
+  -lrt \
+  -lz -Xlinker "-)" -o binlog_test
 	mkdir -p ./output/bin
 	cp -f --link binlog_test ./output/bin
 

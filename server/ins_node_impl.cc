@@ -6,6 +6,7 @@
 #include <boost/function.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gflags/gflags.h>
+#include "common/this_thread.h"
 #include "storage/meta.h"
 #include "storage/binlog.h"
 
@@ -32,7 +33,9 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                               meta_(NULL),
                               binlogger_(NULL),
                               replicatter_(FLAGS_max_cluster_size),
-                              committer_(FLAGS_max_cluster_size) {
+                              committer_(FLAGS_max_cluster_size),
+			      replication_cond_(&mu_),
+                              commit_cond_(&mu_) {
     srand(time(NULL));
     std::vector<std::string>::const_iterator it = members.begin();
     bool self_in_cluster = false;
@@ -163,6 +166,14 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
                 LOG(INFO, "I win the election, term:%d", current_term_);
                 heart_beat_pool_.AddTask(
                     boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
+                std::vector<std::string>::iterator it = members_.begin();
+                for(; it!= members_.end(); it++) {
+                    if (*it == self_id_) {
+                        continue;
+                    }
+                    replicatter_.AddTask(boost::bind(&InsNodeImpl::ReplicateLog,
+                                                     this, *it));
+                }
             }
         } else {
             if (their_term > current_term_) {
@@ -310,9 +321,71 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* controller,
     log_entry.value = value;
     log_entry.term = current_term_;
     log_entry.op = kPut;
-    //binlogger_->AppendEntry(log_entry);
-    //done->Run();
+    binlogger_->AppendEntry(log_entry);
+    done->Run();
     return;
+}
+
+void InsNodeImpl::ReplicateLog(std::string follower_id) {
+    MutexLock lock(&mu_);
+    while (status_ == kLeader) {
+        while (binlogger_->GetLength() <= next_index_[follower_id]) {
+            LOG(INFO, "no new log entry for %s", follower_id.c_str());
+            replication_cond_.Wait();
+        }
+        int64_t index = next_index_[follower_id];
+        int64_t cur_term = current_term_;
+        int64_t prev_index = index - 1;
+        int64_t prev_term = -1;
+        std::string leader_id = self_id_;
+        LogEntry log_entry, prev_log_entry;
+        binlogger_->ReadSlot(index, &log_entry);
+        if (prev_index > -1) {
+            binlogger_->ReadSlot(prev_index, &prev_log_entry);
+        }
+        mu_.Unlock();
+        prev_term = prev_log_entry.term;
+        InsNode_Stub* stub;
+        rpc_client_.GetStub(follower_id, &stub);
+        galaxy::ins::AppendEntriesRequest request;
+        galaxy::ins::AppendEntriesResponse response;
+        request.set_term(cur_term);
+        request.set_leader_id(leader_id);
+        request.set_prev_log_index(prev_index);
+        request.set_prev_log_term(prev_term);
+        request.set_leader_commit_index(commit_index_);
+        galaxy::ins::Entry * entry = request.add_entries();
+        entry->set_term(log_entry.term);
+        entry->set_key(log_entry.key);
+        entry->set_value(log_entry.value);
+        bool ok = rpc_client_.SendRequest(stub, 
+                                          &InsNode_Stub::AppendEntries,
+                                          &request,
+                                          &response,
+                                          2, 1);
+        mu_.Lock();
+        if (status_ != kLeader) {
+            break;
+        }
+        if (ok) {
+            if (response.success()) { // log replicated
+                next_index_[follower_id] = index + 1;
+                match_index_[follower_id] = index;
+            } else { // (index, term ) miss match
+                next_index_[follower_id] -= 1;
+                LOG(INFO, "adjust next_index of %s to %ld",
+                    follower_id.c_str(), 
+                    next_index_[follower_id]);
+                if (next_index_[follower_id] < 0 ){
+                    next_index_[follower_id] = 0;
+                }
+            }
+        } else { //rpc error;
+            LOG(FATAL, "faild to send replicate-rpc to %s ", 
+                follower_id.c_str());
+            ThisThread::Sleep(20);
+        }
+    }
 }
 
 void InsNodeImpl::Get(::google::protobuf::RpcController* controller,

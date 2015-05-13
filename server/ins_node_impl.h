@@ -56,6 +56,7 @@ private:
     void CheckLeaderCrash();
     void TryToBeLeader();
     int32_t GetRandomTimeout();
+    void ReplicateLog(std::string follower_id);
 public:
     std::vector<std::string> members_;
 private:
@@ -74,9 +75,17 @@ private:
     int32_t heartbeat_count_;
     Meta * meta_;
     BinLogger* binlogger_;
+    //for leaders
     std::map<std::string, std::string> data_map_;
     ThreadPool replicatter_;
     ThreadPool committer_;
+    std::map<std::string, int64_t> next_index_;
+    std::map<std::string, int64_t> match_index_;
+    CondVar replication_cond_;
+    // for all servers
+    int64_t commit_index_;
+    int64_t last_applied_index_;
+    CondVar commit_cond_;
 };
 
 void GetHostName(std::string* hostname);
