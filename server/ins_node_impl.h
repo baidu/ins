@@ -19,7 +19,7 @@ class BinLogger;
 class InsNodeImpl : public InsNode {
 public:
    
-    InsNodeImpl(std::string& server_id);
+    InsNodeImpl(std::string& server_id, const std::vector<std::string>& members);
     virtual ~InsNodeImpl();
     void AppendEntries(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::AppendEntriesRequest* request,
@@ -64,7 +64,6 @@ private:
     std::map<int64_t, std::string> voted_for_;
     std::map<int64_t, uint32_t> vote_grant_;
     std::vector<galaxy::ins::Entry> binlog_;
-    std::map<std::string, std::string> states_; 
     galaxy::RpcClient rpc_client_;
     NodeStatus status_;
     Mutex mu_;
@@ -75,6 +74,9 @@ private:
     int32_t heartbeat_count_;
     Meta * meta_;
     BinLogger* binlogger_;
+    std::map<std::string, std::string> data_map_;
+    ThreadPool replicatter_;
+    ThreadPool committer_;
 };
 
 void GetHostName(std::string* hostname);

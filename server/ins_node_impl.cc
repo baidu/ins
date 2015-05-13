@@ -10,6 +10,7 @@
 #include "storage/binlog.h"
 
 DECLARE_string(ins_data_dir);
+DECLARE_int32(max_cluster_size);
 
 namespace galaxy {
 namespace ins {
@@ -22,13 +23,34 @@ void GetHostName(std::string* hostname) {
   *hostname = buf.nodename;
 }
 
-InsNodeImpl::InsNodeImpl (std::string& server_id) : self_id_(server_id),
-                                                    current_term_(0),
-                                                    status_(kFollower),
-                                                    heartbeat_count_(0),
-                                                    meta_(NULL),
-                                                    binlogger_(NULL) {
+InsNodeImpl::InsNodeImpl (std::string& server_id,
+                          const std::vector<std::string>& members
+                          ) : self_id_(server_id),
+                              current_term_(0),
+                              status_(kFollower),
+                              heartbeat_count_(0),
+                              meta_(NULL),
+                              binlogger_(NULL),
+                              replicatter_(FLAGS_max_cluster_size),
+                              committer_(FLAGS_max_cluster_size) {
     srand(time(NULL));
+    std::vector<std::string>::const_iterator it = members.begin();
+    bool self_in_cluster = false;
+    for(; it != members.end(); it++) {
+        members_.push_back(*it);
+        if (self_id_ == *it) {
+            LOG(INFO, "cluster member[Self]: %s", it->c_str());
+            self_in_cluster = true;
+        } else {
+            LOG(INFO, "cluster member: %s", it->c_str());
+        }
+    }
+    if (!self_in_cluster) {
+        LOG(FATAL, "this node is not in cluster membership,"
+                   " please check your configuration. self: %s", self_id_.c_str());
+        exit(-1);
+    }
+
     std::string sub_dir = self_id_;
     boost::replace_all(sub_dir, ":", "_");
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
@@ -280,7 +302,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* controller,
         done->Run();
         return;
     }
-    
+
     const std::string& key = request->key();
     const std::string& value = request->value();
     LogEntry log_entry;

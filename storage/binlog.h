@@ -11,7 +11,8 @@ namespace ins {
 
 enum LogOperation {
     kPut = 1,
-    kDel = 2
+    kDel = 2,
+    kNop = 10
 };
 
 struct LogEntry {
