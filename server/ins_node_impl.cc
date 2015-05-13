@@ -66,7 +66,7 @@ InsNodeImpl::~InsNodeImpl() {
     delete binlogger_;
 }
 
-int64_t InsNodeImpl::GetRandomTimeout() {
+int32_t InsNodeImpl::GetRandomTimeout() {
     int32_t timeout = 150 + (int32_t) (300.0 * rand()/(RAND_MAX+1.0));
     return timeout;
 }
