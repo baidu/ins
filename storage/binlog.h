@@ -6,15 +6,11 @@
 #include <stdlib.h>
 #include <boost/function.hpp>
 #include "common/mutex.h"
+#include "proto/ins_node.pb.h"
 
 namespace galaxy {
 namespace ins {
 
-enum LogOperation {
-    kPut = 1,
-    kDel = 2,
-    kNop = 10
-};
 
 struct LogEntry {
     LogOperation op;

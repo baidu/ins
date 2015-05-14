@@ -39,7 +39,7 @@ ins_sdk_sources = 'sdk/ins_sdk.cc common/logging.cc proto/ins_node.proto'
 
 ins_cli_sources = 'sdk/ins_sdk.cc proto/ins_node.proto common/logging.cc sdk/ins_cli.cc server/flags.cc'
 
-binlog_test_sources = 'storage/binlog.cc storage/binlog_test.cc common/logging.cc' 
+binlog_test_sources = 'storage/binlog.cc storage/binlog_test.cc common/logging.cc proto/ins_node.proto' 
 
 Application('ins', Sources(ins_sources))
 Application('ins_cli', Sources(ins_cli_sources))

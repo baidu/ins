@@ -58,6 +58,7 @@ const ::google::protobuf::Descriptor* ShowStatusResponse_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   ShowStatusResponse_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* NodeStatus_descriptor_ = NULL;
+const ::google::protobuf::EnumDescriptor* LogOperation_descriptor_ = NULL;
 const ::google::protobuf::ServiceDescriptor* InsNode_descriptor_ = NULL;
 
 }  // namespace
@@ -70,10 +71,11 @@ void protobuf_AssignDesc_ins_5fnode_2eproto() {
       "ins_node.proto");
   GOOGLE_CHECK(file != NULL);
   Entry_descriptor_ = file->message_type(0);
-  static const int Entry_offsets_[3] = {
+  static const int Entry_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Entry, key_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Entry, value_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Entry, term_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Entry, op_),
   };
   Entry_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -282,6 +284,7 @@ void protobuf_AssignDesc_ins_5fnode_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ShowStatusResponse));
   NodeStatus_descriptor_ = file->enum_type(0);
+  LogOperation_descriptor_ = file->enum_type(1);
   InsNode_descriptor_ = file->service(0);
 }
 
@@ -361,39 +364,41 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\016ins_node.proto\022\ngalaxy.ins\"1\n\005Entry\022\013\n"
-    "\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\022\014\n\004term\030\003 \002(\003\""
-    "\247\001\n\024AppendEntriesRequest\022\014\n\004term\030\001 \002(\003\022\021"
-    "\n\tleader_id\030\002 \002(\t\022\026\n\016prev_log_index\030\003 \001("
-    "\003\022\025\n\rprev_log_term\030\004 \001(\003\022\033\n\023leader_commi"
-    "t_index\030\005 \001(\003\022\"\n\007entries\030\006 \003(\0132\021.galaxy."
-    "ins.Entry\">\n\025AppendEntriesResponse\022\024\n\014cu"
-    "rrent_term\030\001 \002(\003\022\017\n\007success\030\002 \002(\010\"`\n\013Vot"
-    "eRequest\022\014\n\004term\030\001 \002(\003\022\024\n\014candidate_id\030\002"
-    " \002(\t\022\026\n\016last_log_index\030\003 \001(\003\022\025\n\rlast_log"
-    "_term\030\004 \001(\003\"2\n\014VoteResponse\022\014\n\004term\030\001 \002("
-    "\003\022\024\n\014vote_granted\030\002 \002(\010\"(\n\nPutRequest\022\013\n"
-    "\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\"1\n\013PutResponse"
-    "\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001(\t\"\031\n\n"
-    "GetRequest\022\013\n\003key\030\001 \002(\t\"<\n\013GetResponse\022\013"
-    "\n\003hit\030\001 \002(\010\022\r\n\005value\030\002 \002(\t\022\021\n\tleader_id\030"
-    "\003 \001(\t\"\031\n\nDelRequest\022\013\n\003key\030\001 \002(\t\"1\n\013DelR"
-    "esponse\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 "
-    "\001(\t\"\023\n\021ShowStatusRequest\"J\n\022ShowStatusRe"
-    "sponse\022&\n\006status\030\001 \002(\0162\026.galaxy.ins.Node"
-    "Status\022\014\n\004term\030\002 \002(\003*F\n\nNodeStatus\022\013\n\007kL"
-    "eader\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollower\020\002\022\014"
-    "\n\010kOffline\020\0032\222\003\n\007InsNode\022T\n\rAppendEntrie"
-    "s\022 .galaxy.ins.AppendEntriesRequest\032!.ga"
-    "laxy.ins.AppendEntriesResponse\0229\n\004Vote\022\027"
-    ".galaxy.ins.VoteRequest\032\030.galaxy.ins.Vot"
-    "eResponse\0226\n\003Put\022\026.galaxy.ins.PutRequest"
-    "\032\027.galaxy.ins.PutResponse\0226\n\003Get\022\026.galax"
-    "y.ins.GetRequest\032\027.galaxy.ins.GetRespons"
-    "e\0229\n\006Delete\022\026.galaxy.ins.DelRequest\032\027.ga"
-    "laxy.ins.DelResponse\022K\n\nShowStatus\022\035.gal"
-    "axy.ins.ShowStatusRequest\032\036.galaxy.ins.S"
-    "howStatusResponseB\003\200\001\001", 1302);
+    "\n\016ins_node.proto\022\ngalaxy.ins\"W\n\005Entry\022\013\n"
+    "\003key\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\022\014\n\004term\030\003 \002(\003\022"
+    "$\n\002op\030\004 \001(\0162\030.galaxy.ins.LogOperation\"\247\001"
+    "\n\024AppendEntriesRequest\022\014\n\004term\030\001 \002(\003\022\021\n\t"
+    "leader_id\030\002 \002(\t\022\026\n\016prev_log_index\030\003 \001(\003\022"
+    "\025\n\rprev_log_term\030\004 \001(\003\022\033\n\023leader_commit_"
+    "index\030\005 \001(\003\022\"\n\007entries\030\006 \003(\0132\021.galaxy.in"
+    "s.Entry\">\n\025AppendEntriesResponse\022\024\n\014curr"
+    "ent_term\030\001 \002(\003\022\017\n\007success\030\002 \002(\010\"`\n\013VoteR"
+    "equest\022\014\n\004term\030\001 \002(\003\022\024\n\014candidate_id\030\002 \002"
+    "(\t\022\026\n\016last_log_index\030\003 \001(\003\022\025\n\rlast_log_t"
+    "erm\030\004 \001(\003\"2\n\014VoteResponse\022\014\n\004term\030\001 \002(\003\022"
+    "\024\n\014vote_granted\030\002 \002(\010\"(\n\nPutRequest\022\013\n\003k"
+    "ey\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\"1\n\013PutResponse\022\017"
+    "\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001(\t\"\031\n\nGe"
+    "tRequest\022\013\n\003key\030\001 \002(\t\"<\n\013GetResponse\022\013\n\003"
+    "hit\030\001 \002(\010\022\r\n\005value\030\002 \002(\t\022\021\n\tleader_id\030\003 "
+    "\001(\t\"\031\n\nDelRequest\022\013\n\003key\030\001 \002(\t\"1\n\013DelRes"
+    "ponse\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001("
+    "\t\"\023\n\021ShowStatusRequest\"J\n\022ShowStatusResp"
+    "onse\022&\n\006status\030\001 \002(\0162\026.galaxy.ins.NodeSt"
+    "atus\022\014\n\004term\030\002 \002(\003*F\n\nNodeStatus\022\013\n\007kLea"
+    "der\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollower\020\002\022\014\n\010"
+    "kOffline\020\003*,\n\014LogOperation\022\010\n\004kPut\020\001\022\010\n\004"
+    "kDel\020\002\022\010\n\004kNop\020\n2\222\003\n\007InsNode\022T\n\rAppendEn"
+    "tries\022 .galaxy.ins.AppendEntriesRequest\032"
+    "!.galaxy.ins.AppendEntriesResponse\0229\n\004Vo"
+    "te\022\027.galaxy.ins.VoteRequest\032\030.galaxy.ins"
+    ".VoteResponse\0226\n\003Put\022\026.galaxy.ins.PutReq"
+    "uest\032\027.galaxy.ins.PutResponse\0226\n\003Get\022\026.g"
+    "alaxy.ins.GetRequest\032\027.galaxy.ins.GetRes"
+    "ponse\0229\n\006Delete\022\026.galaxy.ins.DelRequest\032"
+    "\027.galaxy.ins.DelResponse\022K\n\nShowStatus\022\035"
+    ".galaxy.ins.ShowStatusRequest\032\036.galaxy.i"
+    "ns.ShowStatusResponseB\003\200\001\001", 1386);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "ins_node.proto", &protobuf_RegisterTypes);
   Entry::default_instance_ = new Entry();
@@ -448,6 +453,21 @@ bool NodeStatus_IsValid(int value) {
   }
 }
 
+const ::google::protobuf::EnumDescriptor* LogOperation_descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return LogOperation_descriptor_;
+}
+bool LogOperation_IsValid(int value) {
+  switch(value) {
+    case 1:
+    case 2:
+    case 10:
+      return true;
+    default:
+      return false;
+  }
+}
+
 
 // ===================================================================
 
@@ -455,6 +475,7 @@ bool NodeStatus_IsValid(int value) {
 const int Entry::kKeyFieldNumber;
 const int Entry::kValueFieldNumber;
 const int Entry::kTermFieldNumber;
+const int Entry::kOpFieldNumber;
 #endif  // !_MSC_VER
 
 Entry::Entry()
@@ -476,6 +497,7 @@ void Entry::SharedCtor() {
   key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   term_ = GOOGLE_LONGLONG(0);
+  op_ = 1;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -527,6 +549,7 @@ void Entry::Clear() {
       }
     }
     term_ = GOOGLE_LONGLONG(0);
+    op_ = 1;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -583,6 +606,27 @@ bool Entry::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(32)) goto parse_op;
+        break;
+      }
+      
+      // optional .galaxy.ins.LogOperation op = 4;
+      case 4: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_op:
+          int value;
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
+                 input, &value)));
+          if (galaxy::ins::LogOperation_IsValid(value)) {
+            set_op(static_cast< galaxy::ins::LogOperation >(value));
+          } else {
+            mutable_unknown_fields()->AddVarint(4, value);
+          }
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -628,6 +672,12 @@ void Entry::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteInt64(3, this->term(), output);
   }
   
+  // optional .galaxy.ins.LogOperation op = 4;
+  if (has_op()) {
+    ::google::protobuf::internal::WireFormatLite::WriteEnum(
+      4, this->op(), output);
+  }
+  
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -661,6 +711,12 @@ void Entry::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(3, this->term(), target);
   }
   
+  // optional .galaxy.ins.LogOperation op = 4;
+  if (has_op()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
+      4, this->op(), target);
+  }
+  
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -691,6 +747,12 @@ int Entry::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int64Size(
           this->term());
+    }
+    
+    // optional .galaxy.ins.LogOperation op = 4;
+    if (has_op()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::EnumSize(this->op());
     }
     
   }
@@ -729,6 +791,9 @@ void Entry::MergeFrom(const Entry& from) {
     if (from.has_term()) {
       set_term(from.term());
     }
+    if (from.has_op()) {
+      set_op(from.op());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -756,6 +821,7 @@ void Entry::Swap(Entry* other) {
     std::swap(key_, other->key_);
     std::swap(value_, other->value_);
     std::swap(term_, other->term_);
+    std::swap(op_, other->op_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

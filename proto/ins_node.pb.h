@@ -69,6 +69,26 @@ inline bool NodeStatus_Parse(
   return ::google::protobuf::internal::ParseNamedEnum<NodeStatus>(
     NodeStatus_descriptor(), name, value);
 }
+enum LogOperation {
+  kPut = 1,
+  kDel = 2,
+  kNop = 10
+};
+bool LogOperation_IsValid(int value);
+const LogOperation LogOperation_MIN = kPut;
+const LogOperation LogOperation_MAX = kNop;
+const int LogOperation_ARRAYSIZE = LogOperation_MAX + 1;
+
+const ::google::protobuf::EnumDescriptor* LogOperation_descriptor();
+inline const ::std::string& LogOperation_Name(LogOperation value) {
+  return ::google::protobuf::internal::NameOfEnum(
+    LogOperation_descriptor(), value);
+}
+inline bool LogOperation_Parse(
+    const ::std::string& name, LogOperation* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<LogOperation>(
+    LogOperation_descriptor(), name, value);
+}
 // ===================================================================
 
 class Entry : public ::google::protobuf::Message {
@@ -154,6 +174,13 @@ class Entry : public ::google::protobuf::Message {
   inline ::google::protobuf::int64 term() const;
   inline void set_term(::google::protobuf::int64 value);
   
+  // optional .galaxy.ins.LogOperation op = 4;
+  inline bool has_op() const;
+  inline void clear_op();
+  static const int kOpFieldNumber = 4;
+  inline galaxy::ins::LogOperation op() const;
+  inline void set_op(galaxy::ins::LogOperation value);
+  
   // @@protoc_insertion_point(class_scope:galaxy.ins.Entry)
  private:
   inline void set_has_key();
@@ -162,15 +189,18 @@ class Entry : public ::google::protobuf::Message {
   inline void clear_has_value();
   inline void set_has_term();
   inline void clear_has_term();
+  inline void set_has_op();
+  inline void clear_has_op();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::std::string* key_;
   ::std::string* value_;
   ::google::protobuf::int64 term_;
+  int op_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
   
   friend void  protobuf_AddDesc_ins_5fnode_2eproto();
   friend void protobuf_AssignDesc_ins_5fnode_2eproto();
@@ -1600,6 +1630,29 @@ inline void Entry::set_term(::google::protobuf::int64 value) {
   term_ = value;
 }
 
+// optional .galaxy.ins.LogOperation op = 4;
+inline bool Entry::has_op() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void Entry::set_has_op() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void Entry::clear_has_op() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void Entry::clear_op() {
+  op_ = 1;
+  clear_has_op();
+}
+inline galaxy::ins::LogOperation Entry::op() const {
+  return static_cast< galaxy::ins::LogOperation >(op_);
+}
+inline void Entry::set_op(galaxy::ins::LogOperation value) {
+  GOOGLE_DCHECK(galaxy::ins::LogOperation_IsValid(value));
+  set_has_op();
+  op_ = value;
+}
+
 // -------------------------------------------------------------------
 
 // AppendEntriesRequest
@@ -2619,6 +2672,10 @@ namespace protobuf {
 template <>
 inline const EnumDescriptor* GetEnumDescriptor< galaxy::ins::NodeStatus>() {
   return galaxy::ins::NodeStatus_descriptor();
+}
+template <>
+inline const EnumDescriptor* GetEnumDescriptor< galaxy::ins::LogOperation>() {
+  return galaxy::ins::LogOperation_descriptor();
 }
 
 }  // namespace google

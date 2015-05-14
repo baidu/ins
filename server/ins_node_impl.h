@@ -56,7 +56,9 @@ private:
     void CheckLeaderCrash();
     void TryToBeLeader();
     int32_t GetRandomTimeout();
+    void TransToFollower(const char* msg, int64_t new_term);
     void ReplicateLog(std::string follower_id);
+    void StartReplicateLog();
 public:
     std::vector<std::string> members_;
 private:

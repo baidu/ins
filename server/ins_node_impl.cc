@@ -34,7 +34,7 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                               binlogger_(NULL),
                               replicatter_(FLAGS_max_cluster_size),
                               committer_(FLAGS_max_cluster_size),
-			      replication_cond_(&mu_),
+                              replication_cond_(&mu_),
                               commit_cond_(&mu_) {
     srand(time(NULL));
     std::vector<std::string>::const_iterator it = members.begin();
@@ -94,6 +94,17 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* controller,
     done->Run();
 }
 
+void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
+    mu_.AssertHeld();
+    LOG(INFO, "%s, my term is outdated(%ld < %ld), trans to follower",
+        msg, 
+        current_term_, 
+        new_term);
+    status_ = kFollower;
+    current_term_ = new_term;
+    meta_->WriteCurrentTerm(current_term_);
+}
+
 void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* request,
                                   ::galaxy::ins::AppendEntriesResponse* response,
                                   bool failed, int error) {
@@ -106,11 +117,8 @@ void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* re
     }
     if (!failed) {
         if (response_ptr->current_term() > current_term_) {
-            LOG(INFO, "HearBeatCallback, my term is outdated(%ld < %ld), trans to follower",
-                current_term_, response->current_term());
-            status_ = kFollower;
-            current_term_ = response_ptr->current_term();
-            meta_->WriteCurrentTerm(current_term_);
+            TransToFollower("InsNodeImpl::HearBeatCallback", 
+                            response_ptr->current_term());
         }
         else {
             //LOG(INFO, "I am the leader at term: %ld", current_term_);
@@ -148,6 +156,26 @@ void InsNodeImpl::BroadCastHeartBeat() {
     heart_beat_pool_.DelayTask(50, boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
 }
 
+void InsNodeImpl::StartReplicateLog() {
+    mu_.AssertHeld();
+    std::vector<std::string>::iterator it = members_.begin();
+    for(; it!= members_.end(); it++) {
+        if (*it == self_id_) {
+            continue;
+        }
+        std::string follower_id = *it;
+        next_index_[follower_id] = binlogger_->GetLength();
+        match_index_[follower_id] = -1;
+        replicatter_.AddTask(boost::bind(&InsNodeImpl::ReplicateLog,
+                                         this, *it));
+    }
+    LogEntry log_entry;
+    log_entry.key = "FirstTask";
+    log_entry.value = "";
+    log_entry.term = kNop;
+    binlogger_->AppendEntry(log_entry);
+}
+
 void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
                                ::galaxy::ins::VoteResponse* response,
                                bool failed, int error) {
@@ -166,22 +194,11 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
                 LOG(INFO, "I win the election, term:%d", current_term_);
                 heart_beat_pool_.AddTask(
                     boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
-                std::vector<std::string>::iterator it = members_.begin();
-                for(; it!= members_.end(); it++) {
-                    if (*it == self_id_) {
-                        continue;
-                    }
-                    replicatter_.AddTask(boost::bind(&InsNodeImpl::ReplicateLog,
-                                                     this, *it));
-                }
+                StartReplicateLog();
             }
         } else {
             if (their_term > current_term_) {
-                LOG(INFO, "VoteCallback, my term is outdated(%ld < %ld), trans to follower",
-                    current_term_, their_term);
-                current_term_ = their_term;
-                meta_->WriteCurrentTerm(current_term_);
-                status_ =  kFollower;
+                TransToFollower("InsNodeImpl::VoteCallback", their_term);
             }
         }
     }
@@ -252,6 +269,14 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
     if (status_ == kFollower) {
         current_leader_ = request->leader_id();
         heartbeat_count_++;
+        for (size_t i=0; i < request->entries_size(); i++) {
+            LogEntry log_entry;
+            log_entry.op = request->entries(i).op();
+            log_entry.key = request->entries(i).key();
+            log_entry.value = request->entries(i).value();
+            log_entry.term = request->entries(i).term();
+            binlogger_->AppendEntry(log_entry);
+        }
         response->set_current_term(current_term_);
         response->set_success(true);
         done->Run();
@@ -274,11 +299,7 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* controller,
         return;
     }
     if (request->term() > current_term_) {
-        LOG(INFO, "Vote, my term is outdated (%ld < %ld), trans to follower",
-            current_term_, request->term());
-        status_ = kFollower;
-        current_term_ = request->term();
-        meta_->WriteCurrentTerm(current_term_);
+        TransToFollower("InsNodeImpl::Vote", request->term());
     }
     if (voted_for_.find(current_term_) != voted_for_.end() &&
         voted_for_[current_term_] != request->candidate_id()) {
@@ -333,6 +354,9 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             LOG(INFO, "no new log entry for %s", follower_id.c_str());
             replication_cond_.Wait();
         }
+        if (status_ != kLeader) {
+            break;
+        }
         int64_t index = next_index_[follower_id];
         int64_t cur_term = current_term_;
         int64_t prev_index = index - 1;
@@ -364,6 +388,10 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                                           &response,
                                           2, 1);
         mu_.Lock();
+        if (response.current_term() > current_term_) {
+            TransToFollower("InsNodeImpl::ReplicateLog", 
+                            response.current_term());
+        }
         if (status_ != kLeader) {
             break;
         }
@@ -381,6 +409,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                 }
             }
         } else { //rpc error;
+            mu_.Unlock();
             LOG(FATAL, "faild to send replicate-rpc to %s ", 
                 follower_id.c_str());
             ThisThread::Sleep(20);

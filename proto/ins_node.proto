@@ -9,10 +9,17 @@ enum NodeStatus {
     kOffline = 3;  
 }
 
+enum LogOperation {
+    kPut = 1;
+    kDel = 2;
+    kNop = 10;
+};
+
 message Entry {
     required string key = 1;
     required string value = 2;
     required int64 term = 3;
+    optional LogOperation op = 4;
 }
 
 message AppendEntriesRequest {
