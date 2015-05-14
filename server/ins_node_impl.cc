@@ -145,6 +145,7 @@ void InsNodeImpl::BroadCastHeartBeat() {
                     new ::galaxy::ins::AppendEntriesResponse();
         request->set_term(current_term_);
         request->set_leader_id(self_id_);
+
         boost::function<void (const ::galaxy::ins::AppendEntriesRequest*,
                         ::galaxy::ins::AppendEntriesResponse*,
                         bool, int) > callback;
@@ -172,7 +173,8 @@ void InsNodeImpl::StartReplicateLog() {
     LogEntry log_entry;
     log_entry.key = "FirstTask";
     log_entry.value = "";
-    log_entry.term = kNop;
+    log_entry.term = current_term_;
+    log_entry.op = kNop;
     binlogger_->AppendEntry(log_entry);
 }
 
@@ -204,6 +206,18 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
     }
 }
 
+void InsNodeImpl::GetLastLogIndexAndTerm(int64_t* last_log_index,
+                                         int64_t* last_log_term) {
+    mu_.AssertHeld();
+    *last_log_index = binlogger_->GetLength() - 1;
+    *last_log_term = -1;
+    if (*last_log_index >= 0) {
+        LogEntry log_entry;
+        binlogger_->ReadSlot(*last_log_index, &log_entry);
+        *last_log_term = log_entry.term;
+    }
+}
+
 void InsNodeImpl::TryToBeLeader() {
     MutexLock lock(&mu_);
     if (members_.size() == 1) { //single node mode
@@ -227,6 +241,9 @@ void InsNodeImpl::TryToBeLeader() {
     meta_->WriteVotedFor(current_term_, self_id_);
     vote_grant_[current_term_] ++;
     std::vector<std::string>::iterator it = members_.begin();
+    int64_t last_log_index;
+    int64_t last_log_term;
+    GetLastLogIndexAndTerm(&last_log_index, &last_log_term);
     LOG(INFO, "broad cast vote request to cluster, new term: %ld", current_term_);
     for(; it!= members_.end(); it++) {
         if (*it == self_id_) {
@@ -238,6 +255,8 @@ void InsNodeImpl::TryToBeLeader() {
         ::galaxy::ins::VoteResponse* response = new ::galaxy::ins::VoteResponse();
         request->set_candidate_id(self_id_);
         request->set_term(current_term_);
+        request->set_last_log_index(last_log_index);
+        request->set_last_log_term(last_log_term);
         boost::function<void (const ::galaxy::ins::VoteRequest* ,
                               ::galaxy::ins::VoteResponse* ,
                               bool, int ) > callback;
@@ -263,12 +282,37 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
     } else {
         response->set_current_term(current_term_);
         response->set_success(false);
+        LOG(DEBUG, "term is outdated");
         done->Run();
         return;
     }
+
     if (status_ == kFollower) {
         current_leader_ = request->leader_id();
         heartbeat_count_++;
+        if (request->entries_size() > 0) {
+            if (request->prev_log_index() >= binlogger_->GetLength()){
+                response->set_current_term(current_term_);
+                response->set_success(false);
+                LOG(DEBUG, "prev log is beyond");
+                done->Run();
+                return;
+            }
+            if (request->prev_log_index() >= 0) {
+                LogEntry prev_log_entry;
+                binlogger_->ReadSlot(request->prev_log_index(),
+                                     &prev_log_entry);
+                int64_t prev_log_term = prev_log_entry.term;
+                if (prev_log_term != request->prev_log_term()) {
+                    binlogger_->Truncate(binlogger_->GetLength() - 2);
+                    response->set_current_term(current_term_);
+                    response->set_success(false);
+                    LOG(DEBUG, "term not match");
+                    done->Run();
+                    return;
+                }
+            }
+        }
         for (size_t i=0; i < request->entries_size(); i++) {
             LogEntry log_entry;
             log_entry.op = request->entries(i).op();
@@ -298,6 +342,23 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* controller,
         done->Run();
         return;
     }
+    int64_t last_log_index;
+    int64_t last_log_term;
+    GetLastLogIndexAndTerm(&last_log_index, &last_log_term);
+    if (request->last_log_index() < last_log_index) {
+        response->set_vote_granted(false);
+        response->set_term(current_term_);
+        done->Run();
+        return;
+    } else if(request->last_log_index() == last_log_index) {
+        if (request->last_log_term() < last_log_term) {
+            response->set_vote_granted(false);
+            response->set_term(current_term_);
+            done->Run();
+            return;
+        }
+    }
+
     if (request->term() > current_term_) {
         TransToFollower("InsNodeImpl::Vote", request->term());
     }
@@ -343,7 +404,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* controller,
     log_entry.term = current_term_;
     log_entry.op = kPut;
     binlogger_->AppendEntry(log_entry);
-    done->Run();
+    replication_cond_.Signal();
     return;
 }
 
@@ -366,9 +427,10 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         binlogger_->ReadSlot(index, &log_entry);
         if (prev_index > -1) {
             binlogger_->ReadSlot(prev_index, &prev_log_entry);
-        }
+            prev_term = prev_log_entry.term;
+        } 
         mu_.Unlock();
-        prev_term = prev_log_entry.term;
+
         InsNode_Stub* stub;
         rpc_client_.GetStub(follower_id, &stub);
         galaxy::ins::AppendEntriesRequest request;

@@ -94,6 +94,8 @@ TEST(BinLogTest, SlotTruncate) {
     EXPECT_EQ( bin_logger.GetLength(), 50);
     bool not_beyond = bin_logger.ReadUntil(49, boost::bind(ReadUntilTest, _1));
     EXPECT_TRUE(not_beyond);
+    bin_logger.Truncate(-1);
+    EXPECT_EQ(bin_logger.GetLength(), 0);
 }
 
 int main(int argc, char* argv[]) {

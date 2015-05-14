@@ -59,6 +59,8 @@ private:
     void TransToFollower(const char* msg, int64_t new_term);
     void ReplicateLog(std::string follower_id);
     void StartReplicateLog();
+    void GetLastLogIndexAndTerm(int64_t* last_log_index,
+                                int64_t* last_log_term);
 public:
     std::vector<std::string> members_;
 private:

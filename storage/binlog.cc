@@ -119,6 +119,25 @@ void BinLogger::AppendEntry(const LogEntry& log_entry) {
 
 void BinLogger::Truncate(int64_t trunk_slot_index) {
     int64_t offset = trunk_slot_index * sizeof(int64_t);
+    if (offset < 0 ) {
+        if (fflush(log_data_file_) != 0) {
+            LOG(FATAL, "failed to flush %s", log_data_file_name.c_str());
+            abort();
+        }
+        if (fflush(log_index_file_) != 0) {
+            LOG(FATAL, "failed to flush %s", log_index_file_name.c_str());
+            abort();
+        }
+        if (ftruncate(fileno(log_index_file_), 0) != 0) {
+            LOG(FATAL, "failed to truncate %s", log_index_file_name.c_str());
+            abort();
+        }
+        if (ftruncate(fileno(log_data_file_), 0) != 0 ){
+            LOG(FATAL, "failed to truncate %s", log_data_file_name.c_str());
+            abort();
+        }    
+        return;
+    }
     if (fseek(log_index_file_, offset, SEEK_SET) < 0) {
         LOG(FATAL, "seek file failed: %s", log_index_file_name.c_str());
         abort();
