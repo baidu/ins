@@ -35,6 +35,8 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                               replicatter_(FLAGS_max_cluster_size),
                               committer_(FLAGS_max_cluster_size),
                               replication_cond_(&mu_),
+                              commit_index_(-1),
+                              last_applied_index_(-1),
                               commit_cond_(&mu_) {
     srand(time(NULL));
     std::vector<std::string>::const_iterator it = members.begin();
@@ -415,6 +417,22 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     return;
 }
 
+void InsNodeImpl::UpdateCommitIndex(int64_t a_index) {
+    mu_.AssertHeld();
+    std::vector<std::string>::const_iterator it;
+    uint32_t match_count = 0;
+    for (it = members_.begin(); it != members_.end(); it++) {
+        std::string server_id = *it;
+        if (match_index_[server_id] >= a_index) {
+            match_count += 1;
+        }
+    }
+    if (match_count > members_.size()/2 && a_index > commit_index_) {
+        commit_index_ = a_index;
+        LOG(INFO, "update to new commit index: %ld", commit_index_);
+    }
+}
+
 void InsNodeImpl::ReplicateLog(std::string follower_id) {
     MutexLock lock(&mu_);
     while (status_ == kLeader) {
@@ -471,6 +489,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             if (response.success()) { // log replicated
                 next_index_[follower_id] = index + 1;
                 match_index_[follower_id] = index;
+                UpdateCommitIndex(index);
             } else { // (index, term ) miss match
                 next_index_[follower_id] -= 1;
                 LOG(INFO, "adjust next_index of %s to %ld",

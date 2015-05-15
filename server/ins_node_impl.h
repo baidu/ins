@@ -61,6 +61,7 @@ private:
     void StartReplicateLog();
     void GetLastLogIndexAndTerm(int64_t* last_log_index,
                                 int64_t* last_log_term);
+    void UpdateCommitIndex(int64_t a_index);
 public:
     std::vector<std::string> members_;
 private:
