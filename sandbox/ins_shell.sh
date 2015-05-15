@@ -1,7 +1,7 @@
 #!/bin/bash
 while true
 do
-	read -p "galaxy ins> " cmd arg1 arg2
+	read -e -p "galaxy ins> " cmd arg1 arg2
 	case $cmd in
 	"show")
 		sh ./show_cluster.sh
