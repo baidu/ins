@@ -7,7 +7,8 @@ integrated naming service (based on raft)
 * make
 
 # try
-
+	   cd sandbox
+	  ./start_all.sh
 	  ./ins_shell
 	
 	  galaxy ins>  
