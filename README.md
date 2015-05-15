@@ -9,7 +9,7 @@ integrated naming service (based on raft)
 # try
 	   cd sandbox
 	  ./start_all.sh
-	  ./ins_shell
+	  ./ins_shell.sh
 	
 	  galaxy ins>  
 	    show [ show cluster ]
