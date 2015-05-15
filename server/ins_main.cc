@@ -14,7 +14,7 @@ DECLARE_string(cluster_members);
 DECLARE_int32(ins_port);
 
 static volatile bool s_quit = false;
-static void SignalIntHandler(int sig){
+static void SignalIntHandler(int /*sig*/){
     s_quit = true;
 }
 

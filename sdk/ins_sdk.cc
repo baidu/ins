@@ -54,18 +54,20 @@ std::string InsSDK::StatusToString(galaxy::ins::NodeStatus status) {
             return "Offline";
             break;
     }
+    return "UnKnown";
 }
 
 
-bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* error) {
+/*bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* error) {
     return true;
 }
 
 bool InsSDK::Get(const std::string& key, std::string* value, SDKError* error) {
     return true;
 }
-
+*/
 
 } //namespace sdk
 } //namespace ins
 } //namespace galaxy
+

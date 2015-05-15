@@ -53,7 +53,10 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                    " please check your configuration. self: %s", self_id_.c_str());
         exit(-1);
     }
-
+    if (members_.size() > static_cast<size_t>(FLAGS_max_cluster_size)) {
+        LOG(FATAL, "cluster size is larger than configuration: %d > %d",
+            members_.size(), FLAGS_max_cluster_size);
+    }
     std::string sub_dir = self_id_;
     boost::replace_all(sub_dir, ":", "_");
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
@@ -84,8 +87,8 @@ void InsNodeImpl::CheckLeaderCrash() {
     //LOG(INFO, "InsNodeImpl::CheckLeaderCrash, elect_leader_task_:%d", elect_leader_task_);
 }
 
-void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* controller,
-                             const ::galaxy::ins::ShowStatusRequest* request,
+void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* /*controller*/,
+                             const ::galaxy::ins::ShowStatusRequest* /*request*/,
                              ::galaxy::ins::ShowStatusResponse* response,
                              ::google::protobuf::Closure* done) {
     MutexLock lock(&mu_);
@@ -112,7 +115,7 @@ void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
 
 void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* request,
                                   ::galaxy::ins::AppendEntriesResponse* response,
-                                  bool failed, int error) {
+                                  bool failed, int /*error*/) {
     MutexLock lock(&mu_);
     boost::scoped_ptr<const galaxy::ins::AppendEntriesRequest> request_ptr(request);
     boost::scoped_ptr<galaxy::ins::AppendEntriesResponse> response_ptr(response);
@@ -157,7 +160,7 @@ void InsNodeImpl::BroadCastHeartBeat() {
         callback = boost::bind(&InsNodeImpl::HearBeatCallback, this,
                                _1, _2, _3, _4);
         rpc_client_.AsyncRequest(stub, &InsNode_Stub::AppendEntries, 
-                                 request, response, callback, 2, 0);
+                                 request, response, callback, 2);
     }
     heart_beat_pool_.DelayTask(50, boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
 }
@@ -185,7 +188,7 @@ void InsNodeImpl::StartReplicateLog() {
 
 void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
                                ::galaxy::ins::VoteResponse* response,
-                               bool failed, int error) {
+                               bool failed, int /*error*/) {
     MutexLock lock(&mu_);
     boost::scoped_ptr<const galaxy::ins::VoteRequest> request_ptr(request);
     boost::scoped_ptr<galaxy::ins::VoteResponse> response_ptr(response);
@@ -267,13 +270,12 @@ void InsNodeImpl::TryToBeLeader() {
                               bool, int ) > callback;
         callback = boost::bind(&InsNodeImpl::VoteCallback, this, _1, _2, _3, _4);
         rpc_client_.AsyncRequest(stub, &InsNode_Stub::Vote, request, response,
-                                 callback,
-                                 2, 0);
+                                 callback, 2);
     }
     CheckLeaderCrash();
 }
 
-void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
+void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*/,
                                 const ::galaxy::ins::AppendEntriesRequest* request,
                                 ::galaxy::ins::AppendEntriesResponse* response,
                                 ::google::protobuf::Closure* done) {
@@ -318,7 +320,7 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
                 }
             }
         }
-        for (size_t i=0; i < request->entries_size(); i++) {
+        for (int i=0; i < request->entries_size(); i++) {
             LogEntry log_entry;
             log_entry.op = request->entries(i).op();
             log_entry.key = request->entries(i).key();
@@ -336,7 +338,7 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
     return;
 }
 
-void InsNodeImpl::Vote(::google::protobuf::RpcController* controller,
+void InsNodeImpl::Vote(::google::protobuf::RpcController* /*controller*/,
                        const ::galaxy::ins::VoteRequest* request,
                        ::galaxy::ins::VoteResponse* response,
                        ::google::protobuf::Closure* done) {
@@ -382,7 +384,7 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* controller,
     return;
 }
 
-void InsNodeImpl::Put(::google::protobuf::RpcController* controller,
+void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
                       const ::galaxy::ins::PutRequest* request,
                       ::galaxy::ins::PutResponse* response,
                       ::google::protobuf::Closure* done) {
@@ -487,17 +489,17 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
     }
 }
 
-void InsNodeImpl::Get(::google::protobuf::RpcController* controller,
-                      const ::galaxy::ins::GetRequest* request,
-                      ::galaxy::ins::GetResponse* response,
+void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
+                      const ::galaxy::ins::GetRequest* /*request*/,
+                      ::galaxy::ins::GetResponse* /*response*/,
                       ::google::protobuf::Closure* done) {
     done->Run();
     return;
 }
 
-void InsNodeImpl::Delete(::google::protobuf::RpcController* controller,
-                        const ::galaxy::ins::DelRequest* request,
-                        ::galaxy::ins::DelResponse* response,
+void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
+                        const ::galaxy::ins::DelRequest* /*request*/,
+                        ::galaxy::ins::DelResponse* /*response*/,
                         ::google::protobuf::Closure* done) {
     done->Run();
     return;

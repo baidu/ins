@@ -7,6 +7,7 @@ CXXFLAGS=-g \
   -pipe \
   -W \
   -Wall \
+  -Werror \
   -fPIC
 CFLAGS=-g \
   -pipe \
@@ -54,7 +55,7 @@ CCP_FLAGS=
 
 
 #COMAKE UUID
-COMAKE_MD5=68a24ef6657b4bd6b0a401b3713fdeb2  COMAKE
+COMAKE_MD5=b7610639931548c91ca9a1ea30d643cf  COMAKE
 
 
 .PHONY:all
