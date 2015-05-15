@@ -64,8 +64,9 @@ message GetRequest {
 
 message GetResponse {
     required bool hit = 1;
-    required string value = 2;
+    optional string value = 2;
     optional string leader_id = 3;
+    required bool success = 4;
 }
 
 message DelRequest {

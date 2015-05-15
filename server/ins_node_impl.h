@@ -16,6 +16,17 @@ namespace ins {
 class Meta;
 class BinLogger;
 
+struct ClientAck {
+    galaxy::ins::PutResponse* response;
+    galaxy::ins::DelResponse* del_response;
+    google::protobuf::Closure* done;
+    ClientAck() : response(NULL),
+                  del_response(NULL),
+                  done(NULL) {
+
+    }
+};
+
 class InsNodeImpl : public InsNode {
 public:
    
@@ -62,9 +73,11 @@ private:
     void GetLastLogIndexAndTerm(int64_t* last_log_index,
                                 int64_t* last_log_term);
     void UpdateCommitIndex(int64_t a_index);
+    void CommitIndexObserv();
 public:
     std::vector<std::string> members_;
 private:
+    bool stop_;
     std::string self_id_;
     int64_t current_term_;
     std::map<int64_t, std::string> voted_for_;
@@ -86,11 +99,13 @@ private:
     ThreadPool committer_;
     std::map<std::string, int64_t> next_index_;
     std::map<std::string, int64_t> match_index_;
-    CondVar replication_cond_;
+    CondVar* replication_cond_;
+    std::map<int64_t, ClientAck> client_ack_;
     // for all servers
     int64_t commit_index_;
     int64_t last_applied_index_;
-    CondVar commit_cond_;
+    CondVar* commit_cond_;
+
 };
 
 void GetHostName(std::string* hostname);

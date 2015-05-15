@@ -26,19 +26,19 @@ void GetHostName(std::string* hostname) {
 
 InsNodeImpl::InsNodeImpl (std::string& server_id,
                           const std::vector<std::string>& members
-                          ) : self_id_(server_id),
+                          ) : stop_(false),
+                              self_id_(server_id),
                               current_term_(0),
                               status_(kFollower),
                               heartbeat_count_(0),
                               meta_(NULL),
                               binlogger_(NULL),
                               replicatter_(FLAGS_max_cluster_size),
-                              committer_(FLAGS_max_cluster_size),
-                              replication_cond_(&mu_),
                               commit_index_(-1),
-                              last_applied_index_(-1),
-                              commit_cond_(&mu_) {
+                              last_applied_index_(-1) {
     srand(time(NULL));
+    replication_cond_ = new CondVar(&mu_);
+    commit_cond_ = new CondVar(&mu_);
     std::vector<std::string>::const_iterator it = members.begin();
     bool self_in_cluster = false;
     for(; it != members.end(); it++) {
@@ -65,11 +65,14 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
     binlogger_ = new BinLogger(FLAGS_ins_data_dir + "/" + sub_dir);
     current_term_ = meta_->ReadCurrentTerm();
     meta_->ReadVotedFor(voted_for_);
+    committer_.AddTask(boost::bind(&InsNodeImpl::CommitIndexObserv, this));
     MutexLock lock(&mu_);
     CheckLeaderCrash();
 }
 
 InsNodeImpl::~InsNodeImpl() {
+    MutexLock lock(&mu_);
+    stop_ = true;
     delete meta_;
     delete binlogger_;
 }
@@ -115,6 +118,57 @@ void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
     meta_->WriteCurrentTerm(current_term_);
 }
 
+void InsNodeImpl::CommitIndexObserv() {
+    MutexLock lock(&mu_);
+    while (!stop_) {
+        while (commit_index_ <=  last_applied_index_) {
+            LOG(INFO, "commit_idx: %ld, last_applied_index: %ld",
+                commit_index_, last_applied_index_);
+            commit_cond_->Wait();
+        }
+        int64_t from_idx = last_applied_index_;
+        int64_t to_idx = commit_index_;
+        mu_.Unlock();
+        for (int64_t i = from_idx + 1; i <= to_idx; i++) {
+            LogEntry log_entry;
+            binlogger_->ReadSlot(i, &log_entry);
+            mu_.Lock();
+            switch(log_entry.op) {
+                case kPut:
+                    LOG(INFO, "add to data_map_, key: %s, value: %s",
+                        log_entry.key.c_str(), log_entry.value.c_str());
+                    data_map_[log_entry.key] = log_entry.value;
+                    break;
+                case kDel:
+                    LOG(INFO, "delete from data_map_, key: %s",
+                        log_entry.key.c_str());
+                    data_map_.erase(log_entry.key);
+                    break;
+                case kNop:
+                    LOG(INFO, "kNop got, do nothing, key: %s", 
+                              log_entry.key.c_str());
+                    break;
+            }
+            if (client_ack_.find(i) != client_ack_.end()) {
+                ClientAck& ack = client_ack_[i];
+                if (ack.response) {
+                    ack.response->set_success(true);
+                    ack.response->set_leader_id("");
+                    ack.done->Run(); //client put ok;
+                }
+                if (ack.del_response) {
+                    ack.del_response->set_success(true);
+                    ack.del_response->set_leader_id("");
+                    ack.done->Run(); //client del ok;   
+                }
+                client_ack_.erase(i);
+            }
+            last_applied_index_ += 1;
+            mu_.Unlock();
+        }
+    }
+}
+
 void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* request,
                                   ::galaxy::ins::AppendEntriesResponse* response,
                                   bool failed, int /*error*/) {
@@ -155,7 +209,7 @@ void InsNodeImpl::BroadCastHeartBeat() {
                     new ::galaxy::ins::AppendEntriesResponse();
         request->set_term(current_term_);
         request->set_leader_id(self_id_);
-
+        request->set_leader_commit_index(commit_index_);
         boost::function<void (const ::galaxy::ins::AppendEntriesRequest*,
                         ::galaxy::ins::AppendEntriesResponse*,
                         bool, int) > callback;
@@ -181,7 +235,7 @@ void InsNodeImpl::StartReplicateLog() {
                                          this, *it));
     }
     LogEntry log_entry;
-    log_entry.key = "FirstTask";
+    log_entry.key = "Ping";
     log_entry.value = "";
     log_entry.term = current_term_;
     log_entry.op = kNop;
@@ -330,6 +384,14 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
             log_entry.term = request->entries(i).term();
             binlogger_->AppendEntry(log_entry);
         }
+        int64_t old_commit_index = commit_index_;
+        commit_index_ = std::min(binlogger_->GetLength() - 1,
+                                 request->leader_commit_index());
+       
+        if (commit_index_ > old_commit_index) {
+            commit_cond_->Signal();
+            LOG(INFO, "follower: update my commit index to :%ld", commit_index_);
+        }
         response->set_current_term(current_term_);
         response->set_success(true);
         done->Run();
@@ -386,36 +448,6 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* /*controller*/,
     return;
 }
 
-void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
-                      const ::galaxy::ins::PutRequest* request,
-                      ::galaxy::ins::PutResponse* response,
-                      ::google::protobuf::Closure* done) {
-    MutexLock lock(&mu_);
-    if (status_ == kFollower) {
-        response->set_success(false);
-        response->set_leader_id(current_leader_);
-        done->Run();
-        return;
-    }
-
-    if (status_ == kCandidate) {
-        response->set_success(false);
-        response->set_leader_id("");
-        done->Run();
-        return;
-    }
-
-    const std::string& key = request->key();
-    const std::string& value = request->value();
-    LogEntry log_entry;
-    log_entry.key = key;
-    log_entry.value = value;
-    log_entry.term = current_term_;
-    log_entry.op = kPut;
-    binlogger_->AppendEntry(log_entry);
-    replication_cond_.Broadcast();
-    return;
-}
 
 void InsNodeImpl::UpdateCommitIndex(int64_t a_index) {
     mu_.AssertHeld();
@@ -430,15 +462,16 @@ void InsNodeImpl::UpdateCommitIndex(int64_t a_index) {
     if (match_count > members_.size()/2 && a_index > commit_index_) {
         commit_index_ = a_index;
         LOG(INFO, "update to new commit index: %ld", commit_index_);
+        commit_cond_->Signal();
     }
 }
 
 void InsNodeImpl::ReplicateLog(std::string follower_id) {
     MutexLock lock(&mu_);
-    while (status_ == kLeader) {
+    while (!stop_ && status_ == kLeader) {
         while (binlogger_->GetLength() <= next_index_[follower_id]) {
             LOG(INFO, "no new log entry for %s", follower_id.c_str());
-            replication_cond_.TimeWait(2000);
+            replication_cond_->TimeWait(2000);
             if (status_ != kLeader) {
                 break;
             }
@@ -472,12 +505,14 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         entry->set_term(log_entry.term);
         entry->set_key(log_entry.key);
         entry->set_value(log_entry.value);
+        entry->set_op(log_entry.op);
         bool ok = rpc_client_.SendRequest(stub, 
                                           &InsNode_Stub::AppendEntries,
                                           &request,
                                           &response,
                                           2, 1);
         mu_.Lock();
+        mu_.AssertHeld();
         if (ok && response.current_term() > current_term_) {
             TransToFollower("InsNodeImpl::ReplicateLog", 
                             response.current_term());
@@ -509,20 +544,111 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
 }
 
 void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
-                      const ::galaxy::ins::GetRequest* /*request*/,
-                      ::galaxy::ins::GetResponse* /*response*/,
+                      const ::galaxy::ins::GetRequest* request,
+                      ::galaxy::ins::GetResponse* response,
                       ::google::protobuf::Closure* done) {
+    MutexLock lock(&mu_);
+    if (status_ == kFollower) {
+        response->set_hit(false);
+        response->set_leader_id(current_leader_);
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kCandidate) {
+        response->set_hit(false);
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+    std::string key = request->key();
+    LOG(INFO, "client get key: %s", key.c_str());
+    if (data_map_.find(key) != data_map_.end()) {
+        response->set_hit(true);
+        response->set_success(true);
+        response->set_value(data_map_[key]);
+        response->set_leader_id("");
+    } else {
+        response->set_hit(false);
+        response->set_success(true);
+        response->set_leader_id("");
+    }
     done->Run();
     return;
 }
 
 void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
-                        const ::galaxy::ins::DelRequest* /*request*/,
-                        ::galaxy::ins::DelResponse* /*response*/,
+                        const ::galaxy::ins::DelRequest* request,
+                        ::galaxy::ins::DelResponse* response,
                         ::google::protobuf::Closure* done) {
-    done->Run();
+    MutexLock lock(&mu_);
+    if (status_ == kFollower) {
+        response->set_success(false);
+        response->set_leader_id(current_leader_);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kCandidate) {
+        response->set_success(false);
+        response->set_leader_id("");
+        done->Run();
+        return;
+    }
+
+    const std::string& key = request->key();
+    LOG(INFO, "client want delete key :%s", key.c_str());
+    LogEntry log_entry;
+    log_entry.key = key;
+    log_entry.value = "";
+    log_entry.term = current_term_;
+    log_entry.op = kDel;
+    binlogger_->AppendEntry(log_entry);
+    int64_t cur_index = binlogger_->GetLength() - 1;
+    ClientAck& ack = client_ack_[cur_index];
+    ack.done = done;
+    ack.del_response = response;
+    replication_cond_->Broadcast();
     return;
 }
+
+void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
+                      const ::galaxy::ins::PutRequest* request,
+                      ::galaxy::ins::PutResponse* response,
+                      ::google::protobuf::Closure* done) {
+    MutexLock lock(&mu_);
+    if (status_ == kFollower) {
+        response->set_success(false);
+        response->set_leader_id(current_leader_);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kCandidate) {
+        response->set_success(false);
+        response->set_leader_id("");
+        done->Run();
+        return;
+    }
+    const std::string& key = request->key();
+    const std::string& value = request->value();
+    LOG(INFO, "client want put key :%s", key.c_str());
+    LogEntry log_entry;
+    log_entry.key = key;
+    log_entry.value = value;
+    log_entry.term = current_term_;
+    log_entry.op = kPut;
+    binlogger_->AppendEntry(log_entry);
+    int64_t cur_index = binlogger_->GetLength() - 1;
+    ClientAck& ack = client_ack_[cur_index];
+    ack.done = done;
+    ack.response = response;
+    replication_cond_->Broadcast();
+    return;
+}
+
 
 } //namespace ins
 } //namespace galaxy

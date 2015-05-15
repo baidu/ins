@@ -34,18 +34,20 @@ bool BinLogger::ReadUntil(int64_t end_slot_index,
     fseek(log_data_file_, 0 , SEEK_SET);
     LogEntry log_entry;
     int64_t entry_len = 0;
-    if (fread(&entry_len, sizeof(int64_t), 1, log_data_file_) != 1) {
-        LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
-        abort();
+    for (int i=0; i<= end_slot_index; i++) {
+        if (fread(&entry_len, sizeof(int64_t), 1, log_data_file_) != 1) {
+            LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
+            abort();
+        }
+        std::string buf;
+        buf.resize(entry_len);
+        if (fread(&buf[0], entry_len, 1, log_data_file_) !=1 ) {
+            LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
+            abort();
+        }
+        LoadLogEntry(buf, &log_entry);
+        reader(log_entry);
     }
-    std::string buf;
-    buf.resize(entry_len);
-    if (fread(&buf[0], entry_len, 1, log_data_file_) !=1 ) {
-        LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
-        abort();
-    }
-    LoadLogEntry(buf, &log_entry);
-    reader(log_entry);
     return true;
 }
 
@@ -61,6 +63,7 @@ bool BinLogger::ReadSlot(int64_t slot_index, LogEntry* log_entry) {
     int64_t offset = slot_index * sizeof(int64_t);
     if (fseek(log_index_file_, offset, SEEK_SET) < 0) {
         LOG(FATAL, "seek file failed: %s", log_index_file_name.c_str());
+        abort();
         return false;
     }
     int64_t data_offset = 0 ;
@@ -70,6 +73,7 @@ bool BinLogger::ReadSlot(int64_t slot_index, LogEntry* log_entry) {
     }
     if (fseek(log_data_file_, data_offset, SEEK_SET) < 0) {
         LOG(FATAL, "seek file failed: %s", log_data_file_name.c_str());
+        abort();
         return false;
     }
     int64_t entry_len = 0;
@@ -118,6 +122,7 @@ void BinLogger::AppendEntry(const LogEntry& log_entry) {
 }
 
 void BinLogger::Truncate(int64_t trunk_slot_index) {
+    MutexLock lock(&mu_);
     int64_t offset = trunk_slot_index * sizeof(int64_t);
     if (offset < 0 ) {
         if (fflush(log_data_file_) != 0) {

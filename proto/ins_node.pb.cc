@@ -206,10 +206,11 @@ void protobuf_AssignDesc_ins_5fnode_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(GetRequest));
   GetResponse_descriptor_ = file->message_type(8);
-  static const int GetResponse_offsets_[3] = {
+  static const int GetResponse_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GetResponse, hit_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GetResponse, value_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GetResponse, leader_id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GetResponse, success_),
   };
   GetResponse_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -381,27 +382,28 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
     "\024\n\014vote_granted\030\002 \002(\010\"(\n\nPutRequest\022\013\n\003k"
     "ey\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\"1\n\013PutResponse\022\017"
     "\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001(\t\"\031\n\nGe"
-    "tRequest\022\013\n\003key\030\001 \002(\t\"<\n\013GetResponse\022\013\n\003"
-    "hit\030\001 \002(\010\022\r\n\005value\030\002 \002(\t\022\021\n\tleader_id\030\003 "
-    "\001(\t\"\031\n\nDelRequest\022\013\n\003key\030\001 \002(\t\"1\n\013DelRes"
-    "ponse\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001("
-    "\t\"\023\n\021ShowStatusRequest\"y\n\022ShowStatusResp"
-    "onse\022&\n\006status\030\001 \002(\0162\026.galaxy.ins.NodeSt"
-    "atus\022\014\n\004term\030\002 \002(\003\022\026\n\016last_log_index\030\003 \002"
-    "(\003\022\025\n\rlast_log_term\030\004 \002(\003*F\n\nNodeStatus\022"
-    "\013\n\007kLeader\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollowe"
-    "r\020\002\022\014\n\010kOffline\020\003*,\n\014LogOperation\022\010\n\004kPu"
-    "t\020\001\022\010\n\004kDel\020\002\022\010\n\004kNop\020\n2\222\003\n\007InsNode\022T\n\rA"
-    "ppendEntries\022 .galaxy.ins.AppendEntriesR"
-    "equest\032!.galaxy.ins.AppendEntriesRespons"
-    "e\0229\n\004Vote\022\027.galaxy.ins.VoteRequest\032\030.gal"
-    "axy.ins.VoteResponse\0226\n\003Put\022\026.galaxy.ins"
-    ".PutRequest\032\027.galaxy.ins.PutResponse\0226\n\003"
-    "Get\022\026.galaxy.ins.GetRequest\032\027.galaxy.ins"
-    ".GetResponse\0229\n\006Delete\022\026.galaxy.ins.DelR"
-    "equest\032\027.galaxy.ins.DelResponse\022K\n\nShowS"
-    "tatus\022\035.galaxy.ins.ShowStatusRequest\032\036.g"
-    "alaxy.ins.ShowStatusResponseB\003\200\001\001", 1433);
+    "tRequest\022\013\n\003key\030\001 \002(\t\"M\n\013GetResponse\022\013\n\003"
+    "hit\030\001 \002(\010\022\r\n\005value\030\002 \001(\t\022\021\n\tleader_id\030\003 "
+    "\001(\t\022\017\n\007success\030\004 \002(\010\"\031\n\nDelRequest\022\013\n\003ke"
+    "y\030\001 \002(\t\"1\n\013DelResponse\022\017\n\007success\030\001 \002(\010\022"
+    "\021\n\tleader_id\030\002 \001(\t\"\023\n\021ShowStatusRequest\""
+    "y\n\022ShowStatusResponse\022&\n\006status\030\001 \002(\0162\026."
+    "galaxy.ins.NodeStatus\022\014\n\004term\030\002 \002(\003\022\026\n\016l"
+    "ast_log_index\030\003 \002(\003\022\025\n\rlast_log_term\030\004 \002"
+    "(\003*F\n\nNodeStatus\022\013\n\007kLeader\020\000\022\016\n\nkCandid"
+    "ate\020\001\022\r\n\tkFollower\020\002\022\014\n\010kOffline\020\003*,\n\014Lo"
+    "gOperation\022\010\n\004kPut\020\001\022\010\n\004kDel\020\002\022\010\n\004kNop\020\n"
+    "2\222\003\n\007InsNode\022T\n\rAppendEntries\022 .galaxy.i"
+    "ns.AppendEntriesRequest\032!.galaxy.ins.App"
+    "endEntriesResponse\0229\n\004Vote\022\027.galaxy.ins."
+    "VoteRequest\032\030.galaxy.ins.VoteResponse\0226\n"
+    "\003Put\022\026.galaxy.ins.PutRequest\032\027.galaxy.in"
+    "s.PutResponse\0226\n\003Get\022\026.galaxy.ins.GetReq"
+    "uest\032\027.galaxy.ins.GetResponse\0229\n\006Delete\022"
+    "\026.galaxy.ins.DelRequest\032\027.galaxy.ins.Del"
+    "Response\022K\n\nShowStatus\022\035.galaxy.ins.Show"
+    "StatusRequest\032\036.galaxy.ins.ShowStatusRes"
+    "ponseB\003\200\001\001", 1450);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "ins_node.proto", &protobuf_RegisterTypes);
   Entry::default_instance_ = new Entry();
@@ -2881,6 +2883,7 @@ void GetRequest::Swap(GetRequest* other) {
 const int GetResponse::kHitFieldNumber;
 const int GetResponse::kValueFieldNumber;
 const int GetResponse::kLeaderIdFieldNumber;
+const int GetResponse::kSuccessFieldNumber;
 #endif  // !_MSC_VER
 
 GetResponse::GetResponse()
@@ -2902,6 +2905,7 @@ void GetResponse::SharedCtor() {
   hit_ = false;
   value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   leader_id_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  success_ = false;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -2953,6 +2957,7 @@ void GetResponse::Clear() {
         leader_id_->clear();
       }
     }
+    success_ = false;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -2979,7 +2984,7 @@ bool GetResponse::MergePartialFromCodedStream(
         break;
       }
       
-      // required string value = 2;
+      // optional string value = 2;
       case 2: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
@@ -3006,6 +3011,22 @@ bool GetResponse::MergePartialFromCodedStream(
           ::google::protobuf::internal::WireFormat::VerifyUTF8String(
             this->leader_id().data(), this->leader_id().length(),
             ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(32)) goto parse_success;
+        break;
+      }
+      
+      // required bool success = 4;
+      case 4: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_success:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
+                 input, &success_)));
+          set_has_success();
         } else {
           goto handle_uninterpreted;
         }
@@ -3036,7 +3057,7 @@ void GetResponse::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteBool(1, this->hit(), output);
   }
   
-  // required string value = 2;
+  // optional string value = 2;
   if (has_value()) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8String(
       this->value().data(), this->value().length(),
@@ -3054,6 +3075,11 @@ void GetResponse::SerializeWithCachedSizes(
       3, this->leader_id(), output);
   }
   
+  // required bool success = 4;
+  if (has_success()) {
+    ::google::protobuf::internal::WireFormatLite::WriteBool(4, this->success(), output);
+  }
+  
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -3067,7 +3093,7 @@ void GetResponse::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(1, this->hit(), target);
   }
   
-  // required string value = 2;
+  // optional string value = 2;
   if (has_value()) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8String(
       this->value().data(), this->value().length(),
@@ -3087,6 +3113,11 @@ void GetResponse::SerializeWithCachedSizes(
         3, this->leader_id(), target);
   }
   
+  // required bool success = 4;
+  if (has_success()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(4, this->success(), target);
+  }
+  
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -3103,7 +3134,7 @@ int GetResponse::ByteSize() const {
       total_size += 1 + 1;
     }
     
-    // required string value = 2;
+    // optional string value = 2;
     if (has_value()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
@@ -3115,6 +3146,11 @@ int GetResponse::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
           this->leader_id());
+    }
+    
+    // required bool success = 4;
+    if (has_success()) {
+      total_size += 1 + 1;
     }
     
   }
@@ -3153,6 +3189,9 @@ void GetResponse::MergeFrom(const GetResponse& from) {
     if (from.has_leader_id()) {
       set_leader_id(from.leader_id());
     }
+    if (from.has_success()) {
+      set_success(from.success());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -3170,7 +3209,7 @@ void GetResponse::CopyFrom(const GetResponse& from) {
 }
 
 bool GetResponse::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+  if ((_has_bits_[0] & 0x00000009) != 0x00000009) return false;
   
   return true;
 }
@@ -3180,6 +3219,7 @@ void GetResponse::Swap(GetResponse* other) {
     std::swap(hit_, other->hit_);
     std::swap(value_, other->value_);
     std::swap(leader_id_, other->leader_id_);
+    std::swap(success_, other->success_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

@@ -993,7 +993,7 @@ class GetResponse : public ::google::protobuf::Message {
   inline bool hit() const;
   inline void set_hit(bool value);
   
-  // required string value = 2;
+  // optional string value = 2;
   inline bool has_value() const;
   inline void clear_value();
   static const int kValueFieldNumber = 2;
@@ -1015,6 +1015,13 @@ class GetResponse : public ::google::protobuf::Message {
   inline ::std::string* mutable_leader_id();
   inline ::std::string* release_leader_id();
   
+  // required bool success = 4;
+  inline bool has_success() const;
+  inline void clear_success();
+  static const int kSuccessFieldNumber = 4;
+  inline bool success() const;
+  inline void set_success(bool value);
+  
   // @@protoc_insertion_point(class_scope:galaxy.ins.GetResponse)
  private:
   inline void set_has_hit();
@@ -1023,15 +1030,18 @@ class GetResponse : public ::google::protobuf::Message {
   inline void clear_has_value();
   inline void set_has_leader_id();
   inline void clear_has_leader_id();
+  inline void set_has_success();
+  inline void clear_has_success();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::std::string* value_;
   ::std::string* leader_id_;
   bool hit_;
+  bool success_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
   
   friend void  protobuf_AddDesc_ins_5fnode_2eproto();
   friend void protobuf_AssignDesc_ins_5fnode_2eproto();
@@ -2364,7 +2374,7 @@ inline void GetResponse::set_hit(bool value) {
   hit_ = value;
 }
 
-// required string value = 2;
+// optional string value = 2;
 inline bool GetResponse::has_value() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
@@ -2478,6 +2488,28 @@ inline ::std::string* GetResponse::release_leader_id() {
     leader_id_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
     return temp;
   }
+}
+
+// required bool success = 4;
+inline bool GetResponse::has_success() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void GetResponse::set_has_success() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void GetResponse::clear_has_success() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void GetResponse::clear_success() {
+  success_ = false;
+  clear_has_success();
+}
+inline bool GetResponse::success() const {
+  return success_;
+}
+inline void GetResponse::set_success(bool value) {
+  set_has_success();
+  success_ = value;
 }
 
 // -------------------------------------------------------------------

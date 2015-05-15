@@ -9,7 +9,7 @@ using namespace galaxy::ins;
 TEST(BinLogTest, LogEntryDumpLoad) {
     BinLogger bin_logger("/tmp/");
     LogEntry log_entry, log_entry2;
-    log_entry.op = kPut;
+    log_entry.op = kNop;
     log_entry.key = "abc";
     log_entry.value = "123";
     log_entry.term = 1;
