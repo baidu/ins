@@ -8,4 +8,4 @@ ins_cli
 Makefile
 output/*
 sandbox/data/
-sandbox/ins.flag
+ins.flag
