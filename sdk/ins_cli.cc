@@ -27,6 +27,10 @@ int main(int argc, char* argv[]) {
         std::vector<ClusterNodeInfo> cluster_info;
         sdk.ShowCluster(&cluster_info);
         std::vector<ClusterNodeInfo>::iterator it;
+        std::cout << "server_addr \t term \t last_log_index \t last_log_term"
+                  << std::endl
+                  << "-------------------------------------------------------"
+                  << std::endl; 
         for(it = cluster_info.begin(); it != cluster_info.end(); it++ ) {
             std::string s_status = InsSDK::StatusToString(it->status);
             std::cout << it->server_id << "\t" << s_status 
@@ -46,7 +50,7 @@ int main(int argc, char* argv[]) {
             LOG(FATAL, "put failed");
         }
     }
-    
+
     if (FLAGS_ins_cmd == "delete") {
         std::string key = FLAGS_ins_key;
         LOG(INFO, "key: %s", key.c_str());
