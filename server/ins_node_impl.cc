@@ -89,8 +89,13 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* controller,
                              ::galaxy::ins::ShowStatusResponse* response,
                              ::google::protobuf::Closure* done) {
     MutexLock lock(&mu_);
+    int64_t last_log_index;
+    int64_t last_log_term;
+    GetLastLogIndexAndTerm(&last_log_index, &last_log_term);
     response->set_status(status_);
     response->set_term(current_term_);    
+    response->set_last_log_index(last_log_index);
+    response->set_last_log_term(last_log_term);
     done->Run();
 }
 
@@ -282,7 +287,7 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
     } else {
         response->set_current_term(current_term_);
         response->set_success(false);
-        LOG(DEBUG, "term is outdated");
+        LOG(INFO, "[AppendEntries] term is outdated");
         done->Run();
         return;
     }
@@ -294,7 +299,7 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
             if (request->prev_log_index() >= binlogger_->GetLength()){
                 response->set_current_term(current_term_);
                 response->set_success(false);
-                LOG(DEBUG, "prev log is beyond");
+                LOG(INFO, "[AppendEntries] prev log is beyond");
                 done->Run();
                 return;
             }
@@ -304,10 +309,10 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* controller,
                                      &prev_log_entry);
                 int64_t prev_log_term = prev_log_entry.term;
                 if (prev_log_term != request->prev_log_term()) {
-                    binlogger_->Truncate(binlogger_->GetLength() - 2);
+                    binlogger_->Truncate(request->prev_log_index() - 1);
                     response->set_current_term(current_term_);
                     response->set_success(false);
-                    LOG(DEBUG, "term not match");
+                    LOG(INFO, "[AppendEntries] term not match");
                     done->Run();
                     return;
                 }
@@ -404,7 +409,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* controller,
     log_entry.term = current_term_;
     log_entry.op = kPut;
     binlogger_->AppendEntry(log_entry);
-    replication_cond_.Signal();
+    replication_cond_.Broadcast();
     return;
 }
 
@@ -413,7 +418,10 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
     while (status_ == kLeader) {
         while (binlogger_->GetLength() <= next_index_[follower_id]) {
             LOG(INFO, "no new log entry for %s", follower_id.c_str());
-            replication_cond_.Wait();
+            replication_cond_.TimeWait(2000);
+            if (status_ != kLeader) {
+                break;
+            }
         }
         if (status_ != kLeader) {
             break;
@@ -450,7 +458,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                                           &response,
                                           2, 1);
         mu_.Lock();
-        if (response.current_term() > current_term_) {
+        if (ok && response.current_term() > current_term_) {
             TransToFollower("InsNodeImpl::ReplicateLog", 
                             response.current_term());
         }

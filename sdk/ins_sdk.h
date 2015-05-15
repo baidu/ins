@@ -23,6 +23,8 @@ struct ClusterNodeInfo {
     std::string server_id;
     galaxy::ins::NodeStatus status;
     int64_t term;
+    int64_t last_log_index;
+    int64_t last_log_term;
 };
 
 class InsSDK {

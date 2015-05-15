@@ -31,6 +31,8 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
         } else {
             node_info.status = response.status();
             node_info.term = response.term();
+            node_info.last_log_index = response.last_log_index();
+            node_info.last_log_term = response.last_log_term();
         }
         cluster_info->push_back(node_info);
     }

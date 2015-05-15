@@ -1364,20 +1364,40 @@ class ShowStatusResponse : public ::google::protobuf::Message {
   inline ::google::protobuf::int64 term() const;
   inline void set_term(::google::protobuf::int64 value);
   
+  // required int64 last_log_index = 3;
+  inline bool has_last_log_index() const;
+  inline void clear_last_log_index();
+  static const int kLastLogIndexFieldNumber = 3;
+  inline ::google::protobuf::int64 last_log_index() const;
+  inline void set_last_log_index(::google::protobuf::int64 value);
+  
+  // required int64 last_log_term = 4;
+  inline bool has_last_log_term() const;
+  inline void clear_last_log_term();
+  static const int kLastLogTermFieldNumber = 4;
+  inline ::google::protobuf::int64 last_log_term() const;
+  inline void set_last_log_term(::google::protobuf::int64 value);
+  
   // @@protoc_insertion_point(class_scope:galaxy.ins.ShowStatusResponse)
  private:
   inline void set_has_status();
   inline void clear_has_status();
   inline void set_has_term();
   inline void clear_has_term();
+  inline void set_has_last_log_index();
+  inline void clear_has_last_log_index();
+  inline void set_has_last_log_term();
+  inline void clear_has_last_log_term();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::google::protobuf::int64 term_;
+  ::google::protobuf::int64 last_log_index_;
+  ::google::protobuf::int64 last_log_term_;
   int status_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
   
   friend void  protobuf_AddDesc_ins_5fnode_2eproto();
   friend void protobuf_AssignDesc_ins_5fnode_2eproto();
@@ -2657,6 +2677,50 @@ inline ::google::protobuf::int64 ShowStatusResponse::term() const {
 inline void ShowStatusResponse::set_term(::google::protobuf::int64 value) {
   set_has_term();
   term_ = value;
+}
+
+// required int64 last_log_index = 3;
+inline bool ShowStatusResponse::has_last_log_index() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void ShowStatusResponse::set_has_last_log_index() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void ShowStatusResponse::clear_has_last_log_index() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void ShowStatusResponse::clear_last_log_index() {
+  last_log_index_ = GOOGLE_LONGLONG(0);
+  clear_has_last_log_index();
+}
+inline ::google::protobuf::int64 ShowStatusResponse::last_log_index() const {
+  return last_log_index_;
+}
+inline void ShowStatusResponse::set_last_log_index(::google::protobuf::int64 value) {
+  set_has_last_log_index();
+  last_log_index_ = value;
+}
+
+// required int64 last_log_term = 4;
+inline bool ShowStatusResponse::has_last_log_term() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void ShowStatusResponse::set_has_last_log_term() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void ShowStatusResponse::clear_has_last_log_term() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void ShowStatusResponse::clear_last_log_term() {
+  last_log_term_ = GOOGLE_LONGLONG(0);
+  clear_has_last_log_term();
+}
+inline ::google::protobuf::int64 ShowStatusResponse::last_log_term() const {
+  return last_log_term_;
+}
+inline void ShowStatusResponse::set_last_log_term(::google::protobuf::int64 value) {
+  set_has_last_log_term();
+  last_log_term_ = value;
 }
 
 

@@ -168,7 +168,8 @@ void BinLogger::Truncate(int64_t trunk_slot_index) {
         LOG(FATAL, "failed to truncate %s", log_index_file_name.c_str());
         abort();
     }
-    if (ftruncate(fileno(log_data_file_), data_offset + entry_len) != 0 ){
+    if (ftruncate(fileno(log_data_file_), 
+                         data_offset + entry_len + sizeof(entry_len)) != 0 ){
         LOG(FATAL, "failed to truncate %s", log_data_file_name.c_str());
         abort();
     }

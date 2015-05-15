@@ -84,6 +84,8 @@ message ShowStatusRequest {
 message ShowStatusResponse {
     required NodeStatus status = 1;    
     required int64 term = 2;
+    required int64 last_log_index = 3;
+    required int64 last_log_term = 4;
 }
 
 service InsNode {

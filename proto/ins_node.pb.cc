@@ -268,9 +268,11 @@ void protobuf_AssignDesc_ins_5fnode_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ShowStatusRequest));
   ShowStatusResponse_descriptor_ = file->message_type(12);
-  static const int ShowStatusResponse_offsets_[2] = {
+  static const int ShowStatusResponse_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ShowStatusResponse, status_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ShowStatusResponse, term_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ShowStatusResponse, last_log_index_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ShowStatusResponse, last_log_term_),
   };
   ShowStatusResponse_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -383,22 +385,23 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
     "hit\030\001 \002(\010\022\r\n\005value\030\002 \002(\t\022\021\n\tleader_id\030\003 "
     "\001(\t\"\031\n\nDelRequest\022\013\n\003key\030\001 \002(\t\"1\n\013DelRes"
     "ponse\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001("
-    "\t\"\023\n\021ShowStatusRequest\"J\n\022ShowStatusResp"
+    "\t\"\023\n\021ShowStatusRequest\"y\n\022ShowStatusResp"
     "onse\022&\n\006status\030\001 \002(\0162\026.galaxy.ins.NodeSt"
-    "atus\022\014\n\004term\030\002 \002(\003*F\n\nNodeStatus\022\013\n\007kLea"
-    "der\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollower\020\002\022\014\n\010"
-    "kOffline\020\003*,\n\014LogOperation\022\010\n\004kPut\020\001\022\010\n\004"
-    "kDel\020\002\022\010\n\004kNop\020\n2\222\003\n\007InsNode\022T\n\rAppendEn"
-    "tries\022 .galaxy.ins.AppendEntriesRequest\032"
-    "!.galaxy.ins.AppendEntriesResponse\0229\n\004Vo"
-    "te\022\027.galaxy.ins.VoteRequest\032\030.galaxy.ins"
-    ".VoteResponse\0226\n\003Put\022\026.galaxy.ins.PutReq"
-    "uest\032\027.galaxy.ins.PutResponse\0226\n\003Get\022\026.g"
-    "alaxy.ins.GetRequest\032\027.galaxy.ins.GetRes"
-    "ponse\0229\n\006Delete\022\026.galaxy.ins.DelRequest\032"
-    "\027.galaxy.ins.DelResponse\022K\n\nShowStatus\022\035"
-    ".galaxy.ins.ShowStatusRequest\032\036.galaxy.i"
-    "ns.ShowStatusResponseB\003\200\001\001", 1386);
+    "atus\022\014\n\004term\030\002 \002(\003\022\026\n\016last_log_index\030\003 \002"
+    "(\003\022\025\n\rlast_log_term\030\004 \002(\003*F\n\nNodeStatus\022"
+    "\013\n\007kLeader\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollowe"
+    "r\020\002\022\014\n\010kOffline\020\003*,\n\014LogOperation\022\010\n\004kPu"
+    "t\020\001\022\010\n\004kDel\020\002\022\010\n\004kNop\020\n2\222\003\n\007InsNode\022T\n\rA"
+    "ppendEntries\022 .galaxy.ins.AppendEntriesR"
+    "equest\032!.galaxy.ins.AppendEntriesRespons"
+    "e\0229\n\004Vote\022\027.galaxy.ins.VoteRequest\032\030.gal"
+    "axy.ins.VoteResponse\0226\n\003Put\022\026.galaxy.ins"
+    ".PutRequest\032\027.galaxy.ins.PutResponse\0226\n\003"
+    "Get\022\026.galaxy.ins.GetRequest\032\027.galaxy.ins"
+    ".GetResponse\0229\n\006Delete\022\026.galaxy.ins.DelR"
+    "equest\032\027.galaxy.ins.DelResponse\022K\n\nShowS"
+    "tatus\022\035.galaxy.ins.ShowStatusRequest\032\036.g"
+    "alaxy.ins.ShowStatusResponseB\003\200\001\001", 1433);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "ins_node.proto", &protobuf_RegisterTypes);
   Entry::default_instance_ = new Entry();
@@ -3840,6 +3843,8 @@ void ShowStatusRequest::Swap(ShowStatusRequest* other) {
 #ifndef _MSC_VER
 const int ShowStatusResponse::kStatusFieldNumber;
 const int ShowStatusResponse::kTermFieldNumber;
+const int ShowStatusResponse::kLastLogIndexFieldNumber;
+const int ShowStatusResponse::kLastLogTermFieldNumber;
 #endif  // !_MSC_VER
 
 ShowStatusResponse::ShowStatusResponse()
@@ -3860,6 +3865,8 @@ void ShowStatusResponse::SharedCtor() {
   _cached_size_ = 0;
   status_ = 0;
   term_ = GOOGLE_LONGLONG(0);
+  last_log_index_ = GOOGLE_LONGLONG(0);
+  last_log_term_ = GOOGLE_LONGLONG(0);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -3896,6 +3903,8 @@ void ShowStatusResponse::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     status_ = 0;
     term_ = GOOGLE_LONGLONG(0);
+    last_log_index_ = GOOGLE_LONGLONG(0);
+    last_log_term_ = GOOGLE_LONGLONG(0);
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -3939,6 +3948,38 @@ bool ShowStatusResponse::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(24)) goto parse_last_log_index;
+        break;
+      }
+      
+      // required int64 last_log_index = 3;
+      case 3: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_last_log_index:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int64, ::google::protobuf::internal::WireFormatLite::TYPE_INT64>(
+                 input, &last_log_index_)));
+          set_has_last_log_index();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(32)) goto parse_last_log_term;
+        break;
+      }
+      
+      // required int64 last_log_term = 4;
+      case 4: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_last_log_term:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int64, ::google::protobuf::internal::WireFormatLite::TYPE_INT64>(
+                 input, &last_log_term_)));
+          set_has_last_log_term();
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -3972,6 +4013,16 @@ void ShowStatusResponse::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteInt64(2, this->term(), output);
   }
   
+  // required int64 last_log_index = 3;
+  if (has_last_log_index()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt64(3, this->last_log_index(), output);
+  }
+  
+  // required int64 last_log_term = 4;
+  if (has_last_log_term()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt64(4, this->last_log_term(), output);
+  }
+  
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -3989,6 +4040,16 @@ void ShowStatusResponse::SerializeWithCachedSizes(
   // required int64 term = 2;
   if (has_term()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(2, this->term(), target);
+  }
+  
+  // required int64 last_log_index = 3;
+  if (has_last_log_index()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(3, this->last_log_index(), target);
+  }
+  
+  // required int64 last_log_term = 4;
+  if (has_last_log_term()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(4, this->last_log_term(), target);
   }
   
   if (!unknown_fields().empty()) {
@@ -4013,6 +4074,20 @@ int ShowStatusResponse::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int64Size(
           this->term());
+    }
+    
+    // required int64 last_log_index = 3;
+    if (has_last_log_index()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int64Size(
+          this->last_log_index());
+    }
+    
+    // required int64 last_log_term = 4;
+    if (has_last_log_term()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int64Size(
+          this->last_log_term());
     }
     
   }
@@ -4048,6 +4123,12 @@ void ShowStatusResponse::MergeFrom(const ShowStatusResponse& from) {
     if (from.has_term()) {
       set_term(from.term());
     }
+    if (from.has_last_log_index()) {
+      set_last_log_index(from.last_log_index());
+    }
+    if (from.has_last_log_term()) {
+      set_last_log_term(from.last_log_term());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -4065,7 +4146,7 @@ void ShowStatusResponse::CopyFrom(const ShowStatusResponse& from) {
 }
 
 bool ShowStatusResponse::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
+  if ((_has_bits_[0] & 0x0000000f) != 0x0000000f) return false;
   
   return true;
 }
@@ -4074,6 +4155,8 @@ void ShowStatusResponse::Swap(ShowStatusResponse* other) {
   if (other != this) {
     std::swap(status_, other->status_);
     std::swap(term_, other->term_);
+    std::swap(last_log_index_, other->last_log_index_);
+    std::swap(last_log_term_, other->last_log_term_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

@@ -27,6 +27,8 @@ int main(int argc, char* argv[]) {
             std::string s_status = InsSDK::StatusToString(it->status);
             std::cout << it->server_id << "\t" << s_status 
                       << "\t" << it->term
+                      << "\t" << it->last_log_index
+                      << "\t" << it->last_log_term
                       << std::endl;
         }
     }
