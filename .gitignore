@@ -5,6 +5,7 @@
 *.a
 ins
 ins_cli
+Makefile
 output/*
 sandbox/data/
 ins.flag
