@@ -483,6 +483,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         int64_t cur_term = current_term_;
         int64_t prev_index = index - 1;
         int64_t prev_term = -1;
+        int64_t cur_commit_index = commit_index_;
         std::string leader_id = self_id_;
         LogEntry log_entry, prev_log_entry;
         binlogger_->ReadSlot(index, &log_entry);
@@ -500,7 +501,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         request.set_leader_id(leader_id);
         request.set_prev_log_index(prev_index);
         request.set_prev_log_term(prev_term);
-        request.set_leader_commit_index(commit_index_);
+        request.set_leader_commit_index(cur_commit_index);
         galaxy::ins::Entry * entry = request.add_entries();
         entry->set_term(log_entry.term);
         entry->set_key(log_entry.key);
