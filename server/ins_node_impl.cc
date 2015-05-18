@@ -190,6 +190,68 @@ void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* re
     }  
 }
 
+void InsNodeImpl::HeartBeatForReadCallback(
+                              const ::galaxy::ins::AppendEntriesRequest* request,
+                              ::galaxy::ins::AppendEntriesResponse* response,
+                              bool failed, int /*error*/,
+                              ClientReadAck::Ptr context) {
+    MutexLock lock(&mu_);
+    boost::scoped_ptr<const galaxy::ins::AppendEntriesRequest> request_ptr(request);
+    boost::scoped_ptr<galaxy::ins::AppendEntriesResponse> response_ptr(response);
+    if (context->triggered) {
+        return;
+    }
+    if (status_ != kLeader) {
+        LOG(INFO, "outdated HearBeatCallbackForRead, I am no longer leader now.");
+        context->response->set_success(false);
+        context->response->set_hit(false);
+        context->response->set_leader_id("");
+        context->done->Run();
+        context->triggered = true;
+        return ;
+    }
+    if (!failed) {
+        if (response_ptr->current_term() > current_term_) {
+            TransToFollower("InsNodeImpl::HeartBeatCallbackForRead", 
+                            response_ptr->current_term());
+            context->response->set_success(false);
+            context->response->set_hit(false);
+            context->response->set_leader_id("");
+            context->done->Run();
+            context->triggered = true;
+            return ;
+        }
+        else {
+            context->succ_count += 1;
+        }
+    } else {
+        context->err_count += 1;
+    }
+    if (context->succ_count > members_.size() / 2) {
+        std::string key = context->request->key();
+        LOG(INFO, "client get key: %s", key.c_str());
+        if (data_map_.find(key) != data_map_.end()) {
+            context->response->set_hit(true);
+            context->response->set_success(true);
+            context->response->set_value(data_map_[key]);
+            context->response->set_leader_id("");
+        } else {
+            context->response->set_hit(false);
+            context->response->set_success(true);
+            context->response->set_leader_id("");
+        }
+        context->done->Run();
+        context->triggered = true;
+    }
+    if (context->err_count > members_.size() / 2) {
+        context->response->set_success(false);
+        context->response->set_hit(false);
+        context->response->set_leader_id("");
+        context->done->Run();
+        context->triggered = true;
+    }
+}
+
 void InsNodeImpl::BroadCastHeartBeat() {
     MutexLock lock(&mu_);
     if (status_ != kLeader) {
@@ -459,7 +521,7 @@ void InsNodeImpl::UpdateCommitIndex(int64_t a_index) {
             match_count += 1;
         }
     }
-    if (match_count > members_.size()/2 && a_index > commit_index_) {
+    if (match_count >= match_index_.size()/2 && a_index > commit_index_) {
         commit_index_ = a_index;
         LOG(INFO, "update to new commit index: %ld", commit_index_);
         commit_cond_->Signal();
@@ -564,20 +626,33 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
-    std::string key = request->key();
-    LOG(INFO, "client get key: %s", key.c_str());
-    if (data_map_.find(key) != data_map_.end()) {
-        response->set_hit(true);
-        response->set_success(true);
-        response->set_value(data_map_[key]);
-        response->set_leader_id("");
-    } else {
-        response->set_hit(false);
-        response->set_success(true);
-        response->set_leader_id("");
+    ClientReadAck::Ptr context(new ClientReadAck());
+    context->request = request;
+    context->response = response;
+    context->done = done;
+    context->succ_count = 1;//self Get success;
+    std::vector<std::string>::iterator it = members_.begin();
+    for(; it!= members_.end(); it++) { // make sure I am still leader
+        if (*it == self_id_) {
+            continue;
+        }
+        InsNode_Stub* stub;
+        rpc_client_.GetStub(*it, &stub);
+        ::galaxy::ins::AppendEntriesRequest* request = 
+                    new ::galaxy::ins::AppendEntriesRequest();
+        ::galaxy::ins::AppendEntriesResponse* response =
+                    new ::galaxy::ins::AppendEntriesResponse();
+        request->set_term(current_term_);
+        request->set_leader_id(self_id_);
+        request->set_leader_commit_index(commit_index_);
+        boost::function<void (const ::galaxy::ins::AppendEntriesRequest*,
+                        ::galaxy::ins::AppendEntriesResponse*,
+                        bool, int) > callback;
+        callback = boost::bind(&InsNodeImpl::HeartBeatForReadCallback, this,
+                               _1, _2, _3, _4, context);
+        rpc_client_.AsyncRequest(stub, &InsNode_Stub::AppendEntries, 
+                                 request, response, callback, 2);
     }
-    done->Run();
-    return;
 }
 
 void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
@@ -653,6 +728,4 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
 
 } //namespace ins
 } //namespace galaxy
-
-
 

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <boost/shared_ptr.hpp>
 #include "common/mutex.h"
 #include "common/thread_pool.h"
 #include "rpc/rpc_client.h"
@@ -25,6 +26,25 @@ struct ClientAck {
                   done(NULL) {
 
     }
+};
+
+struct ClientReadAck
+{
+    const galaxy::ins::GetRequest* request;
+    galaxy::ins::GetResponse* response;
+    google::protobuf::Closure* done;
+    uint32_t succ_count ;
+    uint32_t err_count;
+    bool triggered;
+    ClientReadAck() : request(NULL),
+                      response(NULL),
+                      done(NULL),
+                      succ_count(0),
+                      err_count(0),
+                      triggered(false) {
+
+    }
+    typedef boost::shared_ptr<ClientReadAck> Ptr;
 };
 
 class InsNodeImpl : public InsNode {
@@ -63,6 +83,11 @@ private:
     void HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* request,
                           ::galaxy::ins::AppendEntriesResponse* response,
                           bool failed, int error);
+    void HeartBeatForReadCallback(const ::galaxy::ins::AppendEntriesRequest* request,
+                                 ::galaxy::ins::AppendEntriesResponse* response,
+                                 bool failed, int error,
+                                 ClientReadAck::Ptr context);
+
     void BroadCastHeartBeat();
     void CheckLeaderCrash();
     void TryToBeLeader();
