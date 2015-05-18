@@ -166,6 +166,7 @@ void InsNodeImpl::CommitIndexObserv() {
             last_applied_index_ += 1;
             mu_.Unlock();
         }
+        mu_.Lock();
     }
 }
 
@@ -602,6 +603,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             LOG(FATAL, "faild to send replicate-rpc to %s ", 
                 follower_id.c_str());
             ThisThread::Sleep(20);
+            mu_.Lock();
         }
     }
 }

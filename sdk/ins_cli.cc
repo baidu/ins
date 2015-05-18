@@ -6,11 +6,9 @@
 #include <algorithm>
 #include <vector>
 #include <iostream>
-#include <boost/algorithm/string.hpp>
 #include <gflags/gflags.h>
 #include "common/logging.h"
 
-DECLARE_string(cluster_members);
 DECLARE_string(ins_cmd);
 DECLARE_string(ins_key);
 DECLARE_string(ins_value);
@@ -18,14 +16,8 @@ DECLARE_string(ins_value);
 using namespace galaxy::ins::sdk;
 
 int main(int argc, char* argv[]) {
-    google::ParseCommandLineFlags(&argc, &argv, true);
     std::vector<std::string> members;
-    boost::split(members, FLAGS_cluster_members,
-                 boost::is_any_of(","), boost::token_compress_on);
-    if (members.size() < 1) {
-        LOG(FATAL, "invalid cluster size");
-        exit(1);
-    }
+    InsSDK::ParseFlagFromArgs(argc, argv, &members);
     InsSDK sdk(members);
     char cli_header[2048] = {'\0'};
     snprintf(cli_header, sizeof(cli_header), 

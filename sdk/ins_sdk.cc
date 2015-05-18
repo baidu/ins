@@ -3,14 +3,53 @@
 #include <algorithm>
 #include <iterator>
 #include <vector>
+#include <boost/algorithm/string.hpp>
+#include <gflags/gflags.h>
 #include "common/asm_atomic.h"
+#include "common/mutex.h"
+#include "rpc/rpc_client.h"
+#include "proto/ins_node.pb.h"
+
+DECLARE_string(cluster_members);
 
 namespace galaxy {
 namespace ins {
 namespace sdk {
 
-InsSDK::InsSDK(const std::vector<std::string>& members) {
+void InsSDK::ParseFlagFromArgs(int argc, char* argv[], 
+                               std::vector<std::string> * members) {
+    google::ParseCommandLineFlags(&argc, &argv, true);
+    boost::split(*members, FLAGS_cluster_members,
+                 boost::is_any_of(","), boost::token_compress_on);
+    if (members->size() < 1) {
+        LOG(FATAL, "invalid cluster size");
+        exit(1);
+    }
+}
+
+InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
+                                                          mu_(NULL) {
+    if (members.size() < 1) {
+        LOG(FATAL, "invalid cluster size");
+        exit(1);
+    }
+    rpc_client_ = new galaxy::RpcClient();
+    mu_ = new Mutex();
     std::copy(members.begin(), members.end(), std::back_inserter(members_));
+}
+
+InsSDK::~InsSDK() {
+    delete rpc_client_;
+    delete mu_;
+}
+
+void InsSDK::PrepareServerList(std::vector<std::string>& server_list) {
+    MutexLock lock(mu_);
+    if (!leader_id_.empty()) {
+        server_list.push_back(leader_id_);
+    }
+    std::copy(members_.begin(), members_.end(),
+              std::back_inserter(server_list) );
 }
 
 bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
@@ -20,10 +59,10 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
         ClusterNodeInfo  node_info;
         node_info.server_id = *it;
         galaxy::ins::InsNode_Stub* stub;
-        rpc_client_.GetStub(*it, &stub);
+        rpc_client_->GetStub(*it, &stub);
         ::galaxy::ins::ShowStatusRequest request;
         ::galaxy::ins::ShowStatusResponse response;
-        bool ok = rpc_client_.SendRequest(stub, &InsNode_Stub::ShowStatus, 
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::ShowStatus, 
                                           &request, &response, 2, 1);
         if (!ok) {
             node_info.status = kOffline;
@@ -39,7 +78,7 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
     return true;
 }
 
-std::string InsSDK::StatusToString(galaxy::ins::NodeStatus status) {
+std::string InsSDK::StatusToString(int32_t status) {
     switch (status) {
         case kLeader:
             return "Leader  ";
@@ -59,17 +98,19 @@ std::string InsSDK::StatusToString(galaxy::ins::NodeStatus status) {
 
 
 bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* error) {
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it ;
-    for (it = members_.begin(); it != members_.end(); it++){
+    for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
         LOG(INFO, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub* stub;
-        rpc_client_.GetStub(server_id, &stub);
+        rpc_client_->GetStub(server_id, &stub);
         galaxy::ins::PutRequest request;
         galaxy::ins::PutResponse response;
         request.set_key(key);
         request.set_value(value);
-        bool ok = rpc_client_.SendRequest(stub, &InsNode_Stub::Put,
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Put,
                                           &request, &response, 2, 1);
         if (!ok) {
             LOG(FATAL, "faild to rcp %s", server_id.c_str());
@@ -83,10 +124,14 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
                 LOG(INFO, "redirect to leader :%s", server_id.c_str());
-                rpc_client_.GetStub(server_id, &stub);
-                ok = rpc_client_.SendRequest(stub, &InsNode_Stub::Put,
+                rpc_client_->GetStub(server_id, &stub);
+                ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Put,
                                              &request, &response, 2, 1);
                 if (ok && response.success()) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
                     *error = kOK;
                     return true;
                 }
@@ -98,16 +143,18 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
 }
 
 bool InsSDK::Get(const std::string& key, std::string* value, SDKError* error) {
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it ;
-    for (it = members_.begin(); it != members_.end(); it++){
+    for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
         LOG(INFO, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub* stub;
-        rpc_client_.GetStub(server_id, &stub);
+        rpc_client_->GetStub(server_id, &stub);
         galaxy::ins::GetRequest request;
         galaxy::ins::GetResponse response;
         request.set_key(key);
-        bool ok = rpc_client_.SendRequest(stub, &InsNode_Stub::Get,
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Get,
                                           &request, &response, 2, 1);
         if (!ok) {
             LOG(FATAL, "faild to rcp %s", server_id.c_str());
@@ -126,10 +173,14 @@ bool InsSDK::Get(const std::string& key, std::string* value, SDKError* error) {
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
                 LOG(INFO, "redirect to leader :%s", server_id.c_str());
-                rpc_client_.GetStub(server_id, &stub);
-                ok = rpc_client_.SendRequest(stub, &InsNode_Stub::Get,
+                rpc_client_->GetStub(server_id, &stub);
+                ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Get,
                                              &request, &response, 2, 1);
                 if (ok && response.success()) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
                     *error = kOK;
                     if (response.hit()) {
                         *error = kOK;
@@ -148,16 +199,18 @@ bool InsSDK::Get(const std::string& key, std::string* value, SDKError* error) {
 
 
 bool InsSDK::Delete(const std::string& key, SDKError* error) {
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it ;
-    for (it = members_.begin(); it != members_.end(); it++){
+    for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
         LOG(INFO, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub* stub;
-        rpc_client_.GetStub(server_id, &stub);
+        rpc_client_->GetStub(server_id, &stub);
         galaxy::ins::DelRequest request;
         galaxy::ins::DelResponse response;
         request.set_key(key);
-        bool ok = rpc_client_.SendRequest(stub, &InsNode_Stub::Delete,
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Delete,
                                           &request, &response, 2, 1);
         if (!ok) {
             LOG(FATAL, "faild to rcp %s", server_id.c_str());
@@ -171,10 +224,14 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
                 LOG(INFO, "redirect to leader :%s", server_id.c_str());
-                rpc_client_.GetStub(server_id, &stub);
-                ok = rpc_client_.SendRequest(stub, &InsNode_Stub::Delete,
+                rpc_client_->GetStub(server_id, &stub);
+                ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Delete,
                                              &request, &response, 2, 1);
                 if (ok && response.success()) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
                     *error = kOK;
                     return true;
                 }
