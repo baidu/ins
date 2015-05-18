@@ -118,6 +118,10 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
         }
 
         if (response.success()) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
             *error = kOK;
             return true;
         } else {
@@ -167,6 +171,10 @@ bool InsSDK::Get(const std::string& key, std::string* value, SDKError* error) {
                 *error = kOK;
             } else {
                 *error = kNoSuchKey;
+            }
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
             }
             return true;
         } else {
@@ -218,6 +226,10 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
         }
 
         if (response.success()) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
             *error = kOK;
             return true;
         } else {
