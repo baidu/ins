@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
             snprintf(value_buf, sizeof(value_buf), "value_%d", i);
             sdk.Put(key_buf, value_buf, &err);
             if (err == kClusterDown) {
-                sleep(2);
+                abort();
             }
             printf("%s\n", key_buf);
         }
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
             std::string value;
             sdk.Get(key_buf, &value, &err);
             if (err == kClusterDown) {
-                sleep(2);
+                abort();
             }
             printf("%s\n", value_buf);
         }

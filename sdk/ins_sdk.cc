@@ -7,6 +7,7 @@
 #include <gflags/gflags.h>
 #include "common/asm_atomic.h"
 #include "common/mutex.h"
+#include "common/this_thread.h"
 #include "rpc/rpc_client.h"
 #include "proto/ins_node.pb.h"
 
@@ -141,6 +142,7 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
                 }
             }
         }
+        ThisThread::Sleep(1000);
     }
     *error = kClusterDown;
     return false;
@@ -200,6 +202,7 @@ bool InsSDK::Get(const std::string& key, std::string* value, SDKError* error) {
                 }
             }
         }
+        ThisThread::Sleep(1000);
     }
     *error = kClusterDown;
     return false;
@@ -247,8 +250,9 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
                     *error = kOK;
                     return true;
                 }
-            }
+            } 
         }
+        ThisThread::Sleep(1000);
     }
     *error = kClusterDown;
     return false;
