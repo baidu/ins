@@ -2,182 +2,91 @@
 
 #include "common/asm_atomic.h"
 #include "common/logging.h"
+#include "leveldb/write_batch.h"
 
 namespace galaxy {
 namespace ins {
 
-const std::string log_data_file_name = "log.data";
-const std::string log_index_file_name = "log.index";
+const std::string log_dbname = "binlog";
+const std::string length_tag = "#BINLOG_LEN#";
 
-BinLogger::BinLogger(const std::string& data_dir) : log_data_file_(NULL),
-                                                    log_index_file_(NULL) {
-    std::string log_data_full_name = data_dir + "/" + log_data_file_name;
-    std::string log_index_full_name = data_dir + "/" + log_index_file_name;
-    log_data_file_ =  fopen(log_data_full_name.c_str(), "a+");
-    assert(log_data_file_);
-    log_index_file_ = fopen(log_index_full_name.c_str(), "a+");
-    assert(log_index_file_);
+BinLogger::BinLogger(const std::string& data_dir) : db_(NULL),
+                                                    length_(0) {
+    std::string full_name = data_dir + "/" + log_dbname;
+    leveldb::Options options;
+    options.create_if_missing = true;
+    leveldb::Status status = leveldb::DB::Open(options, full_name, &db_);
+    assert(status.ok());
+    std::string value;
+    status = db_->Get(leveldb::ReadOptions(), length_tag, &value);
+    if (status.ok() && !value.empty()) {
+        length_ = StringToInt(value);
+    }
 }
 
 BinLogger::~BinLogger() {
-    fclose(log_data_file_);
-    fclose(log_index_file_);
-}
-
-bool BinLogger::ReadUntil(int64_t end_slot_index, 
-                          boost::function<void (const LogEntry& log_entry)> reader) {
-    int64_t slot_count = GetLength();
-    if (end_slot_index >= slot_count) {
-        LOG(FATAL, "invalid end_slot_index: %ld >= %ld", end_slot_index, slot_count);
-        return false;
-    }
-    fseek(log_data_file_, 0 , SEEK_SET);
-    LogEntry log_entry;
-    int64_t entry_len = 0;
-    for (int i=0; i<= end_slot_index; i++) {
-        if (fread(&entry_len, sizeof(int64_t), 1, log_data_file_) != 1) {
-            LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
-            abort();
-        }
-        std::string buf;
-        buf.resize(entry_len);
-        if (fread(&buf[0], entry_len, 1, log_data_file_) !=1 ) {
-            LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
-            abort();
-        }
-        LoadLogEntry(buf, &log_entry);
-        reader(log_entry);
-    }
-    return true;
+    delete db_;
 }
 
 int64_t BinLogger::GetLength() {
     MutexLock lock(&mu_);
-    fseek(log_index_file_, 0 , SEEK_END);
-    int64_t index_file_size = ftell(log_index_file_);
-    return index_file_size / sizeof(int64_t);
+    return length_;
+}
+
+std::string BinLogger::IntToString(int64_t num) {
+    std::string key;
+    key.resize(sizeof(int64_t));
+    memcpy(&key[0], &num, sizeof(int64_t));
+    return key;
+}
+
+int64_t BinLogger::StringToInt(const std::string& s) {
+    assert(s.size() == sizeof(int64_t));
+    int64_t num = 0;
+    memcpy(&num, &s[0], sizeof(int64_t));
+    return num;
 }
 
 bool BinLogger::ReadSlot(int64_t slot_index, LogEntry* log_entry) {
-    MutexLock lock(&mu_);
-    int64_t offset = slot_index * sizeof(int64_t);
-    if (fseek(log_index_file_, offset, SEEK_SET) < 0) {
-        LOG(FATAL, "seek file failed: %s", log_index_file_name.c_str());
-        abort();
-        return false;
-    }
-    int64_t data_offset = 0 ;
-    if (fread(&data_offset, sizeof(int64_t), 1, log_index_file_) != 1) {
-        LOG(FATAL, "faild to read file %s", log_index_file_name.c_str());
-        abort();
-    }
-    if (fseek(log_data_file_, data_offset, SEEK_SET) < 0) {
-        LOG(FATAL, "seek file failed: %s", log_data_file_name.c_str());
-        abort();
-        return false;
-    }
-    int64_t entry_len = 0;
-    if (fread(&entry_len, sizeof(int64_t), 1, log_data_file_) != 1) {
-        LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
-        abort();
-    }
-    std::string buf;
-    buf.resize(entry_len);
-    if (fread(&buf[0], entry_len, 1, log_data_file_) !=1 ) {
-        LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
-        abort();
-    }
-    LoadLogEntry(buf, log_entry);
+    std::string value;
+    std::string key = IntToString(slot_index);
+    leveldb::Status status = db_->Get(leveldb::ReadOptions(), key, &value);
+    assert(status.ok());
+    LoadLogEntry(value, log_entry);
     return true;
 }
 
 void BinLogger::AppendEntry(const LogEntry& log_entry) {
-    MutexLock lock(&mu_);
     std::string buf;
     DumpLogEntry(log_entry, &buf);
-    int64_t entry_len = buf.size();
-    fseek(log_data_file_, 0, SEEK_END);
-    int64_t data_cur_size = ftell(log_data_file_);
-
-    if (fwrite(&entry_len, sizeof(int64_t), 1, log_data_file_) != 1) {
-        LOG(FATAL, "write file %s faild", log_data_file_name.c_str());
-        abort();
+    std::string cur_index;
+    std::string next_index;
+    {
+        MutexLock lock(&mu_);
+        cur_index = IntToString(length_);
+        length_++;
+        next_index = IntToString(length_);
     }
-    if (fwrite(&buf[0], buf.size(), 1, log_data_file_) != 1) {
-        LOG(FATAL, "write file %s faild", log_data_file_name.c_str());
-        abort();
-    }
-    if (fflush(log_data_file_) != 0) {
-        LOG(FATAL, "failed to flush %s", log_data_file_name.c_str());
-        abort();
-    }
-    if (fwrite(&data_cur_size, sizeof(int64_t), 1, log_index_file_) != 1) {
-        LOG(FATAL, "write file %s faild", log_index_file_name.c_str());
-        abort();
-    }
-    if (fflush(log_index_file_) != 0) {
-        LOG(FATAL, "failed to flush %s", log_index_file_name.c_str());
-        abort();
-    }
+    leveldb::WriteBatch batch;
+    batch.Put(cur_index, buf);
+    batch.Put(length_tag, next_index);
+    leveldb::Status status = db_->Write(leveldb::WriteOptions(), &batch);
+    assert(status.ok());
 }
 
 void BinLogger::Truncate(int64_t trunk_slot_index) {
-    MutexLock lock(&mu_);
-    int64_t offset = trunk_slot_index * sizeof(int64_t);
-    if (offset < 0 ) {
-        if (fflush(log_data_file_) != 0) {
-            LOG(FATAL, "failed to flush %s", log_data_file_name.c_str());
-            abort();
-        }
-        if (fflush(log_index_file_) != 0) {
-            LOG(FATAL, "failed to flush %s", log_index_file_name.c_str());
-            abort();
-        }
-        if (ftruncate(fileno(log_index_file_), 0) != 0) {
-            LOG(FATAL, "failed to truncate %s", log_index_file_name.c_str());
-            abort();
-        }
-        if (ftruncate(fileno(log_data_file_), 0) != 0 ){
-            LOG(FATAL, "failed to truncate %s", log_data_file_name.c_str());
-            abort();
-        }    
-        return;
+    if (trunk_slot_index < -1) {
+        trunk_slot_index = -1;
     }
-    if (fseek(log_index_file_, offset, SEEK_SET) < 0) {
-        LOG(FATAL, "seek file failed: %s", log_index_file_name.c_str());
-        abort();
+
+    {
+        MutexLock lock(&mu_);
+        length_ = trunk_slot_index + 1;
     }
-    int64_t data_offset = 0 ;
-    if (fread(&data_offset, sizeof(int64_t), 1, log_index_file_) != 1) {
-        LOG(FATAL, "faild to read file %s", log_index_file_name.c_str());
-        abort();
-    }
-    if (fseek(log_data_file_, data_offset, SEEK_SET) < 0) {
-        LOG(FATAL, "seek file failed: %s", log_data_file_name.c_str());
-        abort();
-    }
-    int64_t entry_len = 0;
-    if (fread(&entry_len, sizeof(int64_t), 1, log_data_file_) != 1) {
-        LOG(FATAL, "faild to read file %s", log_data_file_name.c_str());
-        abort();
-    }
-    if (fflush(log_data_file_) != 0) {
-        LOG(FATAL, "failed to flush %s", log_data_file_name.c_str());
-        abort();
-    }
-    if (fflush(log_index_file_) != 0) {
-        LOG(FATAL, "failed to flush %s", log_index_file_name.c_str());
-        abort();
-    }
-    if (ftruncate(fileno(log_index_file_), offset + sizeof(int64_t)) != 0) {
-        LOG(FATAL, "failed to truncate %s", log_index_file_name.c_str());
-        abort();
-    }
-    if (ftruncate(fileno(log_data_file_), 
-                         data_offset + entry_len + sizeof(entry_len)) != 0 ){
-        LOG(FATAL, "failed to truncate %s", log_data_file_name.c_str());
-        abort();
-    }
+
+    leveldb::Status status = db_->Put(leveldb::WriteOptions(), 
+                                      length_tag, IntToString(length_));
+    assert(status.ok());
 }
 
 void BinLogger::DumpLogEntry(const LogEntry& log_entry, std::string* buf) {

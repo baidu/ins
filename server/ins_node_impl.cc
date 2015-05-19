@@ -13,6 +13,8 @@
 DECLARE_string(ins_data_dir);
 DECLARE_int32(max_cluster_size);
 
+const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
+
 namespace galaxy {
 namespace ins {
 
@@ -61,10 +63,27 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
     }
     std::string sub_dir = self_id_;
     boost::replace_all(sub_dir, ":", "_");
+    
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
     binlogger_ = new BinLogger(FLAGS_ins_data_dir + "/" + sub_dir);
     current_term_ = meta_->ReadCurrentTerm();
     meta_->ReadVotedFor(voted_for_);
+    
+    std::string data_store_path = FLAGS_ins_data_dir + "/" 
+                                  + sub_dir + "/store" ;
+    leveldb::Options options;
+    options.create_if_missing = true;
+    leveldb::Status status = leveldb::DB::Open(options, 
+                                               data_store_path, &data_store_);
+    assert(status.ok());
+    std::string tag_value;
+    status = data_store_->Get(leveldb::ReadOptions(),
+                              tag_last_applied_index,
+                              &tag_value);
+    if (status.ok()) {
+        last_applied_index_ =  BinLogger::StringToInt(tag_value);
+    }
+
     committer_.AddTask(boost::bind(&InsNodeImpl::CommitIndexObserv, this));
     MutexLock lock(&mu_);
     CheckLeaderCrash();
@@ -133,16 +152,22 @@ void InsNodeImpl::CommitIndexObserv() {
             LogEntry log_entry;
             binlogger_->ReadSlot(i, &log_entry);
             mu_.Lock();
+            leveldb::Status s;
             switch(log_entry.op) {
                 case kPut:
-                    LOG(INFO, "add to data_map_, key: %s, value: %s",
+                    LOG(INFO, "add to data_store_, key: %s, value: %s",
                         log_entry.key.c_str(), log_entry.value.c_str());
-                    data_map_[log_entry.key] = log_entry.value;
+                    s = data_store_->Put(leveldb::WriteOptions(),
+                                         log_entry.key,
+                                         log_entry.value);
+                    assert(s.ok());
                     break;
                 case kDel:
-                    LOG(INFO, "delete from data_map_, key: %s",
+                    LOG(INFO, "delete from data_store_, key: %s",
                         log_entry.key.c_str());
-                    data_map_.erase(log_entry.key);
+                    s = data_store_->Delete(leveldb::WriteOptions(),
+                                             log_entry.key);
+                    assert(s.ok());
                     break;
                 case kNop:
                     LOG(INFO, "kNop got, do nothing, key: %s", 
@@ -164,6 +189,9 @@ void InsNodeImpl::CommitIndexObserv() {
                 client_ack_.erase(i);
             }
             last_applied_index_ += 1;
+            data_store_->Put(leveldb::WriteOptions(),
+                            tag_last_applied_index, 
+                            BinLogger::IntToString(last_applied_index_));
             mu_.Unlock();
         }
         mu_.Lock();
@@ -231,10 +259,13 @@ void InsNodeImpl::HeartBeatForReadCallback(
     if (context->succ_count > members_.size() / 2) {
         std::string key = context->request->key();
         LOG(INFO, "client get key: %s", key.c_str());
-        if (data_map_.find(key) != data_map_.end()) {
+        leveldb::Status s;
+        std::string value;
+        s = data_store_->Get(leveldb::ReadOptions(), key, &value);
+        if (s.ok()) {
             context->response->set_hit(true);
             context->response->set_success(true);
-            context->response->set_value(data_map_[key]);
+            context->response->set_value(value);
             context->response->set_leader_id("");
         } else {
             context->response->set_hit(false);

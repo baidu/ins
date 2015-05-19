@@ -36,6 +36,10 @@ DEP_INCPATH=-I../../../public/sofa-pbrpc \
   -I../../../third-64/gtest/include \
   -I../../../third-64/gtest/output \
   -I../../../third-64/gtest/output/include \
+  -I../../../third-64/leveldb \
+  -I../../../third-64/leveldb/include \
+  -I../../../third-64/leveldb/output \
+  -I../../../third-64/leveldb/output/include \
   -I../../../third-64/protobuf \
   -I../../../third-64/protobuf/include \
   -I../../../third-64/protobuf/output \
@@ -55,7 +59,7 @@ CCP_FLAGS=
 
 
 #COMAKE UUID
-COMAKE_MD5=44e078471b3135a303621da3b1d9a430  COMAKE
+COMAKE_MD5=3b5be570157e8940afc50e4c9a38cdf8  COMAKE
 
 
 .PHONY:all
@@ -186,6 +190,7 @@ ins:server/ins_ins_main.o \
   ../../../third-64/gflags/lib/libgflags_nothreads.a \
   ../../../third-64/gtest/lib/libgtest.a \
   ../../../third-64/gtest/lib/libgtest_main.a \
+  ../../../third-64/leveldb/lib/libleveldb.a \
   ../../../third-64/protobuf/lib/libprotobuf-lite.a \
   ../../../third-64/protobuf/lib/libprotobuf.a \
   ../../../third-64/protobuf/lib/libprotoc.a \
@@ -242,6 +247,7 @@ ins_cli:sdk/ins_cli_ins_sdk.o \
   ../../../third-64/gflags/lib/libgflags_nothreads.a \
   ../../../third-64/gtest/lib/libgtest.a \
   ../../../third-64/gtest/lib/libgtest_main.a \
+  ../../../third-64/leveldb/lib/libleveldb.a \
   ../../../third-64/protobuf/lib/libprotobuf-lite.a \
   ../../../third-64/protobuf/lib/libprotobuf.a \
   ../../../third-64/protobuf/lib/libprotoc.a \
@@ -308,6 +314,7 @@ binlog_test:storage/binlog_test_binlog.o \
   ../../../third-64/gflags/lib/libgflags_nothreads.a \
   ../../../third-64/gtest/lib/libgtest.a \
   ../../../third-64/gtest/lib/libgtest_main.a \
+  ../../../third-64/leveldb/lib/libleveldb.a \
   ../../../third-64/protobuf/lib/libprotobuf-lite.a \
   ../../../third-64/protobuf/lib/libprotobuf.a \
   ../../../third-64/protobuf/lib/libprotoc.a \
@@ -357,6 +364,7 @@ sample:sdk/sample_sample.o \
   ../../../third-64/gflags/lib/libgflags_nothreads.a \
   ../../../third-64/gtest/lib/libgtest.a \
   ../../../third-64/gtest/lib/libgtest_main.a \
+  ../../../third-64/leveldb/lib/libleveldb.a \
   ../../../third-64/protobuf/lib/libprotobuf-lite.a \
   ../../../third-64/protobuf/lib/libprotobuf.a \
   ../../../third-64/protobuf/lib/libprotoc.a \
@@ -393,7 +401,6 @@ server/ins_ins_node_impl.o:server/ins_node_impl.cc \
   common/mutex.h \
   common/thread_pool.h \
   common/logging.h \
-  common/timer.h \
   common/this_thread.h \
   storage/meta.h \
   storage/binlog.h \
@@ -447,6 +454,7 @@ sdk/ins_cli_ins_sdk.o:sdk/ins_sdk.cc \
   common/asm_atomic.h \
   common/mutex.h \
   common/timer.h \
+  common/this_thread.h \
   rpc/rpc_client.h \
   common/mutex.h \
   common/thread_pool.h \
@@ -481,6 +489,7 @@ sdk/ins_sdk_ins_sdk.o:sdk/ins_sdk.cc \
   common/asm_atomic.h \
   common/mutex.h \
   common/timer.h \
+  common/this_thread.h \
   rpc/rpc_client.h \
   common/mutex.h \
   common/thread_pool.h \

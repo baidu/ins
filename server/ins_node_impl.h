@@ -10,6 +10,7 @@
 #include "common/mutex.h"
 #include "common/thread_pool.h"
 #include "rpc/rpc_client.h"
+#include "leveldb/db.h"
 
 namespace galaxy {
 namespace ins {
@@ -119,7 +120,7 @@ private:
     Meta * meta_;
     BinLogger* binlogger_;
     //for leaders
-    std::map<std::string, std::string> data_map_;
+    leveldb::DB* data_store_;
     ThreadPool replicatter_;
     ThreadPool committer_;
     std::map<std::string, int64_t> next_index_;
