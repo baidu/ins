@@ -460,7 +460,8 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
                 binlogger_->ReadSlot(request->prev_log_index(),
                                      &prev_log_entry);
                 int64_t prev_log_term = prev_log_entry.term;
-                if (prev_log_term != request->prev_log_term()) {
+                if (prev_log_term != request->prev_log_term() ||
+                    binlogger_->GetLength() != request->prev_log_index() + 1) {
                     binlogger_->Truncate(request->prev_log_index() - 1);
                     response->set_current_term(current_term_);
                     response->set_success(false);
