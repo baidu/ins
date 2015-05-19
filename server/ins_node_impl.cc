@@ -90,10 +90,21 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
 }
 
 InsNodeImpl::~InsNodeImpl() {
-    MutexLock lock(&mu_);
-    stop_ = true;
-    delete meta_;
-    delete binlogger_;
+    {
+        MutexLock lock(&mu_);
+        stop_ = true;
+        commit_cond_->Signal();
+        replication_cond_->Broadcast();
+    }
+    replicatter_.Stop(true);
+    committer_.Stop(true);
+    pool_.Stop(true);
+    heart_beat_pool_.Stop(true);
+    {
+        MutexLock lock(&mu_);
+        delete meta_;
+        delete binlogger_;
+    }
 }
 
 int32_t InsNodeImpl::GetRandomTimeout() {
@@ -103,6 +114,9 @@ int32_t InsNodeImpl::GetRandomTimeout() {
 
 void InsNodeImpl::CheckLeaderCrash() {
     mu_.AssertHeld();
+    if (stop_) {
+        return;
+    }
     int32_t timeout = GetRandomTimeout();
     elect_leader_task_  = pool_.DelayTask(timeout, 
                                         boost::bind(&InsNodeImpl::TryToBeLeader,
@@ -140,10 +154,13 @@ void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
 void InsNodeImpl::CommitIndexObserv() {
     MutexLock lock(&mu_);
     while (!stop_) {
-        while (commit_index_ <=  last_applied_index_) {
+        while (!stop_ && commit_index_ <=  last_applied_index_) {
             LOG(DEBUG, "commit_idx: %ld, last_applied_index: %ld",
                 commit_index_, last_applied_index_);
             commit_cond_->Wait();
+        }
+        if (stop_) {
+            return;
         }
         int64_t from_idx = last_applied_index_;
         int64_t to_idx = commit_index_;
@@ -286,6 +303,9 @@ void InsNodeImpl::HeartBeatForReadCallback(
 
 void InsNodeImpl::BroadCastHeartBeat() {
     MutexLock lock(&mu_);
+    if (stop_) {
+        return;
+    }
     if (status_ != kLeader) {
         return;
     }
@@ -568,12 +588,15 @@ void InsNodeImpl::UpdateCommitIndex(int64_t a_index) {
 void InsNodeImpl::ReplicateLog(std::string follower_id) {
     MutexLock lock(&mu_);
     while (!stop_ && status_ == kLeader) {
-        while (binlogger_->GetLength() <= next_index_[follower_id]) {
+        while (!stop_ && binlogger_->GetLength() <= next_index_[follower_id]) {
             LOG(DEBUG, "no new log entry for %s", follower_id.c_str());
             replication_cond_->TimeWait(2000);
             if (status_ != kLeader) {
                 break;
             }
+        }
+        if (stop_) {
+            return;
         }
         if (status_ != kLeader) {
             break;
