@@ -109,9 +109,10 @@ void protobuf_AssignDesc_ins_5fnode_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(AppendEntriesRequest));
   AppendEntriesResponse_descriptor_ = file->message_type(2);
-  static const int AppendEntriesResponse_offsets_[2] = {
+  static const int AppendEntriesResponse_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(AppendEntriesResponse, current_term_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(AppendEntriesResponse, success_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(AppendEntriesResponse, log_length_),
   };
   AppendEntriesResponse_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -374,36 +375,36 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
     "leader_id\030\002 \002(\t\022\026\n\016prev_log_index\030\003 \001(\003\022"
     "\025\n\rprev_log_term\030\004 \001(\003\022\033\n\023leader_commit_"
     "index\030\005 \001(\003\022\"\n\007entries\030\006 \003(\0132\021.galaxy.in"
-    "s.Entry\">\n\025AppendEntriesResponse\022\024\n\014curr"
-    "ent_term\030\001 \002(\003\022\017\n\007success\030\002 \002(\010\"`\n\013VoteR"
-    "equest\022\014\n\004term\030\001 \002(\003\022\024\n\014candidate_id\030\002 \002"
-    "(\t\022\026\n\016last_log_index\030\003 \001(\003\022\025\n\rlast_log_t"
-    "erm\030\004 \001(\003\"2\n\014VoteResponse\022\014\n\004term\030\001 \002(\003\022"
-    "\024\n\014vote_granted\030\002 \002(\010\"(\n\nPutRequest\022\013\n\003k"
-    "ey\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\"1\n\013PutResponse\022\017"
-    "\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001(\t\"\031\n\nGe"
-    "tRequest\022\013\n\003key\030\001 \002(\t\"M\n\013GetResponse\022\013\n\003"
-    "hit\030\001 \002(\010\022\r\n\005value\030\002 \001(\t\022\021\n\tleader_id\030\003 "
-    "\001(\t\022\017\n\007success\030\004 \002(\010\"\031\n\nDelRequest\022\013\n\003ke"
-    "y\030\001 \002(\t\"1\n\013DelResponse\022\017\n\007success\030\001 \002(\010\022"
-    "\021\n\tleader_id\030\002 \001(\t\"\023\n\021ShowStatusRequest\""
-    "y\n\022ShowStatusResponse\022&\n\006status\030\001 \002(\0162\026."
-    "galaxy.ins.NodeStatus\022\014\n\004term\030\002 \002(\003\022\026\n\016l"
-    "ast_log_index\030\003 \002(\003\022\025\n\rlast_log_term\030\004 \002"
-    "(\003*F\n\nNodeStatus\022\013\n\007kLeader\020\000\022\016\n\nkCandid"
-    "ate\020\001\022\r\n\tkFollower\020\002\022\014\n\010kOffline\020\003*,\n\014Lo"
-    "gOperation\022\010\n\004kPut\020\001\022\010\n\004kDel\020\002\022\010\n\004kNop\020\n"
-    "2\222\003\n\007InsNode\022T\n\rAppendEntries\022 .galaxy.i"
-    "ns.AppendEntriesRequest\032!.galaxy.ins.App"
-    "endEntriesResponse\0229\n\004Vote\022\027.galaxy.ins."
-    "VoteRequest\032\030.galaxy.ins.VoteResponse\0226\n"
-    "\003Put\022\026.galaxy.ins.PutRequest\032\027.galaxy.in"
-    "s.PutResponse\0226\n\003Get\022\026.galaxy.ins.GetReq"
-    "uest\032\027.galaxy.ins.GetResponse\0229\n\006Delete\022"
-    "\026.galaxy.ins.DelRequest\032\027.galaxy.ins.Del"
-    "Response\022K\n\nShowStatus\022\035.galaxy.ins.Show"
-    "StatusRequest\032\036.galaxy.ins.ShowStatusRes"
-    "ponseB\003\200\001\001", 1450);
+    "s.Entry\"R\n\025AppendEntriesResponse\022\024\n\014curr"
+    "ent_term\030\001 \002(\003\022\017\n\007success\030\002 \002(\010\022\022\n\nlog_l"
+    "ength\030\003 \001(\003\"`\n\013VoteRequest\022\014\n\004term\030\001 \002(\003"
+    "\022\024\n\014candidate_id\030\002 \002(\t\022\026\n\016last_log_index"
+    "\030\003 \001(\003\022\025\n\rlast_log_term\030\004 \001(\003\"2\n\014VoteRes"
+    "ponse\022\014\n\004term\030\001 \002(\003\022\024\n\014vote_granted\030\002 \002("
+    "\010\"(\n\nPutRequest\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 "
+    "\002(\t\"1\n\013PutResponse\022\017\n\007success\030\001 \002(\010\022\021\n\tl"
+    "eader_id\030\002 \001(\t\"\031\n\nGetRequest\022\013\n\003key\030\001 \002("
+    "\t\"M\n\013GetResponse\022\013\n\003hit\030\001 \002(\010\022\r\n\005value\030\002"
+    " \001(\t\022\021\n\tleader_id\030\003 \001(\t\022\017\n\007success\030\004 \002(\010"
+    "\"\031\n\nDelRequest\022\013\n\003key\030\001 \002(\t\"1\n\013DelRespon"
+    "se\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001(\t\"\023"
+    "\n\021ShowStatusRequest\"y\n\022ShowStatusRespons"
+    "e\022&\n\006status\030\001 \002(\0162\026.galaxy.ins.NodeStatu"
+    "s\022\014\n\004term\030\002 \002(\003\022\026\n\016last_log_index\030\003 \002(\003\022"
+    "\025\n\rlast_log_term\030\004 \002(\003*F\n\nNodeStatus\022\013\n\007"
+    "kLeader\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollower\020\002"
+    "\022\014\n\010kOffline\020\003*,\n\014LogOperation\022\010\n\004kPut\020\001"
+    "\022\010\n\004kDel\020\002\022\010\n\004kNop\020\n2\222\003\n\007InsNode\022T\n\rAppe"
+    "ndEntries\022 .galaxy.ins.AppendEntriesRequ"
+    "est\032!.galaxy.ins.AppendEntriesResponse\0229"
+    "\n\004Vote\022\027.galaxy.ins.VoteRequest\032\030.galaxy"
+    ".ins.VoteResponse\0226\n\003Put\022\026.galaxy.ins.Pu"
+    "tRequest\032\027.galaxy.ins.PutResponse\0226\n\003Get"
+    "\022\026.galaxy.ins.GetRequest\032\027.galaxy.ins.Ge"
+    "tResponse\0229\n\006Delete\022\026.galaxy.ins.DelRequ"
+    "est\032\027.galaxy.ins.DelResponse\022K\n\nShowStat"
+    "us\022\035.galaxy.ins.ShowStatusRequest\032\036.gala"
+    "xy.ins.ShowStatusResponseB\003\200\001\001", 1470);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "ins_node.proto", &protobuf_RegisterTypes);
   Entry::default_instance_ = new Entry();
@@ -1275,6 +1276,7 @@ void AppendEntriesRequest::Swap(AppendEntriesRequest* other) {
 #ifndef _MSC_VER
 const int AppendEntriesResponse::kCurrentTermFieldNumber;
 const int AppendEntriesResponse::kSuccessFieldNumber;
+const int AppendEntriesResponse::kLogLengthFieldNumber;
 #endif  // !_MSC_VER
 
 AppendEntriesResponse::AppendEntriesResponse()
@@ -1295,6 +1297,7 @@ void AppendEntriesResponse::SharedCtor() {
   _cached_size_ = 0;
   current_term_ = GOOGLE_LONGLONG(0);
   success_ = false;
+  log_length_ = GOOGLE_LONGLONG(0);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -1331,6 +1334,7 @@ void AppendEntriesResponse::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     current_term_ = GOOGLE_LONGLONG(0);
     success_ = false;
+    log_length_ = GOOGLE_LONGLONG(0);
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -1369,6 +1373,22 @@ bool AppendEntriesResponse::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
+        if (input->ExpectTag(24)) goto parse_log_length;
+        break;
+      }
+      
+      // optional int64 log_length = 3;
+      case 3: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_log_length:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int64, ::google::protobuf::internal::WireFormatLite::TYPE_INT64>(
+                 input, &log_length_)));
+          set_has_log_length();
+        } else {
+          goto handle_uninterpreted;
+        }
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -1401,6 +1421,11 @@ void AppendEntriesResponse::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteBool(2, this->success(), output);
   }
   
+  // optional int64 log_length = 3;
+  if (has_log_length()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt64(3, this->log_length(), output);
+  }
+  
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -1417,6 +1442,11 @@ void AppendEntriesResponse::SerializeWithCachedSizes(
   // required bool success = 2;
   if (has_success()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(2, this->success(), target);
+  }
+  
+  // optional int64 log_length = 3;
+  if (has_log_length()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(3, this->log_length(), target);
   }
   
   if (!unknown_fields().empty()) {
@@ -1440,6 +1470,13 @@ int AppendEntriesResponse::ByteSize() const {
     // required bool success = 2;
     if (has_success()) {
       total_size += 1 + 1;
+    }
+    
+    // optional int64 log_length = 3;
+    if (has_log_length()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int64Size(
+          this->log_length());
     }
     
   }
@@ -1475,6 +1512,9 @@ void AppendEntriesResponse::MergeFrom(const AppendEntriesResponse& from) {
     if (from.has_success()) {
       set_success(from.success());
     }
+    if (from.has_log_length()) {
+      set_log_length(from.log_length());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -1501,6 +1541,7 @@ void AppendEntriesResponse::Swap(AppendEntriesResponse* other) {
   if (other != this) {
     std::swap(current_term_, other->current_term_);
     std::swap(success_, other->success_);
+    std::swap(log_length_, other->log_length_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

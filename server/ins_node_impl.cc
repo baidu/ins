@@ -141,7 +141,7 @@ void InsNodeImpl::CommitIndexObserv() {
     MutexLock lock(&mu_);
     while (!stop_) {
         while (commit_index_ <=  last_applied_index_) {
-            LOG(INFO, "commit_idx: %ld, last_applied_index: %ld",
+            LOG(DEBUG, "commit_idx: %ld, last_applied_index: %ld",
                 commit_index_, last_applied_index_);
             commit_cond_->Wait();
         }
@@ -155,7 +155,7 @@ void InsNodeImpl::CommitIndexObserv() {
             leveldb::Status s;
             switch(log_entry.op) {
                 case kPut:
-                    LOG(INFO, "add to data_store_, key: %s, value: %s",
+                    LOG(DEBUG, "add to data_store_, key: %s, value: %s",
                         log_entry.key.c_str(), log_entry.value.c_str());
                     s = data_store_->Put(leveldb::WriteOptions(),
                                          log_entry.key,
@@ -163,14 +163,14 @@ void InsNodeImpl::CommitIndexObserv() {
                     assert(s.ok());
                     break;
                 case kDel:
-                    LOG(INFO, "delete from data_store_, key: %s",
+                    LOG(DEBUG, "delete from data_store_, key: %s",
                         log_entry.key.c_str());
                     s = data_store_->Delete(leveldb::WriteOptions(),
                                              log_entry.key);
                     assert(s.ok());
                     break;
                 case kNop:
-                    LOG(INFO, "kNop got, do nothing, key: %s", 
+                    LOG(DEBUG, "kNop got, do nothing, key: %s", 
                               log_entry.key.c_str());
                     break;
             }
@@ -258,7 +258,7 @@ void InsNodeImpl::HeartBeatForReadCallback(
     }
     if (context->succ_count > members_.size() / 2) {
         std::string key = context->request->key();
-        LOG(INFO, "client get key: %s", key.c_str());
+        LOG(DEBUG, "client get key: %s", key.c_str());
         leveldb::Status s;
         std::string value;
         s = data_store_->Get(leveldb::ReadOptions(), key, &value);
@@ -439,6 +439,7 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
     } else {
         response->set_current_term(current_term_);
         response->set_success(false);
+        response->set_log_length(binlogger_->GetLength());
         LOG(INFO, "[AppendEntries] term is outdated");
         done->Run();
         return;
@@ -451,6 +452,7 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
             if (request->prev_log_index() >= binlogger_->GetLength()){
                 response->set_current_term(current_term_);
                 response->set_success(false);
+                response->set_log_length(binlogger_->GetLength());
                 LOG(INFO, "[AppendEntries] prev log is beyond");
                 done->Run();
                 return;
@@ -465,6 +467,7 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
                     binlogger_->Truncate(request->prev_log_index() - 1);
                     response->set_current_term(current_term_);
                     response->set_success(false);
+                    response->set_log_length(binlogger_->GetLength());
                     LOG(INFO, "[AppendEntries] term not match");
                     done->Run();
                     return;
@@ -485,10 +488,11 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
        
         if (commit_index_ > old_commit_index) {
             commit_cond_->Signal();
-            LOG(INFO, "follower: update my commit index to :%ld", commit_index_);
+            LOG(DEBUG, "follower: update my commit index to :%ld", commit_index_);
         }
         response->set_current_term(current_term_);
         response->set_success(true);
+        response->set_log_length(binlogger_->GetLength());
         done->Run();
     } else {
         LOG(FATAL, "invalid status: %d", status_);
@@ -556,7 +560,7 @@ void InsNodeImpl::UpdateCommitIndex(int64_t a_index) {
     }
     if (match_count >= match_index_.size()/2 && a_index > commit_index_) {
         commit_index_ = a_index;
-        LOG(INFO, "update to new commit index: %ld", commit_index_);
+        LOG(DEBUG, "update to new commit index: %ld", commit_index_);
         commit_cond_->Signal();
     }
 }
@@ -565,7 +569,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
     MutexLock lock(&mu_);
     while (!stop_ && status_ == kLeader) {
         while (binlogger_->GetLength() <= next_index_[follower_id]) {
-            LOG(INFO, "no new log entry for %s", follower_id.c_str());
+            LOG(DEBUG, "no new log entry for %s", follower_id.c_str());
             replication_cond_->TimeWait(2000);
             if (status_ != kLeader) {
                 break;
@@ -623,6 +627,8 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                 UpdateCommitIndex(index);
             } else { // (index, term ) miss match
                 next_index_[follower_id] -= 1;
+                next_index_[follower_id] = std::min(next_index_[follower_id],
+                                                    response.log_length());
                 LOG(INFO, "adjust next_index of %s to %ld",
                     follower_id.c_str(), 
                     next_index_[follower_id]);
@@ -709,7 +715,7 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
     }
 
     const std::string& key = request->key();
-    LOG(INFO, "client want delete key :%s", key.c_str());
+    LOG(DEBUG, "client want delete key :%s", key.c_str());
     LogEntry log_entry;
     log_entry.key = key;
     log_entry.value = "";
@@ -744,7 +750,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     }
     const std::string& key = request->key();
     const std::string& value = request->value();
-    LOG(INFO, "client want put key :%s", key.c_str());
+    LOG(DEBUG, "client want put key :%s", key.c_str());
     LogEntry log_entry;
     log_entry.key = key;
     log_entry.value = value;

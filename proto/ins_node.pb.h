@@ -418,20 +418,30 @@ class AppendEntriesResponse : public ::google::protobuf::Message {
   inline bool success() const;
   inline void set_success(bool value);
   
+  // optional int64 log_length = 3;
+  inline bool has_log_length() const;
+  inline void clear_log_length();
+  static const int kLogLengthFieldNumber = 3;
+  inline ::google::protobuf::int64 log_length() const;
+  inline void set_log_length(::google::protobuf::int64 value);
+  
   // @@protoc_insertion_point(class_scope:galaxy.ins.AppendEntriesResponse)
  private:
   inline void set_has_current_term();
   inline void clear_has_current_term();
   inline void set_has_success();
   inline void clear_has_success();
+  inline void set_has_log_length();
+  inline void clear_has_log_length();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::google::protobuf::int64 current_term_;
+  ::google::protobuf::int64 log_length_;
   bool success_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(3 + 31) / 32];
   
   friend void  protobuf_AddDesc_ins_5fnode_2eproto();
   friend void protobuf_AssignDesc_ins_5fnode_2eproto();
@@ -1904,6 +1914,28 @@ inline bool AppendEntriesResponse::success() const {
 inline void AppendEntriesResponse::set_success(bool value) {
   set_has_success();
   success_ = value;
+}
+
+// optional int64 log_length = 3;
+inline bool AppendEntriesResponse::has_log_length() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void AppendEntriesResponse::set_has_log_length() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void AppendEntriesResponse::clear_has_log_length() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void AppendEntriesResponse::clear_log_length() {
+  log_length_ = GOOGLE_LONGLONG(0);
+  clear_has_log_length();
+}
+inline ::google::protobuf::int64 AppendEntriesResponse::log_length() const {
+  return log_length_;
+}
+inline void AppendEntriesResponse::set_log_length(::google::protobuf::int64 value) {
+  set_has_log_length();
+  log_length_ = value;
 }
 
 // -------------------------------------------------------------------

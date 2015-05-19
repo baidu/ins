@@ -34,6 +34,7 @@ message AppendEntriesRequest {
 message AppendEntriesResponse {
     required int64 current_term = 1;
     required bool success = 2;
+    optional int64 log_length = 3;
 }
 
 message VoteRequest {
