@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <assert.h>
 #include <algorithm>
 #include <vector>
 #include <boost/algorithm/string.hpp>

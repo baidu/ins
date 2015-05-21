@@ -1,5 +1,6 @@
 #include "binlog.h"
 
+#include <assert.h>
 #include "common/asm_atomic.h"
 #include "common/logging.h"
 #include "leveldb/write_batch.h"

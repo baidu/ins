@@ -1,5 +1,6 @@
 #include "ins_sdk.h"
 
+#include <assert.h>
 #include <algorithm>
 #include <iterator>
 #include <vector>

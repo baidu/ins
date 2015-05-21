@@ -1,5 +1,6 @@
 #include "ins_node_impl.h"
 
+#include <assert.h>
 #include <sys/utsname.h>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/bind.hpp>
