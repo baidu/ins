@@ -50,7 +50,7 @@ $(INS_CLI_OBJ): $(INS_CLI_HEADER)
 
 # Targets
 ins: $(INS_OBJ) $(OBJS)
-	$(CXX) $(INS_OBJ $(OBJS) -o $@ $(LDFLAGS)
+	$(CXX) $(INS_OBJ) $(OBJS) -o $@ $(LDFLAGS)
 
 ins_cli: $(INS_CLI_OBJ) $(OBJS)
 	$(CXX) $(INS_CLI_OBJ) $(OBJS) -o $@ $(LDFLAGS)
