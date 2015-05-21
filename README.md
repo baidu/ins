@@ -1,12 +1,18 @@
 # ins
 integrated naming service (based on raft)
 
-# build
+[![Build Status](https://travis-ci.org/fxsjy/ins.svg?branch=master)](https://travis-ci.org/fxsjy/ins)
+
+# build for Baiduer
 * comake2 -UB
 * comake2
 * make
 
-# try
+# build default
+* read .travis.yml and install the depends libs
+* make && make cp
+
+# try it
 	   cd sandbox
 	  ./start_all.sh
 	  ./ins_shell.sh
@@ -17,3 +23,6 @@ integrated naming service (based on raft)
 	    get (key) [read the data by key ]
 	    delete (key) [remove the data by key]
   
+# performance (multiple clients)
+* 55200 read per seconds 
+* 5300 write per seconds
