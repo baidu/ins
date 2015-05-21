@@ -18,7 +18,7 @@ INCLUDE_PATH = -I./ -I$(PROTOBUF_PATH)/include \
 LDFLAGS = -L$(PROTOBUF_PATH)/lib -lprotobuf \
           -L$(PBRPC_PATH)/lib -lsofa-pbrpc \
           -L$(SNAPPY_PATH)/lib -lsnappy \
-          -lpthread -lz -lgflags
+          -lpthread -lz -lleveldb -lgflags
 
 CXXFLAGS += $(OPT)
 
