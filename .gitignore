@@ -3,6 +3,7 @@
 *.dc
 *.SCM
 *.a
+*.pb.*
 ins
 ins_cli
 Makefile
