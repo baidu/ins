@@ -66,6 +66,11 @@ clean:
 	rm -rf $(INS_OBJ) $(INS_CLI_OBJ) $(OBJS)
 	rm -rf $(PROTO_SRC) $(PROTO_HEADER)
 
+cp: $(BIN)
+	mkdir -p output/bin
+	cp ins output/bin
+	cp ins_cli output/bin
+
 .PHONY: test
 test:
 	echo "Test done"
