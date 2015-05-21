@@ -27,7 +27,7 @@ PROTO_SRC = $(patsubst %.proto,%.pb.cc,$(PROTO_FILE))
 PROTO_HEADER = $(patsubst %.proto,%.pb.h,$(PROTO_FILE))
 PROTO_OBJ = $(patsubst %.proto,%.pb.o,$(PROTO_FILE))
 
-INS_SRC = $(wildcard server/*.cc)
+INS_SRC = $(wildcard server/ins_*.cc) storage/binlog.cc storage/meta.cc
 INS_OBJ = $(patsubst %.cc, %.o, $(INS_SRC))
 INS_HEADER = $(wildcard server/*.h)
 
