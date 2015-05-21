@@ -3,21 +3,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#include <boost/filesystem.hpp>
+#include <unistd.h>
 #include "common/logging.h"
+#include "utils.h"
 
 namespace galaxy {
 namespace ins {
 
-namespace bf = boost::filesystem;
 const std::string term_file_name = "term.data";
 const std::string vote_file_name = "vote.data";
 
 Meta::Meta(const std::string& data_dir) : data_dir_(data_dir),
                                           term_file_(NULL),
                                           vote_file_(NULL) {
-    if (!bf::exists(data_dir)) {
-        bf::create_directories(data_dir);
+    bool ok = common::Mkdirs(data_dir.c_str());
+    if (!ok) {
+        LOG(FATAL, "failed to create dir :%s", data_dir.c_str());
+        abort();
     }
     term_file_ = fopen((data_dir+"/"+term_file_name).c_str(), "a+");
     vote_file_ = fopen((data_dir+"/"+vote_file_name).c_str(), "a+");
@@ -42,8 +44,14 @@ void Meta::ReadVotedFor(std::map<int64_t, std::string>& voted_for) {
     voted_for.clear();
     int64_t term = 0;
     char server_id[1024] = {'\0'};
+    int64_t last_term;
+    std::string last_vote_for;
     while(fscanf(vote_file_, "%ld %1023s", &term, server_id) == 2) {
-        voted_for[term] = std::string(server_id);
+        last_term = term;
+        last_vote_for = server_id;
+    }
+    if (!last_vote_for.empty()) {
+        voted_for[term] = std::string(last_vote_for);
     }
 }
 
