@@ -317,6 +317,7 @@ void InsNodeImpl::BroadCastHeartBeat() {
         }
         InsNode_Stub* stub;
         rpc_client_.GetStub(*it, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         ::galaxy::ins::AppendEntriesRequest* request = 
                     new ::galaxy::ins::AppendEntriesRequest();
         ::galaxy::ins::AppendEntriesResponse* response =
@@ -429,6 +430,7 @@ void InsNodeImpl::TryToBeLeader() {
         }
         InsNode_Stub* stub;
         rpc_client_.GetStub(*it, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         ::galaxy::ins::VoteRequest* request = new ::galaxy::ins::VoteRequest();
         ::galaxy::ins::VoteResponse* response = new ::galaxy::ins::VoteResponse();
         request->set_candidate_id(self_id_);
@@ -606,9 +608,10 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         int64_t prev_index = index - 1;
         int64_t prev_term = -1;
         int64_t cur_commit_index = commit_index_;
+        int64_t batch_span = binlogger_->GetLength() - index;
+        batch_span = std::min(batch_span, 100L);
         std::string leader_id = self_id_;
-        LogEntry log_entry, prev_log_entry;
-        binlogger_->ReadSlot(index, &log_entry);
+        LogEntry prev_log_entry;
         if (prev_index > -1) {
             binlogger_->ReadSlot(prev_index, &prev_log_entry);
             prev_term = prev_log_entry.term;
@@ -617,6 +620,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
 
         InsNode_Stub* stub;
         rpc_client_.GetStub(follower_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::AppendEntriesRequest request;
         galaxy::ins::AppendEntriesResponse response;
         request.set_term(cur_term);
@@ -624,11 +628,15 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         request.set_prev_log_index(prev_index);
         request.set_prev_log_term(prev_term);
         request.set_leader_commit_index(cur_commit_index);
-        galaxy::ins::Entry * entry = request.add_entries();
-        entry->set_term(log_entry.term);
-        entry->set_key(log_entry.key);
-        entry->set_value(log_entry.value);
-        entry->set_op(log_entry.op);
+        for (int idx = index; idx < (index + batch_span); idx++) {
+            LogEntry log_entry;
+            binlogger_->ReadSlot(idx, &log_entry);
+            galaxy::ins::Entry * entry = request.add_entries();
+            entry->set_term(log_entry.term);
+            entry->set_key(log_entry.key);
+            entry->set_value(log_entry.value);
+            entry->set_op(log_entry.op);
+        }
         bool ok = rpc_client_.SendRequest(stub, 
                                           &InsNode_Stub::AppendEntries,
                                           &request,
@@ -645,8 +653,8 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         }
         if (ok) {
             if (response.success()) { // log replicated
-                next_index_[follower_id] = index + 1;
-                match_index_[follower_id] = index;
+                next_index_[follower_id] = index + batch_span;
+                match_index_[follower_id] = index + batch_span - 1;
                 UpdateCommitIndex(index);
             } else { // (index, term ) miss match
                 next_index_[follower_id] -= 1;
@@ -689,32 +697,54 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
-    ClientReadAck::Ptr context(new ClientReadAck());
-    context->request = request;
-    context->response = response;
-    context->done = done;
-    context->succ_count = 1;//self Get success;
-    std::vector<std::string>::iterator it = members_.begin();
-    for(; it!= members_.end(); it++) { // make sure I am still leader
-        if (*it == self_id_) {
-            continue;
-        }
-        InsNode_Stub* stub;
-        rpc_client_.GetStub(*it, &stub);
-        ::galaxy::ins::AppendEntriesRequest* request = 
-                    new ::galaxy::ins::AppendEntriesRequest();
-        ::galaxy::ins::AppendEntriesResponse* response =
-                    new ::galaxy::ins::AppendEntriesResponse();
-        request->set_term(current_term_);
-        request->set_leader_id(self_id_);
-        request->set_leader_commit_index(commit_index_);
+
+    if (request->quorum()) {
+        ClientReadAck::Ptr context(new ClientReadAck());
+        context->request = request;
+        context->response = response;
+        context->done = done;
+        context->succ_count = 1;//self Get success;
+        std::vector<std::string>::iterator it = members_.begin();
         boost::function<void (const ::galaxy::ins::AppendEntriesRequest*,
-                        ::galaxy::ins::AppendEntriesResponse*,
-                        bool, int) > callback;
+                              ::galaxy::ins::AppendEntriesResponse*,
+                              bool, int) > callback;
         callback = boost::bind(&InsNodeImpl::HeartBeatForReadCallback, this,
                                _1, _2, _3, _4, context);
-        rpc_client_.AsyncRequest(stub, &InsNode_Stub::AppendEntries, 
-                                 request, response, callback, 2);
+        for(; it!= members_.end(); it++) { // make sure I am still leader
+            if (*it == self_id_) {
+                continue;
+            }
+            InsNode_Stub* stub;
+            rpc_client_.GetStub(*it, &stub);
+            boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+            ::galaxy::ins::AppendEntriesRequest* request = 
+                        new ::galaxy::ins::AppendEntriesRequest();
+            ::galaxy::ins::AppendEntriesResponse* response =
+                        new ::galaxy::ins::AppendEntriesResponse();
+            request->set_term(current_term_);
+            request->set_leader_id(self_id_);
+            request->set_leader_commit_index(commit_index_);
+            rpc_client_.AsyncRequest(stub, &InsNode_Stub::AppendEntries, 
+                                     request, response, callback, 2);
+        }
+    } else {
+        mu_.Unlock();
+        std::string key = request->key();
+        leveldb::Status s;
+        std::string value;
+        s = data_store_->Get(leveldb::ReadOptions(), key, &value);
+        if (s.ok()) {
+            response->set_hit(true);
+            response->set_success(true);
+            response->set_value(value);
+            response->set_leader_id("");
+        } else {
+            response->set_hit(false);
+            response->set_success(true);
+            response->set_leader_id("");
+        }
+        done->Run();
+        mu_.Lock();
     }
 }
 

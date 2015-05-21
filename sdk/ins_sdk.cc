@@ -4,6 +4,7 @@
 #include <iterator>
 #include <vector>
 #include <boost/algorithm/string.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <gflags/gflags.h>
 #include "common/asm_atomic.h"
 #include "common/mutex.h"
@@ -61,6 +62,7 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
         node_info.server_id = *it;
         galaxy::ins::InsNode_Stub* stub;
         rpc_client_->GetStub(*it, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         ::galaxy::ins::ShowStatusRequest request;
         ::galaxy::ins::ShowStatusResponse response;
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::ShowStatus, 
@@ -105,8 +107,9 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
         LOG(INFO, "rpc to %s", server_id.c_str());
-        galaxy::ins::InsNode_Stub* stub;
+        galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::PutRequest request;
         galaxy::ins::PutResponse response;
         request.set_key(key);
@@ -129,8 +132,9 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
                 LOG(INFO, "redirect to leader :%s", server_id.c_str());
-                rpc_client_->GetStub(server_id, &stub);
-                ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Put,
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Put,
                                              &request, &response, 2, 1);
                 if (ok && response.success()) {
                     {
@@ -148,18 +152,21 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
     return false;
 }
 
-bool InsSDK::Get(const std::string& key, std::string* value, SDKError* error) {
+bool InsSDK::Get(const std::string& key, std::string* value,
+                 SDKError* error, bool quorum) {
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
         LOG(INFO, "rpc to %s", server_id.c_str());
-        galaxy::ins::InsNode_Stub* stub;
+        galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::GetRequest request;
         galaxy::ins::GetResponse response;
         request.set_key(key);
+        request.set_quorum(quorum);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Get,
                                           &request, &response, 2, 1);
         if (!ok) {
@@ -183,8 +190,9 @@ bool InsSDK::Get(const std::string& key, std::string* value, SDKError* error) {
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
                 LOG(INFO, "redirect to leader :%s", server_id.c_str());
-                rpc_client_->GetStub(server_id, &stub);
-                ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Get,
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Get,
                                              &request, &response, 2, 1);
                 if (ok && response.success()) {
                     {
@@ -216,7 +224,7 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
         LOG(INFO, "rpc to %s", server_id.c_str());
-        galaxy::ins::InsNode_Stub* stub;
+        galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
         galaxy::ins::DelRequest request;
         galaxy::ins::DelResponse response;
@@ -239,8 +247,9 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
                 LOG(INFO, "redirect to leader :%s", server_id.c_str());
-                rpc_client_->GetStub(server_id, &stub);
-                ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Delete,
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Delete,
                                              &request, &response, 2, 1);
                 if (ok && response.success()) {
                     {

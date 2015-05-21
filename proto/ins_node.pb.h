@@ -921,17 +921,27 @@ class GetRequest : public ::google::protobuf::Message {
   inline ::std::string* mutable_key();
   inline ::std::string* release_key();
   
+  // optional bool quorum = 2 [default = false];
+  inline bool has_quorum() const;
+  inline void clear_quorum();
+  static const int kQuorumFieldNumber = 2;
+  inline bool quorum() const;
+  inline void set_quorum(bool value);
+  
   // @@protoc_insertion_point(class_scope:galaxy.ins.GetRequest)
  private:
   inline void set_has_key();
   inline void clear_has_key();
+  inline void set_has_quorum();
+  inline void clear_has_quorum();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::std::string* key_;
+  bool quorum_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
   
   friend void  protobuf_AddDesc_ins_5fnode_2eproto();
   friend void protobuf_AssignDesc_ins_5fnode_2eproto();
@@ -2378,6 +2388,28 @@ inline ::std::string* GetRequest::release_key() {
     key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
     return temp;
   }
+}
+
+// optional bool quorum = 2 [default = false];
+inline bool GetRequest::has_quorum() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void GetRequest::set_has_quorum() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void GetRequest::clear_has_quorum() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void GetRequest::clear_quorum() {
+  quorum_ = false;
+  clear_has_quorum();
+}
+inline bool GetRequest::quorum() const {
+  return quorum_;
+}
+inline void GetRequest::set_quorum(bool value) {
+  set_has_quorum();
+  quorum_ = value;
 }
 
 // -------------------------------------------------------------------

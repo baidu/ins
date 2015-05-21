@@ -47,7 +47,11 @@ DEP_INCPATH=-I../../../public/sofa-pbrpc \
   -I../../../third-64/snappy \
   -I../../../third-64/snappy/include \
   -I../../../third-64/snappy/output \
-  -I../../../third-64/snappy/output/include
+  -I../../../third-64/snappy/output/include \
+  -I../../../third-64/tcmalloc \
+  -I../../../third-64/tcmalloc/include \
+  -I../../../third-64/tcmalloc/output \
+  -I../../../third-64/tcmalloc/output/include
 
 #============ CCP vars ============
 CCHECK=@ccheck.py
@@ -59,7 +63,7 @@ CCP_FLAGS=
 
 
 #COMAKE UUID
-COMAKE_MD5=3b5be570157e8940afc50e4c9a38cdf8  COMAKE
+COMAKE_MD5=4292ddd78ca99c2a1a1143f74006f56b  COMAKE
 
 
 .PHONY:all
@@ -194,7 +198,13 @@ ins:server/ins_ins_main.o \
   ../../../third-64/protobuf/lib/libprotobuf-lite.a \
   ../../../third-64/protobuf/lib/libprotobuf.a \
   ../../../third-64/protobuf/lib/libprotoc.a \
-  ../../../third-64/snappy/lib/libsnappy.a -lpthread \
+  ../../../third-64/snappy/lib/libsnappy.a \
+  ../../../third-64/tcmalloc/lib/libprofiler.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_and_profiler.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_debug.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal_debug.a -lpthread \
   -lcrypto \
   -lrt \
   -lz -Xlinker "-)" -o ins
@@ -251,7 +261,13 @@ ins_cli:sdk/ins_cli_ins_sdk.o \
   ../../../third-64/protobuf/lib/libprotobuf-lite.a \
   ../../../third-64/protobuf/lib/libprotobuf.a \
   ../../../third-64/protobuf/lib/libprotoc.a \
-  ../../../third-64/snappy/lib/libsnappy.a -lpthread \
+  ../../../third-64/snappy/lib/libsnappy.a \
+  ../../../third-64/tcmalloc/lib/libprofiler.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_and_profiler.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_debug.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal_debug.a -lpthread \
   -lcrypto \
   -lrt \
   -lz -Xlinker "-)" -o ins_cli
@@ -318,7 +334,13 @@ binlog_test:storage/binlog_test_binlog.o \
   ../../../third-64/protobuf/lib/libprotobuf-lite.a \
   ../../../third-64/protobuf/lib/libprotobuf.a \
   ../../../third-64/protobuf/lib/libprotoc.a \
-  ../../../third-64/snappy/lib/libsnappy.a -lpthread \
+  ../../../third-64/snappy/lib/libsnappy.a \
+  ../../../third-64/tcmalloc/lib/libprofiler.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_and_profiler.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_debug.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal_debug.a -lpthread \
   -lcrypto \
   -lrt \
   -lz -Xlinker "-)" -o binlog_test
@@ -368,7 +390,13 @@ sample:sdk/sample_sample.o \
   ../../../third-64/protobuf/lib/libprotobuf-lite.a \
   ../../../third-64/protobuf/lib/libprotobuf.a \
   ../../../third-64/protobuf/lib/libprotoc.a \
-  ../../../third-64/snappy/lib/libsnappy.a -lpthread \
+  ../../../third-64/snappy/lib/libsnappy.a \
+  ../../../third-64/tcmalloc/lib/libprofiler.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_and_profiler.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_debug.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal.a \
+  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal_debug.a -lpthread \
   -lcrypto \
   -lrt \
   -lz -Xlinker "-)" -o sample

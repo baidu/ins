@@ -27,7 +27,9 @@ int main(int argc, char* argv[]) {
             snprintf(value_buf, sizeof(value_buf), "value_%d", i);
             sdk.Put(key_buf, value_buf, &err);
             if (err == kClusterDown) {
-                abort();
+                i--;
+                printf("try put again: %s", key_buf);
+                sleep(2);
             }
             printf("%s\n", key_buf);
         }
@@ -44,7 +46,28 @@ int main(int argc, char* argv[]) {
             std::string value;
             sdk.Get(key_buf, &value, &err);
             if (err == kClusterDown) {
-                abort();
+                i--;
+                printf("try get again: %s", key_buf);
+                sleep(2);
+            }
+            printf("%s\n", value_buf);
+        }
+    } else if(strcmp("readq", argv[1]) == 0) {
+        fprintf(stderr, "readq test\n");
+        InsSDK::ParseFlagFromArgs(argc, argv, &members);
+        InsSDK sdk(members);
+        char key_buf[1024] = {'\0'};
+        char value_buf[1024] = {'\0'};
+        SDKError err;
+        for (int i=1; i<=100000; i++) {
+            snprintf(key_buf, sizeof(key_buf), "key_%d", i);
+            snprintf(value_buf, sizeof(value_buf), "value_%d", i);
+            std::string value;
+            sdk.Get(key_buf, &value, &err, true);
+            if (err == kClusterDown) {
+                i--;
+                printf("try get again: %s", key_buf);
+                sleep(2);
             }
             printf("%s\n", value_buf);
         }

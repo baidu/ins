@@ -192,8 +192,9 @@ void protobuf_AssignDesc_ins_5fnode_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(PutResponse));
   GetRequest_descriptor_ = file->message_type(7);
-  static const int GetRequest_offsets_[1] = {
+  static const int GetRequest_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GetRequest, key_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(GetRequest, quorum_),
   };
   GetRequest_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -383,28 +384,29 @@ void protobuf_AddDesc_ins_5fnode_2eproto() {
     "ponse\022\014\n\004term\030\001 \002(\003\022\024\n\014vote_granted\030\002 \002("
     "\010\"(\n\nPutRequest\022\013\n\003key\030\001 \002(\t\022\r\n\005value\030\002 "
     "\002(\t\"1\n\013PutResponse\022\017\n\007success\030\001 \002(\010\022\021\n\tl"
-    "eader_id\030\002 \001(\t\"\031\n\nGetRequest\022\013\n\003key\030\001 \002("
-    "\t\"M\n\013GetResponse\022\013\n\003hit\030\001 \002(\010\022\r\n\005value\030\002"
-    " \001(\t\022\021\n\tleader_id\030\003 \001(\t\022\017\n\007success\030\004 \002(\010"
-    "\"\031\n\nDelRequest\022\013\n\003key\030\001 \002(\t\"1\n\013DelRespon"
-    "se\022\017\n\007success\030\001 \002(\010\022\021\n\tleader_id\030\002 \001(\t\"\023"
-    "\n\021ShowStatusRequest\"y\n\022ShowStatusRespons"
-    "e\022&\n\006status\030\001 \002(\0162\026.galaxy.ins.NodeStatu"
-    "s\022\014\n\004term\030\002 \002(\003\022\026\n\016last_log_index\030\003 \002(\003\022"
-    "\025\n\rlast_log_term\030\004 \002(\003*F\n\nNodeStatus\022\013\n\007"
-    "kLeader\020\000\022\016\n\nkCandidate\020\001\022\r\n\tkFollower\020\002"
-    "\022\014\n\010kOffline\020\003*,\n\014LogOperation\022\010\n\004kPut\020\001"
-    "\022\010\n\004kDel\020\002\022\010\n\004kNop\020\n2\222\003\n\007InsNode\022T\n\rAppe"
-    "ndEntries\022 .galaxy.ins.AppendEntriesRequ"
-    "est\032!.galaxy.ins.AppendEntriesResponse\0229"
-    "\n\004Vote\022\027.galaxy.ins.VoteRequest\032\030.galaxy"
-    ".ins.VoteResponse\0226\n\003Put\022\026.galaxy.ins.Pu"
-    "tRequest\032\027.galaxy.ins.PutResponse\0226\n\003Get"
-    "\022\026.galaxy.ins.GetRequest\032\027.galaxy.ins.Ge"
-    "tResponse\0229\n\006Delete\022\026.galaxy.ins.DelRequ"
-    "est\032\027.galaxy.ins.DelResponse\022K\n\nShowStat"
-    "us\022\035.galaxy.ins.ShowStatusRequest\032\036.gala"
-    "xy.ins.ShowStatusResponseB\003\200\001\001", 1470);
+    "eader_id\030\002 \001(\t\"0\n\nGetRequest\022\013\n\003key\030\001 \002("
+    "\t\022\025\n\006quorum\030\002 \001(\010:\005false\"M\n\013GetResponse\022"
+    "\013\n\003hit\030\001 \002(\010\022\r\n\005value\030\002 \001(\t\022\021\n\tleader_id"
+    "\030\003 \001(\t\022\017\n\007success\030\004 \002(\010\"\031\n\nDelRequest\022\013\n"
+    "\003key\030\001 \002(\t\"1\n\013DelResponse\022\017\n\007success\030\001 \002"
+    "(\010\022\021\n\tleader_id\030\002 \001(\t\"\023\n\021ShowStatusReque"
+    "st\"y\n\022ShowStatusResponse\022&\n\006status\030\001 \002(\016"
+    "2\026.galaxy.ins.NodeStatus\022\014\n\004term\030\002 \002(\003\022\026"
+    "\n\016last_log_index\030\003 \002(\003\022\025\n\rlast_log_term\030"
+    "\004 \002(\003*F\n\nNodeStatus\022\013\n\007kLeader\020\000\022\016\n\nkCan"
+    "didate\020\001\022\r\n\tkFollower\020\002\022\014\n\010kOffline\020\003*,\n"
+    "\014LogOperation\022\010\n\004kPut\020\001\022\010\n\004kDel\020\002\022\010\n\004kNo"
+    "p\020\n2\222\003\n\007InsNode\022T\n\rAppendEntries\022 .galax"
+    "y.ins.AppendEntriesRequest\032!.galaxy.ins."
+    "AppendEntriesResponse\0229\n\004Vote\022\027.galaxy.i"
+    "ns.VoteRequest\032\030.galaxy.ins.VoteResponse"
+    "\0226\n\003Put\022\026.galaxy.ins.PutRequest\032\027.galaxy"
+    ".ins.PutResponse\0226\n\003Get\022\026.galaxy.ins.Get"
+    "Request\032\027.galaxy.ins.GetResponse\0229\n\006Dele"
+    "te\022\026.galaxy.ins.DelRequest\032\027.galaxy.ins."
+    "DelResponse\022K\n\nShowStatus\022\035.galaxy.ins.S"
+    "howStatusRequest\032\036.galaxy.ins.ShowStatus"
+    "ResponseB\003\200\001\001", 1493);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "ins_node.proto", &protobuf_RegisterTypes);
   Entry::default_instance_ = new Entry();
@@ -2697,6 +2699,7 @@ void PutResponse::Swap(PutResponse* other) {
 
 #ifndef _MSC_VER
 const int GetRequest::kKeyFieldNumber;
+const int GetRequest::kQuorumFieldNumber;
 #endif  // !_MSC_VER
 
 GetRequest::GetRequest()
@@ -2716,6 +2719,7 @@ GetRequest::GetRequest(const GetRequest& from)
 void GetRequest::SharedCtor() {
   _cached_size_ = 0;
   key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  quorum_ = false;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -2758,6 +2762,7 @@ void GetRequest::Clear() {
         key_->clear();
       }
     }
+    quorum_ = false;
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -2778,6 +2783,22 @@ bool GetRequest::MergePartialFromCodedStream(
           ::google::protobuf::internal::WireFormat::VerifyUTF8String(
             this->key().data(), this->key().length(),
             ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(16)) goto parse_quorum;
+        break;
+      }
+      
+      // optional bool quorum = 2 [default = false];
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+         parse_quorum:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
+                 input, &quorum_)));
+          set_has_quorum();
         } else {
           goto handle_uninterpreted;
         }
@@ -2812,6 +2833,11 @@ void GetRequest::SerializeWithCachedSizes(
       1, this->key(), output);
   }
   
+  // optional bool quorum = 2 [default = false];
+  if (has_quorum()) {
+    ::google::protobuf::internal::WireFormatLite::WriteBool(2, this->quorum(), output);
+  }
+  
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -2830,6 +2856,11 @@ void GetRequest::SerializeWithCachedSizes(
         1, this->key(), target);
   }
   
+  // optional bool quorum = 2 [default = false];
+  if (has_quorum()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(2, this->quorum(), target);
+  }
+  
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -2846,6 +2877,11 @@ int GetRequest::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
           this->key());
+    }
+    
+    // optional bool quorum = 2 [default = false];
+    if (has_quorum()) {
+      total_size += 1 + 1;
     }
     
   }
@@ -2878,6 +2914,9 @@ void GetRequest::MergeFrom(const GetRequest& from) {
     if (from.has_key()) {
       set_key(from.key());
     }
+    if (from.has_quorum()) {
+      set_quorum(from.quorum());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -2903,6 +2942,7 @@ bool GetRequest::IsInitialized() const {
 void GetRequest::Swap(GetRequest* other) {
   if (other != this) {
     std::swap(key_, other->key_);
+    std::swap(quorum_, other->quorum_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

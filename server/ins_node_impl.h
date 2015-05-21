@@ -25,7 +25,6 @@ struct ClientAck {
     ClientAck() : response(NULL),
                   del_response(NULL),
                   done(NULL) {
-
     }
 };
 
@@ -131,7 +130,6 @@ private:
     int64_t commit_index_;
     int64_t last_applied_index_;
     CondVar* commit_cond_;
-
 };
 
 void GetHostName(std::string* hostname);

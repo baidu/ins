@@ -15,6 +15,10 @@ do
 		sh ./test_get.sh $arg1
 	;;
 
+	"getq")
+		sh ./test_getq.sh $arg1
+	;;
+
 	"delete")
 		sh ./test_del.sh $arg1
 	;;
