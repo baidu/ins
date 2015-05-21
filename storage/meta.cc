@@ -52,7 +52,7 @@ void Meta::ReadVotedFor(std::map<int64_t, std::string>& voted_for) {
         last_vote_for = server_id;
     }
     if (!last_vote_for.empty()) {
-        voted_for[term] = std::string(last_vote_for);
+        voted_for[last_term] = std::string(last_vote_for);
     }
 }
 
