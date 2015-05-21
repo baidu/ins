@@ -1,580 +1,71 @@
-#COMAKE2 edit-mode: -*- Makefile -*-
-####################64Bit Mode####################
-ifeq ($(shell uname -m),x86_64)
-CC=gcc
-CXX=g++
-CXXFLAGS=-g \
-  -pipe \
-  -W \
-  -Wall \
-  -Werror \
-  -fPIC
-CFLAGS=-g \
-  -pipe \
-  -W \
-  -Wall \
-  -fPIC
-CPPFLAGS=-D_GNU_SOURCE \
-  -D__STDC_LIMIT_MACROS \
-  -DVERSION=\"0.0.0.1\"
-INCPATH=-I. \
-  -I./src \
-  -I./output/include
-DEP_INCPATH=-I../../../public/sofa-pbrpc \
-  -I../../../public/sofa-pbrpc/include \
-  -I../../../public/sofa-pbrpc/output \
-  -I../../../public/sofa-pbrpc/output/include \
-  -I../../../third-64/boost \
-  -I../../../third-64/boost/include \
-  -I../../../third-64/boost/output \
-  -I../../../third-64/boost/output/include \
-  -I../../../third-64/gflags \
-  -I../../../third-64/gflags/include \
-  -I../../../third-64/gflags/output \
-  -I../../../third-64/gflags/output/include \
-  -I../../../third-64/gtest \
-  -I../../../third-64/gtest/include \
-  -I../../../third-64/gtest/output \
-  -I../../../third-64/gtest/output/include \
-  -I../../../third-64/leveldb \
-  -I../../../third-64/leveldb/include \
-  -I../../../third-64/leveldb/output \
-  -I../../../third-64/leveldb/output/include \
-  -I../../../third-64/protobuf \
-  -I../../../third-64/protobuf/include \
-  -I../../../third-64/protobuf/output \
-  -I../../../third-64/protobuf/output/include \
-  -I../../../third-64/snappy \
-  -I../../../third-64/snappy/include \
-  -I../../../third-64/snappy/output \
-  -I../../../third-64/snappy/output/include \
-  -I../../../third-64/tcmalloc \
-  -I../../../third-64/tcmalloc/include \
-  -I../../../third-64/tcmalloc/output \
-  -I../../../third-64/tcmalloc/output/include
+# OPT ?= -O2 -DNDEBUG     # (A) Production use (optimized mode)
+OPT ?= -g2 -Wall          # (B) Debug mode, w/ full line-level debugging symbols
+# OPT ?= -O2 -g2 -DNDEBUG # (C) Profiling mode: opt, but w/debugging symbols
 
-#============ CCP vars ============
-CCHECK=@ccheck.py
-CCHECK_FLAGS=
-PCLINT=@pclint
-PCLINT_FLAGS=
-CCP=@ccp.py
-CCP_FLAGS=
+# Thirdparty
+SNAPPY_PATH=./thirdparty/snappy/
+PROTOBUF_PATH=./thirdparty/protobuf/
+PROTOC_PATH=
+PROTOC=$(PROTOC_PATH)protoc
+PBRPC_PATH=./thirdparty/sofa-pbrpc/output/
+BOOST_PATH=../boost/
 
+INCLUDE_PATH = -I./ -I$(PROTOBUF_PATH)/include \
+               -I$(PBRPC_PATH)/include \
+               -I$(SNAPPY_PATH)/include \
+               -I$(BOOST_PATH)/include
 
-#COMAKE UUID
-COMAKE_MD5=4292ddd78ca99c2a1a1143f74006f56b  COMAKE
+LDFLAGS = -L$(PROTOBUF_PATH)/lib -lprotobuf \
+          -L$(PBRPC_PATH)/lib -lsofa-pbrpc \
+          -L$(SNAPPY_PATH)/lib -lsnappy \
+          -lpthread -lz -lleveldb -lgflags
 
+CXXFLAGS += $(OPT)
 
-.PHONY:all
-all:comake2_makefile_check ins ins_cli libins_sdk.a binlog_test sample 
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mall[0m']"
-	@echo "make all done"
+PROTO_FILE = $(wildcard proto/*.proto)
+PROTO_SRC = $(patsubst %.proto,%.pb.cc,$(PROTO_FILE))
+PROTO_HEADER = $(patsubst %.proto,%.pb.h,$(PROTO_FILE))
+PROTO_OBJ = $(patsubst %.proto,%.pb.o,$(PROTO_FILE))
 
-.PHONY:comake2_makefile_check
-comake2_makefile_check:
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcomake2_makefile_check[0m']"
-	#in case of error, update 'Makefile' by 'comake2'
-	@echo "$(COMAKE_MD5)">comake2.md5
-	@md5sum -c --status comake2.md5
-	@rm -f comake2.md5
+INS_SRC = $(wildcard server/ins_*.cc) storage/binlog.cc storage/meta.cc
+INS_OBJ = $(patsubst %.cc, %.o, $(INS_SRC))
+INS_HEADER = $(wildcard server/*.h)
 
-.PHONY:ccpclean
-ccpclean:
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mccpclean[0m']"
-	@echo "make ccpclean done"
+INS_CLI_SRC = $(wildcard sdk/ins_*.cc)
+INS_CLI_OBJ = $(patsubst %.cc, %.o, $(INS_CLI_SRC))
+INS_CLI_HEADER = $(wildcard sdk/*.h)
 
-.PHONY:clean
-clean:ccpclean
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mclean[0m']"
-	rm -rf ins
-	rm -rf ./output/bin/ins
-	rm -rf ins_cli
-	rm -rf ./output/bin/ins_cli
-	rm -rf libins_sdk.a
-	rm -rf ./output/lib/libins_sdk.a
-	rm -rf binlog_test
-	rm -rf ./output/bin/binlog_test
-	rm -rf sample
-	rm -rf ./output/bin/sample
-	rm -rf server/ins_ins_main.o
-	rm -rf server/ins_ins_node_impl.o
-	rm -rf server/ins_flags.o
-	rm -rf storage/ins_meta.o
-	rm -rf common/ins_logging.o
-	rm -rf storage/ins_binlog.o
-	rm -rf proto/ins_node.pb.cc
-	rm -rf proto/ins_node.pb.h
-	rm -rf proto/ins_ins_node.pb.o
-	rm -rf sdk/ins_cli_ins_sdk.o
-	rm -rf proto/ins_node.pb.cc
-	rm -rf proto/ins_node.pb.h
-	rm -rf proto/ins_cli_ins_node.pb.o
-	rm -rf common/ins_cli_logging.o
-	rm -rf sdk/ins_cli_ins_cli.o
-	rm -rf server/ins_cli_flags.o
-	rm -rf sdk/ins_sdk_ins_sdk.o
-	rm -rf common/ins_sdk_logging.o
-	rm -rf proto/ins_node.pb.cc
-	rm -rf proto/ins_node.pb.h
-	rm -rf proto/ins_sdk_ins_node.pb.o
-	rm -rf server/ins_sdk_flags.o
-	rm -rf storage/binlog_test_binlog.o
-	rm -rf storage/binlog_test_binlog_test.o
-	rm -rf common/binlog_test_logging.o
-	rm -rf proto/ins_node.pb.cc
-	rm -rf proto/ins_node.pb.h
-	rm -rf proto/binlog_test_ins_node.pb.o
-	rm -rf sdk/sample_sample.o
+FLAGS_OBJ = $(patsubst %.cc, %.o, $(wildcard server/flags.cc))
+COMMON_OBJ = $(patsubst %.cc, %.o, $(wildcard common/*.cc))
+OBJS = $(FLAGS_OBJ) $(COMMON_OBJ) $(PROTO_OBJ)
 
-.PHONY:dist
-dist:
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mdist[0m']"
-	tar czvf output.tar.gz output
-	@echo "make dist done"
+BIN = ins ins_cli
 
-.PHONY:distclean
-distclean:clean
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mdistclean[0m']"
-	rm -f output.tar.gz
-	@echo "make distclean done"
+all: $(BIN)
 
-.PHONY:love
-love:
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mlove[0m']"
-	@echo "make love done"
+# Depends
+$(INS_OBJ) $(INS_CLI_OBJ): $(PROTO_HEADER)
+$(INS_OBJ): $(INS_HEADER)
+$(INS_CLI_OBJ): $(INS_CLI_HEADER)
 
-ins:server/ins_ins_main.o \
-  server/ins_ins_node_impl.o \
-  server/ins_flags.o \
-  storage/ins_meta.o \
-  common/ins_logging.o \
-  storage/ins_binlog.o \
-  proto/ins_ins_node.pb.o
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mins[0m']"
-	$(CXX) server/ins_ins_main.o \
-  server/ins_ins_node_impl.o \
-  server/ins_flags.o \
-  storage/ins_meta.o \
-  common/ins_logging.o \
-  storage/ins_binlog.o \
-  proto/ins_ins_node.pb.o -Xlinker "-("  ../../../public/sofa-pbrpc/libsofa-pbrpc.a \
-  ../../../third-64/boost/lib/libboost_atomic.a \
-  ../../../third-64/boost/lib/libboost_chrono.a \
-  ../../../third-64/boost/lib/libboost_container.a \
-  ../../../third-64/boost/lib/libboost_context.a \
-  ../../../third-64/boost/lib/libboost_coroutine.a \
-  ../../../third-64/boost/lib/libboost_date_time.a \
-  ../../../third-64/boost/lib/libboost_exception.a \
-  ../../../third-64/boost/lib/libboost_filesystem.a \
-  ../../../third-64/boost/lib/libboost_graph.a \
-  ../../../third-64/boost/lib/libboost_locale.a \
-  ../../../third-64/boost/lib/libboost_log_setup.a \
-  ../../../third-64/boost/lib/libboost_math_c99.a \
-  ../../../third-64/boost/lib/libboost_math_c99f.a \
-  ../../../third-64/boost/lib/libboost_math_c99l.a \
-  ../../../third-64/boost/lib/libboost_math_tr1.a \
-  ../../../third-64/boost/lib/libboost_math_tr1f.a \
-  ../../../third-64/boost/lib/libboost_math_tr1l.a \
-  ../../../third-64/boost/lib/libboost_prg_exec_monitor.a \
-  ../../../third-64/boost/lib/libboost_program_options.a \
-  ../../../third-64/boost/lib/libboost_python.a \
-  ../../../third-64/boost/lib/libboost_random.a \
-  ../../../third-64/boost/lib/libboost_regex.a \
-  ../../../third-64/boost/lib/libboost_serialization.a \
-  ../../../third-64/boost/lib/libboost_signals.a \
-  ../../../third-64/boost/lib/libboost_system.a \
-  ../../../third-64/boost/lib/libboost_test_exec_monitor.a \
-  ../../../third-64/boost/lib/libboost_thread.a \
-  ../../../third-64/boost/lib/libboost_timer.a \
-  ../../../third-64/boost/lib/libboost_unit_test_framework.a \
-  ../../../third-64/boost/lib/libboost_wave.a \
-  ../../../third-64/boost/lib/libboost_wserialization.a \
-  ../../../third-64/gflags/lib/libgflags.a \
-  ../../../third-64/gflags/lib/libgflags_nothreads.a \
-  ../../../third-64/gtest/lib/libgtest.a \
-  ../../../third-64/gtest/lib/libgtest_main.a \
-  ../../../third-64/leveldb/lib/libleveldb.a \
-  ../../../third-64/protobuf/lib/libprotobuf-lite.a \
-  ../../../third-64/protobuf/lib/libprotobuf.a \
-  ../../../third-64/protobuf/lib/libprotoc.a \
-  ../../../third-64/snappy/lib/libsnappy.a \
-  ../../../third-64/tcmalloc/lib/libprofiler.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_and_profiler.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_debug.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal_debug.a -lpthread \
-  -lcrypto \
-  -lrt \
-  -lz -Xlinker "-)" -o ins
-	mkdir -p ./output/bin
-	cp -f --link ins ./output/bin
+# Targets
+ins: $(INS_OBJ) $(OBJS)
+	$(CXX) $(INS_OBJ) $(OBJS) -o $@ $(LDFLAGS)
 
-ins_cli:sdk/ins_cli_ins_sdk.o \
-  proto/ins_cli_ins_node.pb.o \
-  common/ins_cli_logging.o \
-  sdk/ins_cli_ins_cli.o \
-  server/ins_cli_flags.o
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mins_cli[0m']"
-	$(CXX) sdk/ins_cli_ins_sdk.o \
-  proto/ins_cli_ins_node.pb.o \
-  common/ins_cli_logging.o \
-  sdk/ins_cli_ins_cli.o \
-  server/ins_cli_flags.o -Xlinker "-("  ../../../public/sofa-pbrpc/libsofa-pbrpc.a \
-  ../../../third-64/boost/lib/libboost_atomic.a \
-  ../../../third-64/boost/lib/libboost_chrono.a \
-  ../../../third-64/boost/lib/libboost_container.a \
-  ../../../third-64/boost/lib/libboost_context.a \
-  ../../../third-64/boost/lib/libboost_coroutine.a \
-  ../../../third-64/boost/lib/libboost_date_time.a \
-  ../../../third-64/boost/lib/libboost_exception.a \
-  ../../../third-64/boost/lib/libboost_filesystem.a \
-  ../../../third-64/boost/lib/libboost_graph.a \
-  ../../../third-64/boost/lib/libboost_locale.a \
-  ../../../third-64/boost/lib/libboost_log_setup.a \
-  ../../../third-64/boost/lib/libboost_math_c99.a \
-  ../../../third-64/boost/lib/libboost_math_c99f.a \
-  ../../../third-64/boost/lib/libboost_math_c99l.a \
-  ../../../third-64/boost/lib/libboost_math_tr1.a \
-  ../../../third-64/boost/lib/libboost_math_tr1f.a \
-  ../../../third-64/boost/lib/libboost_math_tr1l.a \
-  ../../../third-64/boost/lib/libboost_prg_exec_monitor.a \
-  ../../../third-64/boost/lib/libboost_program_options.a \
-  ../../../third-64/boost/lib/libboost_python.a \
-  ../../../third-64/boost/lib/libboost_random.a \
-  ../../../third-64/boost/lib/libboost_regex.a \
-  ../../../third-64/boost/lib/libboost_serialization.a \
-  ../../../third-64/boost/lib/libboost_signals.a \
-  ../../../third-64/boost/lib/libboost_system.a \
-  ../../../third-64/boost/lib/libboost_test_exec_monitor.a \
-  ../../../third-64/boost/lib/libboost_thread.a \
-  ../../../third-64/boost/lib/libboost_timer.a \
-  ../../../third-64/boost/lib/libboost_unit_test_framework.a \
-  ../../../third-64/boost/lib/libboost_wave.a \
-  ../../../third-64/boost/lib/libboost_wserialization.a \
-  ../../../third-64/gflags/lib/libgflags.a \
-  ../../../third-64/gflags/lib/libgflags_nothreads.a \
-  ../../../third-64/gtest/lib/libgtest.a \
-  ../../../third-64/gtest/lib/libgtest_main.a \
-  ../../../third-64/leveldb/lib/libleveldb.a \
-  ../../../third-64/protobuf/lib/libprotobuf-lite.a \
-  ../../../third-64/protobuf/lib/libprotobuf.a \
-  ../../../third-64/protobuf/lib/libprotoc.a \
-  ../../../third-64/snappy/lib/libsnappy.a \
-  ../../../third-64/tcmalloc/lib/libprofiler.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_and_profiler.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_debug.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal_debug.a -lpthread \
-  -lcrypto \
-  -lrt \
-  -lz -Xlinker "-)" -o ins_cli
-	mkdir -p ./output/bin
-	cp -f --link ins_cli ./output/bin
+ins_cli: $(INS_CLI_OBJ) $(OBJS)
+	$(CXX) $(INS_CLI_OBJ) $(OBJS) -o $@ $(LDFLAGS)
 
-libins_sdk.a:sdk/ins_sdk_ins_sdk.o \
-  common/ins_sdk_logging.o \
-  proto/ins_sdk_ins_node.pb.o \
-  server/ins_sdk_flags.o
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mlibins_sdk.a[0m']"
-	ar crs libins_sdk.a sdk/ins_sdk_ins_sdk.o \
-  common/ins_sdk_logging.o \
-  proto/ins_sdk_ins_node.pb.o \
-  server/ins_sdk_flags.o
-	mkdir -p ./output/lib
-	cp -f --link libins_sdk.a ./output/lib
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) -c $< -o $@
 
-binlog_test:storage/binlog_test_binlog.o \
-  storage/binlog_test_binlog_test.o \
-  common/binlog_test_logging.o \
-  proto/binlog_test_ins_node.pb.o
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mbinlog_test[0m']"
-	$(CXX) storage/binlog_test_binlog.o \
-  storage/binlog_test_binlog_test.o \
-  common/binlog_test_logging.o \
-  proto/binlog_test_ins_node.pb.o -Xlinker "-("  ../../../public/sofa-pbrpc/libsofa-pbrpc.a \
-  ../../../third-64/boost/lib/libboost_atomic.a \
-  ../../../third-64/boost/lib/libboost_chrono.a \
-  ../../../third-64/boost/lib/libboost_container.a \
-  ../../../third-64/boost/lib/libboost_context.a \
-  ../../../third-64/boost/lib/libboost_coroutine.a \
-  ../../../third-64/boost/lib/libboost_date_time.a \
-  ../../../third-64/boost/lib/libboost_exception.a \
-  ../../../third-64/boost/lib/libboost_filesystem.a \
-  ../../../third-64/boost/lib/libboost_graph.a \
-  ../../../third-64/boost/lib/libboost_locale.a \
-  ../../../third-64/boost/lib/libboost_log_setup.a \
-  ../../../third-64/boost/lib/libboost_math_c99.a \
-  ../../../third-64/boost/lib/libboost_math_c99f.a \
-  ../../../third-64/boost/lib/libboost_math_c99l.a \
-  ../../../third-64/boost/lib/libboost_math_tr1.a \
-  ../../../third-64/boost/lib/libboost_math_tr1f.a \
-  ../../../third-64/boost/lib/libboost_math_tr1l.a \
-  ../../../third-64/boost/lib/libboost_prg_exec_monitor.a \
-  ../../../third-64/boost/lib/libboost_program_options.a \
-  ../../../third-64/boost/lib/libboost_python.a \
-  ../../../third-64/boost/lib/libboost_random.a \
-  ../../../third-64/boost/lib/libboost_regex.a \
-  ../../../third-64/boost/lib/libboost_serialization.a \
-  ../../../third-64/boost/lib/libboost_signals.a \
-  ../../../third-64/boost/lib/libboost_system.a \
-  ../../../third-64/boost/lib/libboost_test_exec_monitor.a \
-  ../../../third-64/boost/lib/libboost_thread.a \
-  ../../../third-64/boost/lib/libboost_timer.a \
-  ../../../third-64/boost/lib/libboost_unit_test_framework.a \
-  ../../../third-64/boost/lib/libboost_wave.a \
-  ../../../third-64/boost/lib/libboost_wserialization.a \
-  ../../../third-64/gflags/lib/libgflags.a \
-  ../../../third-64/gflags/lib/libgflags_nothreads.a \
-  ../../../third-64/gtest/lib/libgtest.a \
-  ../../../third-64/gtest/lib/libgtest_main.a \
-  ../../../third-64/leveldb/lib/libleveldb.a \
-  ../../../third-64/protobuf/lib/libprotobuf-lite.a \
-  ../../../third-64/protobuf/lib/libprotobuf.a \
-  ../../../third-64/protobuf/lib/libprotoc.a \
-  ../../../third-64/snappy/lib/libsnappy.a \
-  ../../../third-64/tcmalloc/lib/libprofiler.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_and_profiler.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_debug.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal_debug.a -lpthread \
-  -lcrypto \
-  -lrt \
-  -lz -Xlinker "-)" -o binlog_test
-	mkdir -p ./output/bin
-	cp -f --link binlog_test ./output/bin
+%.pb.h %.pb.cc: %.proto
+	$(PROTOC) --proto_path=./proto/ --proto_path=/usr/local/include --cpp_out=./proto/ $<
 
-sample:sdk/sample_sample.o \
-  libins_sdk.a
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msample[0m']"
-	$(CXX) sdk/sample_sample.o -Xlinker "-(" libins_sdk.a ../../../public/sofa-pbrpc/libsofa-pbrpc.a \
-  ../../../third-64/boost/lib/libboost_atomic.a \
-  ../../../third-64/boost/lib/libboost_chrono.a \
-  ../../../third-64/boost/lib/libboost_container.a \
-  ../../../third-64/boost/lib/libboost_context.a \
-  ../../../third-64/boost/lib/libboost_coroutine.a \
-  ../../../third-64/boost/lib/libboost_date_time.a \
-  ../../../third-64/boost/lib/libboost_exception.a \
-  ../../../third-64/boost/lib/libboost_filesystem.a \
-  ../../../third-64/boost/lib/libboost_graph.a \
-  ../../../third-64/boost/lib/libboost_locale.a \
-  ../../../third-64/boost/lib/libboost_log_setup.a \
-  ../../../third-64/boost/lib/libboost_math_c99.a \
-  ../../../third-64/boost/lib/libboost_math_c99f.a \
-  ../../../third-64/boost/lib/libboost_math_c99l.a \
-  ../../../third-64/boost/lib/libboost_math_tr1.a \
-  ../../../third-64/boost/lib/libboost_math_tr1f.a \
-  ../../../third-64/boost/lib/libboost_math_tr1l.a \
-  ../../../third-64/boost/lib/libboost_prg_exec_monitor.a \
-  ../../../third-64/boost/lib/libboost_program_options.a \
-  ../../../third-64/boost/lib/libboost_python.a \
-  ../../../third-64/boost/lib/libboost_random.a \
-  ../../../third-64/boost/lib/libboost_regex.a \
-  ../../../third-64/boost/lib/libboost_serialization.a \
-  ../../../third-64/boost/lib/libboost_signals.a \
-  ../../../third-64/boost/lib/libboost_system.a \
-  ../../../third-64/boost/lib/libboost_test_exec_monitor.a \
-  ../../../third-64/boost/lib/libboost_thread.a \
-  ../../../third-64/boost/lib/libboost_timer.a \
-  ../../../third-64/boost/lib/libboost_unit_test_framework.a \
-  ../../../third-64/boost/lib/libboost_wave.a \
-  ../../../third-64/boost/lib/libboost_wserialization.a \
-  ../../../third-64/gflags/lib/libgflags.a \
-  ../../../third-64/gflags/lib/libgflags_nothreads.a \
-  ../../../third-64/gtest/lib/libgtest.a \
-  ../../../third-64/gtest/lib/libgtest_main.a \
-  ../../../third-64/leveldb/lib/libleveldb.a \
-  ../../../third-64/protobuf/lib/libprotobuf-lite.a \
-  ../../../third-64/protobuf/lib/libprotobuf.a \
-  ../../../third-64/protobuf/lib/libprotoc.a \
-  ../../../third-64/snappy/lib/libsnappy.a \
-  ../../../third-64/tcmalloc/lib/libprofiler.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_and_profiler.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_debug.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal.a \
-  ../../../third-64/tcmalloc/lib/libtcmalloc_minimal_debug.a -lpthread \
-  -lcrypto \
-  -lrt \
-  -lz -Xlinker "-)" -o sample
-	mkdir -p ./output/bin
-	cp -f --link sample ./output/bin
+clean:
+	rm -rf $(BIN)
+	rm -rf $(INS_OBJ) $(INS_CLI_OBJ) $(OBJS)
+	rm -rf $(PROTO_SRC) $(PROTO_HEADER)
 
-server/ins_ins_main.o:server/ins_main.cc \
-  common/logging.h \
-  server/ins_node_impl.h \
-  proto/ins_node.pb.h \
-  common/mutex.h \
-  common/timer.h \
-  common/thread_pool.h \
-  common/mutex.h \
-  rpc/rpc_client.h \
-  common/mutex.h \
-  common/thread_pool.h \
-  common/logging.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_ins_main.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_ins_main.o server/ins_main.cc
-
-server/ins_ins_node_impl.o:server/ins_node_impl.cc \
-  server/ins_node_impl.h \
-  proto/ins_node.pb.h \
-  common/mutex.h \
-  common/timer.h \
-  common/thread_pool.h \
-  common/mutex.h \
-  rpc/rpc_client.h \
-  common/mutex.h \
-  common/thread_pool.h \
-  common/logging.h \
-  common/this_thread.h \
-  storage/meta.h \
-  storage/binlog.h \
-  common/mutex.h \
-  proto/ins_node.pb.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_ins_node_impl.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_ins_node_impl.o server/ins_node_impl.cc
-
-server/ins_flags.o:server/flags.cc
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_flags.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_flags.o server/flags.cc
-
-storage/ins_meta.o:storage/meta.cc \
-  storage/meta.h \
-  common/logging.h \
-  storage/utils.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/ins_meta.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/ins_meta.o storage/meta.cc
-
-common/ins_logging.o:common/logging.cc \
-  common/logging.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcommon/ins_logging.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/ins_logging.o common/logging.cc
-
-storage/ins_binlog.o:storage/binlog.cc \
-  storage/binlog.h \
-  common/mutex.h \
-  common/timer.h \
-  proto/ins_node.pb.h \
-  common/asm_atomic.h \
-  common/logging.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/ins_binlog.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/ins_binlog.o storage/binlog.cc
-
-proto/ins_node.pb.cc \
-  proto/ins_node.pb.h:proto/ins_node.proto
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_node.pb.cc \
-  proto/ins_node.pb.h[0m']"
-	../../../third-64/protobuf/bin/protoc --cpp_out=proto --proto_path=proto  proto/ins_node.proto
-
-proto/ins_node.proto:
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_node.proto[0m']"
-	@echo "ALREADY BUILT"
-
-proto/ins_ins_node.pb.o:proto/ins_node.pb.cc \
-  proto/ins_node.pb.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_ins_node.pb.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/ins_ins_node.pb.o proto/ins_node.pb.cc
-
-sdk/ins_cli_ins_sdk.o:sdk/ins_sdk.cc \
-  sdk/ins_sdk.h \
-  common/asm_atomic.h \
-  common/mutex.h \
-  common/timer.h \
-  common/this_thread.h \
-  rpc/rpc_client.h \
-  common/mutex.h \
-  common/thread_pool.h \
-  common/mutex.h \
-  common/logging.h \
-  proto/ins_node.pb.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msdk/ins_cli_ins_sdk.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o sdk/ins_cli_ins_sdk.o sdk/ins_sdk.cc
-
-proto/ins_cli_ins_node.pb.o:proto/ins_node.pb.cc \
-  proto/ins_node.pb.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_cli_ins_node.pb.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/ins_cli_ins_node.pb.o proto/ins_node.pb.cc
-
-common/ins_cli_logging.o:common/logging.cc \
-  common/logging.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcommon/ins_cli_logging.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/ins_cli_logging.o common/logging.cc
-
-sdk/ins_cli_ins_cli.o:sdk/ins_cli.cc \
-  sdk/ins_sdk.h \
-  common/logging.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msdk/ins_cli_ins_cli.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o sdk/ins_cli_ins_cli.o sdk/ins_cli.cc
-
-server/ins_cli_flags.o:server/flags.cc
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_cli_flags.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_cli_flags.o server/flags.cc
-
-sdk/ins_sdk_ins_sdk.o:sdk/ins_sdk.cc \
-  sdk/ins_sdk.h \
-  common/asm_atomic.h \
-  common/mutex.h \
-  common/timer.h \
-  common/this_thread.h \
-  rpc/rpc_client.h \
-  common/mutex.h \
-  common/thread_pool.h \
-  common/mutex.h \
-  common/logging.h \
-  proto/ins_node.pb.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msdk/ins_sdk_ins_sdk.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o sdk/ins_sdk_ins_sdk.o sdk/ins_sdk.cc
-
-common/ins_sdk_logging.o:common/logging.cc \
-  common/logging.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcommon/ins_sdk_logging.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/ins_sdk_logging.o common/logging.cc
-
-proto/ins_sdk_ins_node.pb.o:proto/ins_node.pb.cc \
-  proto/ins_node.pb.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/ins_sdk_ins_node.pb.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/ins_sdk_ins_node.pb.o proto/ins_node.pb.cc
-
-server/ins_sdk_flags.o:server/flags.cc
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mserver/ins_sdk_flags.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o server/ins_sdk_flags.o server/flags.cc
-
-storage/binlog_test_binlog.o:storage/binlog.cc \
-  storage/binlog.h \
-  common/mutex.h \
-  common/timer.h \
-  proto/ins_node.pb.h \
-  common/asm_atomic.h \
-  common/logging.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/binlog_test_binlog.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/binlog_test_binlog.o storage/binlog.cc
-
-storage/binlog_test_binlog_test.o:storage/binlog_test.cc \
-  storage/binlog.h \
-  common/mutex.h \
-  common/timer.h \
-  proto/ins_node.pb.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mstorage/binlog_test_binlog_test.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o storage/binlog_test_binlog_test.o storage/binlog_test.cc
-
-common/binlog_test_logging.o:common/logging.cc \
-  common/logging.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mcommon/binlog_test_logging.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o common/binlog_test_logging.o common/logging.cc
-
-proto/binlog_test_ins_node.pb.o:proto/ins_node.pb.cc \
-  proto/ins_node.pb.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40mproto/binlog_test_ins_node.pb.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o proto/binlog_test_ins_node.pb.o proto/ins_node.pb.cc
-
-sdk/sample_sample.o:sdk/sample.cc \
-  sdk/ins_sdk.h
-	@echo "[[1;32;40mCOMAKE:BUILD[0m][Target:'[1;32;40msdk/sample_sample.o[0m']"
-	$(CXX) -c $(INCPATH) $(DEP_INCPATH) $(CPPFLAGS) $(CXXFLAGS)  -o sdk/sample_sample.o sdk/sample.cc
-
-endif #ifeq ($(shell uname -m),x86_64)
-
-
+.PHONY: test
+test:
+	echo "Test done"
