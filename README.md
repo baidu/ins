@@ -23,6 +23,6 @@ integrated naming service (based on raft)
 	    get (key) [read the data by key ]
 	    delete (key) [remove the data by key]
   
-# performance (multiple clients)
+# performance (multiple clients， 5 cluster-nodes in LAN)
 * 55200 read per seconds 
 * 5300 write per seconds
