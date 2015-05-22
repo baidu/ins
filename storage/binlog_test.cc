@@ -40,11 +40,29 @@ TEST(BinLogTest, SlotWriteTest) {
     }
 }
 
+TEST(BinLogTest, SlotBatchWriteTest) {
+    BinLogger bin_logger("/tmp/");
+    char key_buf[1024] = {'\0'};
+    char value_buf[1024] = {'\0'};
+    ::google::protobuf::RepeatedPtrField< ::galaxy::ins::Entry > entries;
+    for (int i=101; i<=200; i++) {
+        ::galaxy::ins::Entry* log_entry = entries.Add();
+        snprintf(key_buf, sizeof(key_buf), "key_%d", i);
+        snprintf(value_buf, sizeof(value_buf), "value_%d", i);
+        log_entry->set_key(key_buf);
+        log_entry->set_value(value_buf);
+        log_entry->set_term(i);
+        log_entry->set_op((i % 2 == 0) ? kPut : kDel);
+    }
+    bin_logger.AppendEntryList(entries);
+}
+
+
 TEST(BinLogTest, SlotReadTest) {
     BinLogger bin_logger("/tmp/");
     char key_buf[1024] = {'\0'};
     char value_buf[1024] = {'\0'};
-    for (int i=1; i<=100; i++) {
+    for (int i=1; i<=200; i++) {
         LogEntry log_entry;
         bin_logger.ReadSlot(i-1, &log_entry);
         snprintf(key_buf, sizeof(key_buf), "key_%d", i);
@@ -59,7 +77,7 @@ TEST(BinLogTest, SlotReadTest) {
 
 TEST(BinLogTest, SlotTruncate) {
     BinLogger bin_logger("/tmp/");
-    EXPECT_EQ( bin_logger.GetLength(), 100 );
+    EXPECT_EQ( bin_logger.GetLength(), 200 );
     bin_logger.Truncate(49);
     EXPECT_EQ( bin_logger.GetLength(), 50);
     bin_logger.Truncate(-1);

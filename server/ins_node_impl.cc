@@ -13,6 +13,7 @@
 
 DECLARE_string(ins_data_dir);
 DECLARE_int32(max_cluster_size);
+DECLARE_int32(log_rep_batch_max);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -497,14 +498,9 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
                 }
             }
         }
-        for (int i=0; i < request->entries_size(); i++) {
-            LogEntry log_entry;
-            log_entry.op = request->entries(i).op();
-            log_entry.key = request->entries(i).key();
-            log_entry.value = request->entries(i).value();
-            log_entry.term = request->entries(i).term();
-            binlogger_->AppendEntry(log_entry);
-        }
+        mu_.Unlock();
+        binlogger_->AppendEntryList(request->entries());
+        mu_.Lock();
         int64_t old_commit_index = commit_index_;
         commit_index_ = std::min(binlogger_->GetLength() - 1,
                                  request->leader_commit_index());
@@ -610,7 +606,8 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         int64_t prev_term = -1;
         int64_t cur_commit_index = commit_index_;
         int64_t batch_span = binlogger_->GetLength() - index;
-        batch_span = std::min(batch_span, 100L);
+        batch_span = std::min(batch_span, 
+                              static_cast<int64_t>(FLAGS_log_rep_batch_max));
         std::string leader_id = self_id_;
         LogEntry prev_log_entry;
         if (prev_index > -1) {

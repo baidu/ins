@@ -7,3 +7,5 @@ DEFINE_string(ins_cmd, "", "the command of inc shell");
 DEFINE_string(ins_key, "key", "");
 DEFINE_string(ins_value, "v123", "");
 DEFINE_int32(max_cluster_size, 10, "maximum size of ins cluster");
+DEFINE_int32(log_rep_batch_max, 500, "maximum batch size of log replication");
+

@@ -29,6 +29,9 @@ public:
     void Truncate(int64_t trunc_slot_index);
     void DumpLogEntry(const LogEntry& log_entry, std::string* buf);
     void LoadLogEntry(const std::string& buf, LogEntry* log_entry);
+    void AppendEntryList(
+       const ::google::protobuf::RepeatedPtrField< ::galaxy::ins::Entry > &entries
+    );
     static std::string IntToString(int64_t num);
     static int64_t StringToInt(const std::string& s);
 private:
