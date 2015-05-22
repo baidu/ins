@@ -488,7 +488,7 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
                                      &prev_log_entry);
                 int64_t prev_log_term = prev_log_entry.term;
                 if (prev_log_term != request->prev_log_term() ||
-                    binlogger_->GetLength() != request->prev_log_index() + 1) {
+                    binlogger_->GetLength() > request->prev_log_index() + 1) {
                     binlogger_->Truncate(request->prev_log_index() - 1);
                     response->set_current_term(current_term_);
                     response->set_success(false);
@@ -535,13 +535,13 @@ void InsNodeImpl::Vote(::google::protobuf::RpcController* /*controller*/,
     int64_t last_log_index;
     int64_t last_log_term;
     GetLastLogIndexAndTerm(&last_log_index, &last_log_term);
-    if (request->last_log_index() < last_log_index) {
+    if (request->last_log_term() < last_log_term) {
         response->set_vote_granted(false);
         response->set_term(current_term_);
         done->Run();
         return;
-    } else if(request->last_log_index() == last_log_index) {
-        if (request->last_log_term() < last_log_term) {
+    } else if(request->last_log_term() == last_log_term) {
+        if (request->last_log_index() < last_log_index) {
             response->set_vote_granted(false);
             response->set_term(current_term_);
             done->Run();
