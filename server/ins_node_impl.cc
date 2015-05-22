@@ -12,6 +12,7 @@
 #include "storage/binlog.h"
 
 DECLARE_string(ins_data_dir);
+DECLARE_string(ins_binlog_dir);
 DECLARE_int32(max_cluster_size);
 DECLARE_int32(log_rep_batch_max);
 
@@ -67,7 +68,7 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
     boost::replace_all(sub_dir, ":", "_");
     
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
-    binlogger_ = new BinLogger(FLAGS_ins_data_dir + "/" + sub_dir);
+    binlogger_ = new BinLogger(FLAGS_ins_binlog_dir + "/" + sub_dir);
     current_term_ = meta_->ReadCurrentTerm();
     meta_->ReadVotedFor(voted_for_);
     
@@ -653,7 +654,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             if (response.success()) { // log replicated
                 next_index_[follower_id] = index + batch_span;
                 match_index_[follower_id] = index + batch_span - 1;
-                UpdateCommitIndex(index);
+                UpdateCommitIndex(index + batch_span - 1);
             } else { // (index, term ) miss match
                 next_index_[follower_id] -= 1;
                 next_index_[follower_id] = std::min(next_index_[follower_id],

@@ -4,6 +4,7 @@
 #include "common/asm_atomic.h"
 #include "common/logging.h"
 #include "leveldb/write_batch.h"
+#include "utils.h"
 
 namespace galaxy {
 namespace ins {
@@ -13,6 +14,11 @@ const std::string length_tag = "#BINLOG_LEN#";
 
 BinLogger::BinLogger(const std::string& data_dir) : db_(NULL),
                                                     length_(0) {
+    bool ok = common::Mkdirs(data_dir.c_str());
+    if (!ok) {
+        LOG(FATAL, "failed to create dir :%s", data_dir.c_str());
+        abort();
+    }
     std::string full_name = data_dir + "/" + log_dbname;
     leveldb::Options options;
     options.create_if_missing = true;
