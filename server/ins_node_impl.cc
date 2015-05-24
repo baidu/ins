@@ -341,9 +341,15 @@ void InsNodeImpl::BroadCastHeartBeat() {
 
 void InsNodeImpl::StartReplicateLog() {
     mu_.AssertHeld();
+    LOG(INFO, "StartReplicateLog");
     std::vector<std::string>::iterator it = members_.begin();
     for(; it!= members_.end(); it++) {
         if (*it == self_id_) {
+            continue;
+        }
+        if (replicating_.find(*it) != replicating_.end()){
+            LOG(INFO, "there is another thread replicating on : %s",
+                it->c_str());
             continue;
         }
         std::string follower_id = *it;
@@ -482,21 +488,30 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
                 done->Run();
                 return;
             }
+            int64_t prev_log_term = -1;
             if (request->prev_log_index() >= 0) {
                 LogEntry prev_log_entry;
                 binlogger_->ReadSlot(request->prev_log_index(),
                                      &prev_log_entry);
-                int64_t prev_log_term = prev_log_entry.term;
-                if (prev_log_term != request->prev_log_term() ||
-                    binlogger_->GetLength() > request->prev_log_index() + 1) {
-                    binlogger_->Truncate(request->prev_log_index() - 1);
-                    response->set_current_term(current_term_);
-                    response->set_success(false);
-                    response->set_log_length(binlogger_->GetLength());
-                    LOG(INFO, "[AppendEntries] term not match");
-                    done->Run();
-                    return;
-                }
+                prev_log_term = prev_log_entry.term;
+            }
+            if (prev_log_term != request->prev_log_term() ) {
+                binlogger_->Truncate(request->prev_log_index() - 1);
+                response->set_current_term(current_term_);
+                response->set_success(false);
+                response->set_log_length(binlogger_->GetLength());
+                LOG(INFO, "[AppendEntries] term not match, "
+                    "term: %ld,%ld", 
+                    prev_log_term, request->prev_log_term());
+                done->Run();
+                return;
+            }
+            if (binlogger_->GetLength() > request->prev_log_index() + 1) {
+                int64_t old_length = binlogger_->GetLength();
+                binlogger_->Truncate(request->prev_log_index() );
+                LOG(INFO, "[AppendEntries] log length alignment, "
+                    "length: %ld,%ld", 
+                    old_length, request->prev_log_index());
             }
         }
         mu_.Unlock();
@@ -587,6 +602,7 @@ void InsNodeImpl::UpdateCommitIndex(int64_t a_index) {
 
 void InsNodeImpl::ReplicateLog(std::string follower_id) {
     MutexLock lock(&mu_);
+    replicating_.insert(follower_id);
     while (!stop_ && status_ == kLeader) {
         while (!stop_ && binlogger_->GetLength() <= next_index_[follower_id]) {
             LOG(DEBUG, "no new log entry for %s", follower_id.c_str());
@@ -596,9 +612,10 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             }
         }
         if (stop_) {
-            return;
+            break;
         }
         if (status_ != kLeader) {
+            LOG(INFO, "stop realicate log, no longger leader"); 
             break;
         }
         int64_t index = next_index_[follower_id];
@@ -648,6 +665,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                             response.current_term());
         }
         if (status_ != kLeader) {
+            LOG(INFO, "stop realicate log, no longger leader"); 
             break;
         }
         if (ok) {
@@ -674,6 +692,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             mu_.Lock();
         }
     }
+    replicating_.erase(follower_id);
 }
 
 void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <boost/shared_ptr.hpp>
 #include "common/mutex.h"
 #include "common/thread_pool.h"
@@ -126,6 +127,7 @@ private:
     std::map<std::string, int64_t> match_index_;
     CondVar* replication_cond_;
     std::map<int64_t, ClientAck> client_ack_;
+    std::set<std::string> replicating_;
     // for all servers
     int64_t commit_index_;
     int64_t last_applied_index_;
