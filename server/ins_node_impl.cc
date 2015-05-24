@@ -513,10 +513,8 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
                     "length: %ld,%ld", 
                     old_length, request->prev_log_index());
             }
+            binlogger_->AppendEntryList(request->entries());
         }
-        mu_.Unlock();
-        binlogger_->AppendEntryList(request->entries());
-        mu_.Lock();
         int64_t old_commit_index = commit_index_;
         commit_index_ = std::min(binlogger_->GetLength() - 1,
                                  request->leader_commit_index());

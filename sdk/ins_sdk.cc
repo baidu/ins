@@ -71,6 +71,8 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
         if (!ok) {
             node_info.status = kOffline;
             node_info.term = -1;
+            node_info.last_log_index = -1;
+            node_info.last_log_term = -1;
         } else {
             node_info.status = response.status();
             node_info.term = response.term();
