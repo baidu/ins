@@ -171,7 +171,6 @@ void InsNodeImpl::CommitIndexObserv() {
         for (int64_t i = from_idx + 1; i <= to_idx; i++) {
             LogEntry log_entry;
             binlogger_->ReadSlot(i, &log_entry);
-            mu_.Lock();
             leveldb::Status s;
             switch(log_entry.op) {
                 case kPut:
@@ -194,6 +193,7 @@ void InsNodeImpl::CommitIndexObserv() {
                               log_entry.key.c_str());
                     break;
             }
+            mu_.Lock();
             if (client_ack_.find(i) != client_ack_.end()) {
                 ClientAck& ack = client_ack_[i];
                 if (ack.response) {
@@ -833,7 +833,6 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     replication_cond_->Broadcast();
     return;
 }
-
 
 } //namespace ins
 } //namespace galaxy
