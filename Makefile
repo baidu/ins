@@ -18,7 +18,7 @@ INCLUDE_PATH = -I./ -I$(PROTOBUF_PATH)/include \
 LDFLAGS = -L$(PROTOBUF_PATH)/lib -lprotobuf \
           -L$(PBRPC_PATH)/lib -lsofa-pbrpc \
           -L$(SNAPPY_PATH)/lib -lsnappy \
-          -lpthread -lz -lleveldb -lgflags
+          -lz -lleveldb -lgflags -lpthread
 
 CXXFLAGS += $(OPT)
 
@@ -35,11 +35,15 @@ INS_CLI_SRC = $(wildcard sdk/ins_*.cc)
 INS_CLI_OBJ = $(patsubst %.cc, %.o, $(INS_CLI_SRC))
 INS_CLI_HEADER = $(wildcard sdk/*.h)
 
+SAMPLE_SRC = sdk/sample.cc
+SAMPLE_OBJ = $(patsubst %.cc, %.o, $(SAMPLE_SRC))
+SAMPLE_HEADER = $(wildcard sdk/*.h)
+
 FLAGS_OBJ = $(patsubst %.cc, %.o, $(wildcard server/flags.cc))
 COMMON_OBJ = $(patsubst %.cc, %.o, $(wildcard common/*.cc))
 OBJS = $(FLAGS_OBJ) $(COMMON_OBJ) $(PROTO_OBJ)
 
-BIN = ins ins_cli
+BIN = ins ins_cli sample
 
 all: $(BIN)
 
@@ -47,6 +51,7 @@ all: $(BIN)
 $(INS_OBJ) $(INS_CLI_OBJ): $(PROTO_HEADER)
 $(INS_OBJ): $(INS_HEADER)
 $(INS_CLI_OBJ): $(INS_CLI_HEADER)
+$(SAMPLE_OBJ): $(SAMPLE_HEADER)
 
 # Targets
 ins: $(INS_OBJ) $(OBJS)
@@ -54,6 +59,9 @@ ins: $(INS_OBJ) $(OBJS)
 
 ins_cli: $(INS_CLI_OBJ) $(OBJS)
 	$(CXX) $(INS_CLI_OBJ) $(OBJS) -o $@ $(LDFLAGS)
+
+sample: $(SAMPLE_OBJ) $(OBJS) sdk/ins_sdk.o
+	$(CXX) $(SAMPLE_OBJ) $(OBJS) sdk/ins_sdk.o -o $@ $(LDFLAGS)
 
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) -c $< -o $@
@@ -70,6 +78,7 @@ cp: $(BIN)
 	mkdir -p output/bin
 	cp ins output/bin
 	cp ins_cli output/bin
+	cp sample output/bin
 
 .PHONY: test
 test:
