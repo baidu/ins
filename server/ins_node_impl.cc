@@ -15,6 +15,7 @@ DECLARE_string(ins_data_dir);
 DECLARE_string(ins_binlog_dir);
 DECLARE_int32(max_cluster_size);
 DECLARE_int32(log_rep_batch_max);
+DECLARE_int32(replication_retry_timespan);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -658,7 +659,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                                           &InsNode_Stub::AppendEntries,
                                           &request,
                                           &response,
-                                          2, 1);
+                                          5, 1);
         mu_.Lock();
         mu_.AssertHeld();
         if (ok && response.current_term() > current_term_) {
@@ -691,7 +692,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             mu_.Unlock();
             LOG(FATAL, "faild to send replicate-rpc to %s ", 
                 follower_id.c_str());
-            ThisThread::Sleep(20);
+            ThisThread::Sleep(FLAGS_replication_retry_timespan);
             mu_.Lock();
         }
     }

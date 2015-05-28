@@ -9,4 +9,5 @@ DEFINE_string(ins_key, "key", "");
 DEFINE_string(ins_value, "v123", "");
 DEFINE_int32(max_cluster_size, 10, "maximum size of ins cluster");
 DEFINE_int32(log_rep_batch_max, 500, "maximum batch size of log replication");
+DEFINE_int32(replication_retry_timespan, 2000, "when replication fail, sleep a while before retry");
 
