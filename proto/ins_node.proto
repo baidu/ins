@@ -89,6 +89,7 @@ message ShowStatusResponse {
     required int64 term = 2;
     required int64 last_log_index = 3;
     required int64 last_log_term = 4;
+    optional int64 commit_index = 5; 
 }
 
 service InsNode {

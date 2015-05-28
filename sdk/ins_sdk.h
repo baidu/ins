@@ -30,6 +30,7 @@ struct ClusterNodeInfo {
     int64_t term;
     int64_t last_log_index;
     int64_t last_log_term;
+    int64_t commit_index;
 };
 
 class InsSDK {

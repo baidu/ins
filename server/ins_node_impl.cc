@@ -140,6 +140,7 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* /*controller*/,
     response->set_term(current_term_);    
     response->set_last_log_index(last_log_index);
     response->set_last_log_term(last_log_term);
+    response->set_commit_index(commit_index_);
     done->Run();
 }
 
@@ -633,6 +634,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         mu_.Unlock();
 
         InsNode_Stub* stub;
+        int64_t max_term = -1;
         rpc_client_.GetStub(follower_id, &stub);
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::AppendEntriesRequest request;
@@ -650,6 +652,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             entry->set_key(log_entry.key);
             entry->set_value(log_entry.value);
             entry->set_op(log_entry.op);
+            max_term = std::max(max_term, log_entry.term);
         }
         bool ok = rpc_client_.SendRequest(stub, 
                                           &InsNode_Stub::AppendEntries,
@@ -670,7 +673,9 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             if (response.success()) { // log replicated
                 next_index_[follower_id] = index + batch_span;
                 match_index_[follower_id] = index + batch_span - 1;
-                UpdateCommitIndex(index + batch_span - 1);
+                if (max_term == current_term_) {
+                    UpdateCommitIndex(index + batch_span - 1);
+                }
             } else { // (index, term ) miss match
                 next_index_[follower_id] -= 1;
                 next_index_[follower_id] = std::min(next_index_[follower_id],

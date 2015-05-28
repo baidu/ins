@@ -73,11 +73,13 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
             node_info.term = -1;
             node_info.last_log_index = -1;
             node_info.last_log_term = -1;
+            node_info.commit_index = -1;
         } else {
             node_info.status = response.status();
             node_info.term = response.term();
             node_info.last_log_index = response.last_log_index();
             node_info.last_log_term = response.last_log_term();
+            node_info.commit_index = response.commit_index();
         }
         cluster_info->push_back(node_info);
     }

@@ -22,12 +22,13 @@ int main(int argc, char* argv[]) {
     InsSDK sdk(members);
     char cli_header[2048] = {'\0'};
     snprintf(cli_header, sizeof(cli_header), 
-             "%-*s\t%-*s\t%-*s\t%-*s\t%-*s", 
+             "%-*s\t%-*s\t%-*s\t%-*s\t%-*s\t%-*s", 
              35, "server node",
              10, "role",
              15, "term",
              15, "last_log_index",
-             15, "last_log_term");
+             15, "last_log_term",
+             15, "commit_index");
     std::string header_line;
     header_line.resize(strlen(cli_header) + 8);
     std::fill(header_line.begin(), header_line.end(), '-');
@@ -44,12 +45,13 @@ int main(int argc, char* argv[]) {
             std::string s_status = InsSDK::StatusToString(it->status);
             char raw_info[1024] = {'\0'};
             snprintf(raw_info, sizeof(raw_info), 
-                     "%-*s\t%-*s\t%-*ld\t%-*ld\t%-*ld", 
+                     "%-*s\t%-*s\t%-*ld\t%-*ld\t%-*ld\t%-*ld", 
                      35, it->server_id.c_str(),
                      10, s_status.c_str(),
                      15, it->term,
                      15, it->last_log_index,
-                     15, it->last_log_term);
+                     15, it->last_log_term,
+                     15, it->commit_index);
             std::cout << raw_info
                       << std::endl;
         }
