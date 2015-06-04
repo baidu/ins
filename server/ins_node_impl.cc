@@ -43,7 +43,8 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                               meta_(NULL),
                               binlogger_(NULL),
                               replicatter_(FLAGS_max_cluster_size),
-                              heartbeat_read_timestamp(0),
+                              heartbeat_read_timestamp_(0),
+                              in_safe_mode_(true),
                               commit_index_(-1),
                               last_applied_index_(-1) {
     srand(time(NULL));
@@ -176,6 +177,7 @@ void InsNodeImpl::CommitIndexObserv() {
         }
         int64_t from_idx = last_applied_index_;
         int64_t to_idx = commit_index_;
+        bool nop_committed = false;
         mu_.Unlock();
         for (int64_t i = from_idx + 1; i <= to_idx; i++) {
             LogEntry log_entry;
@@ -200,9 +202,14 @@ void InsNodeImpl::CommitIndexObserv() {
                 case kNop:
                     LOG(DEBUG, "kNop got, do nothing, key: %s", 
                               log_entry.key.c_str());
+                    nop_committed = true;
                     break;
             }
             mu_.Lock();
+            if (status_ == kLeader && nop_committed) {
+                in_safe_mode_ = false;
+                LOG(INFO, "Leave safe mode now");
+            }
             if (client_ack_.find(i) != client_ack_.end()) {
                 ClientAck& ack = client_ack_[i];
                 if (ack.response) {
@@ -303,7 +310,7 @@ void InsNodeImpl::HeartBeatForReadCallback(
         }
         context->done->Run();
         context->triggered = true;
-        heartbeat_read_timestamp = common::timer::get_micros();
+        heartbeat_read_timestamp_ = common::timer::get_micros();
     }
     if (context->err_count > members_.size() / 2) {
         context->response->set_success(false);
@@ -378,6 +385,7 @@ void InsNodeImpl::StartReplicateLog() {
 
 void InsNodeImpl::TransToLeader() {
     mu_.AssertHeld();
+    in_safe_mode_ = true;
     status_ = kLeader;
     current_leader_ = self_id_;
     LOG(INFO, "I win the election, term:%d", current_term_);
@@ -426,6 +434,8 @@ void InsNodeImpl::TryToBeLeader() {
     if (members_.size() == 1) { //single node mode
         status_ = kLeader;
         current_leader_ =  self_id_;
+        in_safe_mode_ = false;
+        commit_index_ = last_applied_index_;
         return;
     }
     if (status_ == kLeader) {
@@ -732,9 +742,19 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+
+    if (status_ == kLeader && in_safe_mode_) {
+        LOG(INFO, "leader is still in safe mode");
+        response->set_hit(false);
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
     int64_t now_timestamp = common::timer::get_micros();
     if (members_.size() > 1
-        && (now_timestamp - heartbeat_read_timestamp) > 
+        && (now_timestamp - heartbeat_read_timestamp_) > 
               1000 * FLAGS_elect_timeout_min) {
         LOG(DEBUG, "broadcast for read");
         ClientReadAck::Ptr context(new ClientReadAck());
@@ -805,6 +825,14 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
         return;
     }
 
+    if (status_ == kLeader && in_safe_mode_) {
+        LOG(INFO, "leader is still in safe mode");
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
     const std::string& key = request->key();
     LOG(DEBUG, "client want delete key :%s", key.c_str());
     LogEntry log_entry;
@@ -842,6 +870,15 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+
+    if (status_ == kLeader && in_safe_mode_) {
+        LOG(INFO, "leader is still in safe mode");
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
     const std::string& key = request->key();
     const std::string& value = request->value();
     LOG(DEBUG, "client want put key :%s", key.c_str());
