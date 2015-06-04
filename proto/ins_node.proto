@@ -60,8 +60,7 @@ message PutResponse {
 }
 
 message GetRequest {
-    required string key = 1;    
-    optional bool quorum = 2 [default = false];
+    required string key = 1; 
 }
 
 message GetResponse {

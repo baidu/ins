@@ -158,7 +158,7 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
 }
 
 bool InsSDK::Get(const std::string& key, std::string* value,
-                 SDKError* error, bool quorum) {
+                 SDKError* error) {
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it ;
@@ -171,7 +171,6 @@ bool InsSDK::Get(const std::string& key, std::string* value,
         galaxy::ins::GetRequest request;
         galaxy::ins::GetResponse response;
         request.set_key(key);
-        request.set_quorum(quorum);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Get,
                                           &request, &response, 2, 1);
         if (!ok) {

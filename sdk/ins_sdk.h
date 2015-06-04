@@ -42,7 +42,7 @@ public:
     bool ShowCluster(std::vector<ClusterNodeInfo>* cluster_info);
     bool Put(const std::string& key, const std::string& value, SDKError* error);
     bool Get(const std::string& key, std::string* value, 
-             SDKError* error, bool quorum = false);
+             SDKError* error);
     bool Delete(const std::string& key, SDKError* error);
     static std::string StatusToString(int32_t status);
 private:

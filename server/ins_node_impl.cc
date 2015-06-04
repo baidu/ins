@@ -8,6 +8,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <gflags/gflags.h>
 #include "common/this_thread.h"
+#include "common/timer.h"
 #include "storage/meta.h"
 #include "storage/binlog.h"
 
@@ -16,6 +17,8 @@ DECLARE_string(ins_binlog_dir);
 DECLARE_int32(max_cluster_size);
 DECLARE_int32(log_rep_batch_max);
 DECLARE_int32(replication_retry_timespan);
+DECLARE_int32(elect_timeout_min);
+DECLARE_int32(elect_timeout_max);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -40,6 +43,7 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                               meta_(NULL),
                               binlogger_(NULL),
                               replicatter_(FLAGS_max_cluster_size),
+                              heartbeat_read_timestamp(0),
                               commit_index_(-1),
                               last_applied_index_(-1) {
     srand(time(NULL));
@@ -112,7 +116,10 @@ InsNodeImpl::~InsNodeImpl() {
 }
 
 int32_t InsNodeImpl::GetRandomTimeout() {
-    int32_t timeout = 150 + (int32_t) (300.0 * rand()/(RAND_MAX+1.0));
+    float span = FLAGS_elect_timeout_max - FLAGS_elect_timeout_min;
+    int32_t timeout = FLAGS_elect_timeout_min + 
+                      (int32_t) (span * rand()/(RAND_MAX+1.0));
+    //LOG(INFO, "random timeout %ld", timeout);
     return timeout;
 }
 
@@ -296,6 +303,7 @@ void InsNodeImpl::HeartBeatForReadCallback(
         }
         context->done->Run();
         context->triggered = true;
+        heartbeat_read_timestamp = common::timer::get_micros();
     }
     if (context->err_count > members_.size() / 2) {
         context->response->set_success(false);
@@ -719,8 +727,11 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
-
-    if (request->quorum()) {
+    int64_t now_timestamp = common::timer::get_micros();
+    if (members_.size() > 1
+        && (now_timestamp - heartbeat_read_timestamp) > 
+              1000 * FLAGS_elect_timeout_min) {
+        LOG(DEBUG, "broadcast for read");
         ClientReadAck::Ptr context(new ClientReadAck());
         context->request = request;
         context->response = response;
@@ -802,6 +813,9 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
     ack.done = done;
     ack.del_response = response;
     replication_cond_->Broadcast();
+    if (members_.size() == 1) { //single node cluster
+        UpdateCommitIndex(binlogger_->GetLength() - 1);
+    }
     return;
 }
 
@@ -837,6 +851,9 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     ack.done = done;
     ack.response = response;
     replication_cond_->Broadcast();
+    if (members_.size() == 1) { //single node cluster
+        UpdateCommitIndex(binlogger_->GetLength() - 1);
+    }
     return;
 }
 

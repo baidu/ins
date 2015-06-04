@@ -128,6 +128,7 @@ private:
     CondVar* replication_cond_;
     std::map<int64_t, ClientAck> client_ack_;
     std::set<std::string> replicating_;
+    int64_t heartbeat_read_timestamp;
     // for all servers
     int64_t commit_index_;
     int64_t last_applied_index_;

@@ -93,21 +93,5 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (FLAGS_ins_cmd == "getq") {
-        std::string key = FLAGS_ins_key;
-        std::string value;
-        LOG(INFO, "key: %s", key.c_str());
-        if (sdk.Get(key, &value, &ins_err, true)) {
-            LOG(INFO, "get success");
-            if (ins_err == kOK) {
-                printf("value: %s\n", value.c_str());
-            } else {
-                printf("NOT FOUND\n");
-            }
-        } else {
-            LOG(FATAL, "get failed");
-        }
-    }
-
     return 0;
 }
