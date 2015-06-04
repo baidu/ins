@@ -100,6 +100,7 @@ private:
                                 int64_t* last_log_term);
     void UpdateCommitIndex(int64_t a_index);
     void CommitIndexObserv();
+    void TransToLeader();
 public:
     std::vector<std::string> members_;
 private:

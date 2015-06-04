@@ -376,6 +376,16 @@ void InsNodeImpl::StartReplicateLog() {
     binlogger_->AppendEntry(log_entry);
 }
 
+void InsNodeImpl::TransToLeader() {
+    mu_.AssertHeld();
+    status_ = kLeader;
+    current_leader_ = self_id_;
+    LOG(INFO, "I win the election, term:%d", current_term_);
+    heart_beat_pool_.AddTask(
+        boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
+    StartReplicateLog();
+}
+
 void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
                                ::galaxy::ins::VoteResponse* response,
                                bool failed, int /*error*/) {
@@ -389,12 +399,7 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
         if (response_ptr->vote_granted() && their_term == current_term_) {
             vote_grant_[current_term_]++;
             if (vote_grant_[current_term_] > (members_.size() / 2)) {
-                status_ = kLeader;
-                current_leader_ = self_id_;
-                LOG(INFO, "I win the election, term:%d", current_term_);
-                heart_beat_pool_.AddTask(
-                    boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
-                StartReplicateLog();
+                TransToLeader();
             }
         } else {
             if (their_term > current_term_) {
