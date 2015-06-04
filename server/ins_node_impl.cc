@@ -899,6 +899,64 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     return;
 }
 
+void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::ScanRequest* request,
+                       ::galaxy::ins::ScanResponse* response,
+                       ::google::protobuf::Closure* done) {
+    (void) controller;
+    MutexLock lock(&mu_);
+    if (status_ == kFollower) {
+        response->set_leader_id(current_leader_);
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kCandidate) {
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kLeader && in_safe_mode_) {
+        LOG(INFO, "leader is still in safe mode");
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
+    mu_.Unlock();
+    std::string start_key = request->start_key();
+    std::string end_key = request->end_key();
+    int32_t size_limit = request->size_limit();
+    leveldb::Iterator* it = data_store_->NewIterator(leveldb::ReadOptions());
+    bool has_more = false;
+    int32_t count = 0;
+    for (it->Seek(start_key);
+         it->Valid() && it->key().ToString() < end_key;
+         it->Next()) {
+        count ++;
+        if (count > size_limit) {
+            has_more = true;
+            break;
+        }
+        galaxy::ins::ScanItem* item = response->add_items();
+        item->set_key(it->key().ToString());
+        item->set_value(it->value().ToString());
+    }
+
+    assert(it->status().ok());
+    delete it;
+    response->set_has_more(has_more);
+    response->set_success(true);
+    done->Run();
+
+    mu_.Lock();    
+    return;
+}
+
 } //namespace ins
 } //namespace galaxy
 

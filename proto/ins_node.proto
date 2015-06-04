@@ -91,12 +91,31 @@ message ShowStatusResponse {
     optional int64 commit_index = 5; 
 }
 
+message ScanRequest {
+    required string start_key = 1;
+    required string end_key = 2;
+    required int32 size_limit = 3;    
+}
+
+message ScanItem {
+    required string key = 1;
+    required string value = 2;
+}
+
+message ScanResponse {
+    optional bool has_more = 1;
+    repeated ScanItem items = 2;
+    optional string leader_id = 3;
+    required bool success = 4;
+}
+
 service InsNode {
     rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse);
     rpc Vote(VoteRequest) returns (VoteResponse);
     rpc Put(PutRequest) returns (PutResponse);
     rpc Get(GetRequest) returns (GetResponse);
     rpc Delete(DelRequest) returns (DelResponse);
+    rpc Scan(ScanRequest) returns (ScanResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
 }
 

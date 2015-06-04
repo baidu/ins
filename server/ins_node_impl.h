@@ -77,6 +77,10 @@ public:
                     const ::galaxy::ins::ShowStatusRequest* request,
                     ::galaxy::ins::ShowStatusResponse* response,
                     ::google::protobuf::Closure* done);
+    void Scan(::google::protobuf::RpcController* controller,
+              const ::galaxy::ins::ScanRequest* request,
+              ::galaxy::ins::ScanResponse* response,
+              ::google::protobuf::Closure* done);
 private:
     void VoteCallback(const ::galaxy::ins::VoteRequest* request,
                       ::galaxy::ins::VoteResponse* response,

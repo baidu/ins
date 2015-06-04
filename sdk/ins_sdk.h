@@ -33,6 +33,13 @@ struct ClusterNodeInfo {
     int64_t commit_index;
 };
 
+struct KVPair {
+    std::string key;
+    std::string value;
+};
+
+class ScanResult;
+
 class InsSDK {
 public:
     static void ParseFlagFromArgs(int argc, char* argv[],
@@ -44,6 +51,12 @@ public:
     bool Get(const std::string& key, std::string* value, 
              SDKError* error);
     bool Delete(const std::string& key, SDKError* error);
+    ScanResult* Scan(const std::string& start_key, 
+                     const std::string& end_key);
+    bool ScanOnce(const std::string& start_key,
+                  const std::string& end_key,
+                  std::vector<KVPair>* buffer,
+                  SDKError* error);
     static std::string StatusToString(int32_t status);
 private:
     void PrepareServerList(std::vector<std::string>& server_list);
@@ -51,6 +64,24 @@ private:
     std::vector<std::string> members_;
     galaxy::RpcClient* rpc_client_;
     common::Mutex* mu_;
+};
+
+
+class ScanResult {
+public:
+    ScanResult(InsSDK* sdk);
+    void Init(const std::string& start_key, const std::string& end_key);
+    bool Done();
+    SDKError Error();
+    const std::string Key();
+    const std::string Value();
+    void Next();
+private:
+    std::vector<KVPair> buffer_;
+    size_t offset_;
+    InsSDK* sdk_;
+    SDKError error_;
+    std::string end_key_;
 };
 
 } //namespace sdk

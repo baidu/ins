@@ -22,6 +22,9 @@ do
 	"delete")
 		sh ./test_del.sh $arg1
 	;;
+	"scan")
+		sh ./test_scan.sh $arg1 $arg2
+	;;
 	"quit")
 		exit 0
 	;;
@@ -31,6 +34,7 @@ do
 		echo "  put (key) (value) [ update the data ] "
 	        echo "  get (key) [read the data by key ]"	
 		echo "  delete (key) [remove the data by key]"
+		echo "  scan (start key) (end key)"
 	;;
 
 	esac

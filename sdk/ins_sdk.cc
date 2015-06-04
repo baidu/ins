@@ -220,6 +220,79 @@ bool InsSDK::Get(const std::string& key, std::string* value,
     return false;
 }
 
+bool InsSDK::ScanOnce(const std::string& start_key,
+                      const std::string& end_key,
+                      std::vector<KVPair>* buffer,
+                      SDKError* error) {
+    assert(buffer);
+    std::string value;
+    if (!Get(start_key, &value, error)) { //avoid network partition problem
+        LOG(FATAL, "the leader may be unavilable");
+        return false;
+    }
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
+    std::vector<std::string>::const_iterator it ;
+    for (it = server_list.begin(); it != server_list.end(); it++){
+        std::string server_id = *it;
+        LOG(INFO, "rpc to %s", server_id.c_str());
+        galaxy::ins::InsNode_Stub *stub, *stub2;
+        rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::ScanRequest request;
+        galaxy::ins::ScanResponse response;
+        request.set_start_key(start_key);
+        request.set_end_key(end_key);
+        request.set_size_limit(500);
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Scan,
+                                           &request, &response, 5, 1);
+        if (!ok) {
+            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            continue;
+        }
+
+        if (response.success()) {
+            *error = kOK;
+            for(int i = 0; i < response.items_size(); i++) {
+                KVPair kv_pair;
+                kv_pair.key = response.items(i).key();
+                kv_pair.value = response.items(i).value();
+                buffer->push_back(kv_pair);
+            }
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
+            return true;
+        } else {
+            if (!response.leader_id().empty()) {
+                server_id = response.leader_id();
+                LOG(INFO, "redirect to leader :%s", server_id.c_str());
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Scan,
+                                              &request, &response, 5, 1);
+                if (ok && response.success()) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
+                    *error = kOK;
+                    for(int i = 0; i < response.items_size(); i++) {
+                        KVPair kv_pair;
+                        kv_pair.key = response.items(i).key();
+                        kv_pair.value = response.items(i).value();
+                        buffer->push_back(kv_pair);
+                    }       
+                    return true;
+                }
+            }
+        }
+        ThisThread::Sleep(1000);
+    }
+    *error = kClusterDown;
+    return false;
+}
 
 bool InsSDK::Delete(const std::string& key, SDKError* error) {
     std::vector<std::string> server_list;
@@ -269,6 +342,58 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
     }
     *error = kClusterDown;
     return false;
+}
+
+ScanResult::ScanResult(InsSDK* sdk) : offset_(0),
+                                      sdk_(sdk),
+                                      error_(kOK) {
+
+}
+
+ScanResult* InsSDK::Scan(const std::string& start_key, 
+                         const std::string& end_key) {
+    (void) start_key;
+    (void) end_key;
+    ScanResult* result =  new ScanResult(this);
+    result->Init(start_key, end_key);
+    return result;
+}
+
+void ScanResult::Init(const std::string& start_key, const std::string& end_key) {
+    assert(sdk_);
+    end_key_ =  end_key;
+    sdk_->ScanOnce(start_key, end_key, &buffer_, &error_);
+    offset_ = 0;
+}
+
+bool ScanResult::Done() {
+    return buffer_.empty();
+}
+
+SDKError ScanResult::Error() {
+    return error_;
+}
+
+const std::string ScanResult::Key() {
+    assert(offset_ < buffer_.size());
+    return buffer_[offset_].key;
+}
+
+const std::string ScanResult::Value() {
+    assert(offset_ < buffer_.size());
+    return buffer_[offset_].value;
+}
+
+void ScanResult::Next() {
+    offset_ ++ ;
+    if (offset_ >= buffer_.size() && !buffer_.empty()) {
+        std::string last_key = buffer_[buffer_.size()-1].key;
+        std::vector<KVPair> empty_v;
+        buffer_.swap(empty_v);
+        last_key.append(1,'\0');
+        sdk_->ScanOnce(last_key, end_key_, &buffer_, &error_); 
+        offset_ = 0;      
+    }
 }
 
 } //namespace sdk

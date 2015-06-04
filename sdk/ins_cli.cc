@@ -13,6 +13,8 @@
 DECLARE_string(ins_cmd);
 DECLARE_string(ins_key);
 DECLARE_string(ins_value);
+DECLARE_string(ins_start_key);
+DECLARE_string(ins_end_key);
 
 using namespace galaxy::ins::sdk;
 
@@ -91,6 +93,20 @@ int main(int argc, char* argv[]) {
         } else {
             LOG(FATAL, "get failed");
         }
+    }
+
+    if (FLAGS_ins_cmd == "scan") {
+        std::string start_key = FLAGS_ins_start_key;
+        std::string end_key = FLAGS_ins_end_key;
+        LOG(INFO, "scan: [%s, %s)", start_key.c_str(), end_key.c_str());
+        ScanResult* result = sdk.Scan(start_key, end_key);
+        int i = 0;
+        while (!result->Done()) {
+            printf("[%d]\t%s -> %s\n", ++i,
+                   result->Key().c_str(), result->Value().c_str());
+            result->Next();
+        }
+        delete result;
     }
 
     return 0;
