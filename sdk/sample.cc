@@ -30,8 +30,9 @@ int main(int argc, char* argv[]) {
             sdk.Put(key_buf, value_buf, &err);
             if (err == kClusterDown) {
                 i--;
-                printf("try put again: %s", key_buf);
+                printf("try put again: %s\n", key_buf);
                 sleep(2);
+                continue;
             }
             printf("%s\n", key_buf);
         }
@@ -51,6 +52,7 @@ int main(int argc, char* argv[]) {
                 i--;
                 printf("try get again: %s", key_buf);
                 sleep(2);
+                continue;
             }
             printf("%s\n", value_buf);
         }
