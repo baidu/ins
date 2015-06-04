@@ -351,7 +351,7 @@ void InsNodeImpl::BroadCastHeartBeat() {
         callback = boost::bind(&InsNodeImpl::HearBeatCallback, this,
                                _1, _2, _3, _4);
         rpc_client_.AsyncRequest(stub, &InsNode_Stub::AppendEntries, 
-                                 request, response, callback, 2);
+                                 request, response, callback, 2, 1);
     }
     heart_beat_pool_.DelayTask(50, boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
 }
@@ -476,7 +476,7 @@ void InsNodeImpl::TryToBeLeader() {
                               bool, int ) > callback;
         callback = boost::bind(&InsNodeImpl::VoteCallback, this, _1, _2, _3, _4);
         rpc_client_.AsyncRequest(stub, &InsNode_Stub::Vote, request, response,
-                                 callback, 2);
+                                 callback, 2, 1);
     }
     CheckLeaderCrash();
 }
@@ -783,7 +783,7 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
             request->set_leader_id(self_id_);
             request->set_leader_commit_index(commit_index_);
             rpc_client_.AsyncRequest(stub, &InsNode_Stub::AppendEntries, 
-                                     request, response, callback, 2);
+                                     request, response, callback, 2, 1);
         }
     } else {
         mu_.Unlock();
