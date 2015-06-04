@@ -352,8 +352,6 @@ ScanResult::ScanResult(InsSDK* sdk) : offset_(0),
 
 ScanResult* InsSDK::Scan(const std::string& start_key, 
                          const std::string& end_key) {
-    (void) start_key;
-    (void) end_key;
     ScanResult* result =  new ScanResult(this);
     result->Init(start_key, end_key);
     return result;

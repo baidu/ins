@@ -935,7 +935,7 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
     bool has_more = false;
     int32_t count = 0;
     for (it->Seek(start_key);
-         it->Valid() && it->key().ToString() < end_key;
+         it->Valid() && (it->key().ToString() < end_key || end_key.empty());
          it->Next()) {
         count ++;
         if (count > size_limit) {
