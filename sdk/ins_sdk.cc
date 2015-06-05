@@ -111,7 +111,7 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
-        LOG(INFO, "rpc to %s", server_id.c_str());
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
@@ -136,7 +136,7 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
         } else {
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
-                LOG(INFO, "redirect to leader :%s", server_id.c_str());
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
                 rpc_client_->GetStub(server_id, &stub2);
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Put,
@@ -164,7 +164,7 @@ bool InsSDK::Get(const std::string& key, std::string* value,
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
-        LOG(INFO, "rpc to %s", server_id.c_str());
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
@@ -193,7 +193,7 @@ bool InsSDK::Get(const std::string& key, std::string* value,
         } else {
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
-                LOG(INFO, "redirect to leader :%s", server_id.c_str());
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
                 rpc_client_->GetStub(server_id, &stub2);
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Get,
@@ -235,7 +235,7 @@ bool InsSDK::ScanOnce(const std::string& start_key,
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
-        LOG(INFO, "rpc to %s", server_id.c_str());
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
@@ -267,7 +267,7 @@ bool InsSDK::ScanOnce(const std::string& start_key,
         } else {
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
-                LOG(INFO, "redirect to leader :%s", server_id.c_str());
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
                 rpc_client_->GetStub(server_id, &stub2);
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Scan,
@@ -300,7 +300,7 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
-        LOG(INFO, "rpc to %s", server_id.c_str());
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
         galaxy::ins::DelRequest request;
@@ -323,7 +323,7 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
         } else {
             if (!response.leader_id().empty()) {
                 server_id = response.leader_id();
-                LOG(INFO, "redirect to leader :%s", server_id.c_str());
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
                 rpc_client_->GetStub(server_id, &stub2);
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Delete,

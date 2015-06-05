@@ -61,9 +61,9 @@ int main(int argc, char* argv[]) {
     if (FLAGS_ins_cmd == "put") {
         std::string key = FLAGS_ins_key;
         std::string value = FLAGS_ins_value;
-        LOG(INFO, "key: %s, value: %s", key.c_str(), value.c_str());
+        LOG(DEBUG, "key: %s, value: %s", key.c_str(), value.c_str());
         if (sdk.Put(key, value, &ins_err)) {
-            LOG(INFO, "put success");
+            LOG(DEBUG, "put success");
         } else {
             LOG(FATAL, "put failed");
         }
@@ -71,9 +71,9 @@ int main(int argc, char* argv[]) {
 
     if (FLAGS_ins_cmd == "delete") {
         std::string key = FLAGS_ins_key;
-        LOG(INFO, "key: %s", key.c_str());
+        LOG(DEBUG, "key: %s", key.c_str());
         if (sdk.Delete(key, &ins_err)) {
-            LOG(INFO, "delete success");
+            LOG(DEBUG, "delete success");
         } else {
             LOG(FATAL, "delete failed");
         }
@@ -82,9 +82,9 @@ int main(int argc, char* argv[]) {
     if (FLAGS_ins_cmd == "get") {
         std::string key = FLAGS_ins_key;
         std::string value;
-        LOG(INFO, "key: %s", key.c_str());
+        LOG(DEBUG, "key: %s", key.c_str());
         if (sdk.Get(key, &value, &ins_err)) {
-            LOG(INFO, "get success");
+            LOG(DEBUG, "get success");
             if (ins_err == kOK) {
                 printf("value: %s\n", value.c_str());
             } else {
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
     if (FLAGS_ins_cmd == "scan") {
         std::string start_key = FLAGS_ins_start_key;
         std::string end_key = FLAGS_ins_end_key;
-        LOG(INFO, "scan: [%s, %s)", start_key.c_str(), end_key.c_str());
+        LOG(DEBUG, "scan: [%s, %s)", start_key.c_str(), end_key.c_str());
         ScanResult* result = sdk.Scan(start_key, end_key);
         int i = 0;
         while (!result->Done()) {
