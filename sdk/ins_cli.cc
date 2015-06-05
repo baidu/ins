@@ -128,7 +128,10 @@ int main(int argc, char* argv[]) {
         SDKError error;
         bool done = false;
         bool ret = sdk.Watch(key, my_watch_callback, &done, &error);
-        assert(ret);
+        if (!ret) {
+            fprintf(stderr, "rpc error: %d", static_cast<int>(error));
+            return 1;
+        }
         while (!done) {
             sleep(1);
         }
