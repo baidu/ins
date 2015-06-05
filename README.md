@@ -23,7 +23,8 @@ integrated naming service (based on raft)
 	  put (key) (value) [ update the data ] 
 	  get (key) [read the data by key ]
 	  delete (key) [remove the data by key]
-	  scan (start key) (end key)
+	  scan (start key) (end key, excluded)
+	  watch (key)
   
 # performance (multiple clients， 5 cluster-nodes in LAN)
 * 55200 read per second

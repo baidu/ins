@@ -26,7 +26,7 @@ do
 		sh ./test_scan.sh $arg1 $arg2
 	;;
 	"watch")
-		sh ./test_watch.sh $arg1
+		sh ./test_watch.sh $arg1 &
 	;;
 	"quit")
 		exit 0
@@ -39,6 +39,7 @@ do
 		echo "  delete (key) [remove the data by key]"
 		echo "  scan (start key) (end key, excluded)"
 		echo "  watch (key)"
+		echo "  enter quit to exit shell"
 	;;
 
 	esac
