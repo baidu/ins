@@ -10,6 +10,7 @@
 #include "common/asm_atomic.h"
 #include "common/mutex.h"
 #include "common/this_thread.h"
+#include "common/thread_pool.h"
 #include "rpc/rpc_client.h"
 #include "proto/ins_node.pb.h"
 
@@ -31,7 +32,8 @@ void InsSDK::ParseFlagFromArgs(int argc, char* argv[],
 }
 
 InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
-                                                          mu_(NULL) {
+                                                          mu_(NULL),
+                                                          watch_pool_(NULL) {
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
         exit(1);
@@ -39,11 +41,13 @@ InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
     rpc_client_ = new galaxy::RpcClient();
     mu_ = new Mutex();
     std::copy(members.begin(), members.end(), std::back_inserter(members_));
+    watch_pool_ = new common::ThreadPool();
 }
 
 InsSDK::~InsSDK() {
     delete rpc_client_;
     delete mu_;
+    delete watch_pool_;
 }
 
 void InsSDK::PrepareServerList(std::vector<std::string>& server_list) {
@@ -342,6 +346,59 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
     }
     *error = kClusterDown;
     return false;
+}
+
+void InsSDK::WatchTask(const std::string& key,
+                       const std::string& old_value,
+                       bool has_key,
+                       WatchCallback user_callback,
+                       void* context) {
+    std::string new_value = "";
+    SDKError error;
+    bool ok = Get(key, &new_value, &error);
+    bool watch_again = false;
+    if (ok) {
+        bool now_has_key = true;
+        if (error == kNoSuchKey) {
+            now_has_key = false;
+        }
+        if (has_key != now_has_key || new_value != old_value) {
+            user_callback(key, new_value, old_value,
+                          now_has_key, context); //trigger callback
+            return; //dont't watch again
+        } else {
+            watch_again = true;
+        }
+    }  
+    if (!ok || watch_again) {
+        watch_pool_->DelayTask(2000, 
+            boost::bind(&InsSDK::WatchTask, this,
+                        key, old_value, has_key,
+                        user_callback, context)
+        );
+    }
+}
+
+bool InsSDK::Watch(const std::string& key, 
+                   WatchCallback user_callback, 
+                   void* context,
+                   SDKError* error) {
+    assert(watch_pool_);
+    std::string old_value;
+    bool ok = Get(key, &old_value, error);
+    if (!ok) {
+        return false;
+    }
+    bool has_key = true;
+    if (*error == kNoSuchKey) {
+        has_key = false;
+    }
+    watch_pool_->AddTask(
+        boost::bind(&InsSDK::WatchTask, this,
+                    key, old_value, has_key,
+                    user_callback, context)
+    );
+    return true;
 }
 
 ScanResult::ScanResult(InsSDK* sdk) : offset_(0),

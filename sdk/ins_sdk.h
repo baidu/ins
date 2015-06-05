@@ -7,6 +7,7 @@
 
 namespace common {
     class Mutex;
+    class ThreadPool;
 }
 
 namespace galaxy {
@@ -40,6 +41,12 @@ struct KVPair {
 
 class ScanResult;
 
+typedef void (*WatchCallback)(const std::string& key,
+                              const std::string& value,
+                              const std::string& old_value,
+                              bool has_key,
+                              void* context);
+
 class InsSDK {
 public:
     static void ParseFlagFromArgs(int argc, char* argv[],
@@ -57,13 +64,25 @@ public:
                   const std::string& end_key,
                   std::vector<KVPair>* buffer,
                   SDKError* error);
+    bool Watch(const std::string& key, 
+               WatchCallback user_callback,
+               void* context, 
+               SDKError* error);
+
     static std::string StatusToString(int32_t status);
+
 private:
     void PrepareServerList(std::vector<std::string>& server_list);
+    void WatchTask(const std::string& key,
+                   const std::string& old_value,
+                   bool has_key,
+                   WatchCallback user_callback,
+                   void* context);
     std::string leader_id_;
     std::vector<std::string> members_;
     galaxy::RpcClient* rpc_client_;
     common::Mutex* mu_;
+    common::ThreadPool* watch_pool_;
 };
 
 

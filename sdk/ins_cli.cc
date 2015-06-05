@@ -18,6 +18,20 @@ DECLARE_string(ins_end_key);
 
 using namespace galaxy::ins::sdk;
 
+void my_watch_callback(const std::string& key, 
+                       const std::string& value,
+                       const std::string& old_value,
+                       bool has_key, void* context) {
+    printf("key: %s\n", key.c_str());
+    printf("value: %s\n", value.c_str());
+    printf("old value: %s\n", old_value.c_str());
+    printf("has key: %s\n", has_key?"true":"false");
+    bool* done = reinterpret_cast<bool*>(context);
+    if (done) {
+        *done = true;
+    }
+}
+
 int main(int argc, char* argv[]) {
     std::vector<std::string> members;
     InsSDK::ParseFlagFromArgs(argc, argv, &members);
@@ -107,6 +121,17 @@ int main(int argc, char* argv[]) {
             result->Next();
         }
         delete result;
+    }
+
+    if (FLAGS_ins_cmd == "watch") {
+        std::string key = FLAGS_ins_key;
+        SDKError error;
+        bool done = false;
+        bool ret = sdk.Watch(key, my_watch_callback, &done, &error);
+        assert(ret);
+        while (!done) {
+            sleep(1);
+        }
     }
 
     return 0;

@@ -25,6 +25,9 @@ do
 	"scan")
 		sh ./test_scan.sh $arg1 $arg2
 	;;
+	"watch")
+		sh ./test_watch.sh $arg1
+	;;
 	"quit")
 		exit 0
 	;;
@@ -34,7 +37,8 @@ do
 		echo "  put (key) (value) [ update the data ] "
 	        echo "  get (key) [read the data by key ]"	
 		echo "  delete (key) [remove the data by key]"
-		echo "  scan (start key) (end key)"
+		echo "  scan (start key) (end key, excluded)"
+		echo "  watch (key)"
 	;;
 
 	esac
