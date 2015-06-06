@@ -18,18 +18,18 @@ DECLARE_string(ins_end_key);
 
 using namespace galaxy::ins::sdk;
 
-void my_watch_callback(const std::string& key, 
-                       const std::string& value,
-                       const std::string& old_value,
-                       bool has_key, void* context) {
-    printf("key: %s\n", key.c_str());
-    printf("value: %s\n", value.c_str());
-    printf("old value: %s\n", old_value.c_str());
-    printf("has key: %s\n", has_key?"true":"false");
-    bool* done = reinterpret_cast<bool*>(context);
+void my_watch_callback(const WatchParam& param, SDKError error) {
+    printf("key: %s\n", param.key.c_str());
+    printf("new value: %s\n", param.new_value.c_str());
+    printf("old value: %s\n", param.old_value.c_str());
+    printf("now has key: %s\n", param.now_has_key? "true":"false");
+    printf("old has key: %s\n", param.old_has_key? "true":"false");
+    printf("error code: %d\n", static_cast<int>(error));
+    bool* done = reinterpret_cast<bool*>(param.context);
     if (done) {
         *done = true;
     }
+    (void)error;
 }
 
 int main(int argc, char* argv[]) {

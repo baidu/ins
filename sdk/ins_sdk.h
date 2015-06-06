@@ -41,11 +41,16 @@ struct KVPair {
 
 class ScanResult;
 
-typedef void (*WatchCallback)(const std::string& key,
-                              const std::string& value,
-                              const std::string& old_value,
-                              bool has_key,
-                              void* context);
+struct WatchParam {
+    std::string key;
+    std::string new_value;
+    std::string old_value;
+    bool old_has_key;
+    bool now_has_key;
+    void* context;
+};
+
+typedef void (*WatchCallback)(const WatchParam& param, SDKError error);
 
 class InsSDK {
 public:
@@ -75,9 +80,10 @@ private:
     void PrepareServerList(std::vector<std::string>& server_list);
     void WatchTask(const std::string& key,
                    const std::string& old_value,
-                   bool has_key,
+                   bool old_has_key,
                    WatchCallback user_callback,
-                   void* context);
+                   void* context,
+                   int32_t err_count);
     std::string leader_id_;
     std::vector<std::string> members_;
     galaxy::RpcClient* rpc_client_;

@@ -20,6 +20,9 @@ namespace galaxy {
 namespace ins {
 namespace sdk {
 
+const static int32_t watch_period = 2000; //ms
+const static int32_t max_watch_rpc_error = 15; 
+
 void InsSDK::ParseFlagFromArgs(int argc, char* argv[], 
                                std::vector<std::string> * members) {
     google::ParseCommandLineFlags(&argc, &argv, true);
@@ -350,9 +353,10 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
 
 void InsSDK::WatchTask(const std::string& key,
                        const std::string& old_value,
-                       bool has_key,
+                       bool old_has_key,
                        WatchCallback user_callback,
-                       void* context) {
+                       void* context,
+                       int32_t err_count) {
     std::string new_value = "";
     SDKError error;
     bool ok = Get(key, &new_value, &error);
@@ -362,19 +366,34 @@ void InsSDK::WatchTask(const std::string& key,
         if (error == kNoSuchKey) {
             now_has_key = false;
         }
-        if (has_key != now_has_key || new_value != old_value) {
-            user_callback(key, new_value, old_value,
-                          now_has_key, context); //trigger callback
+        if (old_has_key != now_has_key || new_value != old_value) {
+            WatchParam param;
+            param.key = key;
+            param.new_value = new_value;
+            param.old_value = old_value;
+            param.now_has_key = now_has_key;
+            param.old_has_key = old_has_key;
+            param.context = context;
+            user_callback(param, kOK); //trigger callback
             return; //dont't watch again
         } else {
             watch_again = true;
         }
     }  
     if (!ok || watch_again) {
-        watch_pool_->DelayTask(2000, 
+        if (!ok) {
+            err_count ++;
+            if (err_count > max_watch_rpc_error) {
+                WatchParam param;
+                param.context = context;
+                user_callback(param, kClusterDown);
+                return; //dont't watch again, the cluster maybe down
+            }
+        }
+        watch_pool_->DelayTask(watch_period, 
             boost::bind(&InsSDK::WatchTask, this,
-                        key, old_value, has_key,
-                        user_callback, context)
+                        key, old_value, old_has_key,
+                        user_callback, context, err_count)
         );
     }
 }
@@ -389,14 +408,14 @@ bool InsSDK::Watch(const std::string& key,
     if (!ok) {
         return false;
     }
-    bool has_key = true;
+    bool old_has_key = true;
     if (*error == kNoSuchKey) {
-        has_key = false;
+        old_has_key = false;
     }
     watch_pool_->AddTask(
         boost::bind(&InsSDK::WatchTask, this,
-                    key, old_value, has_key,
-                    user_callback, context)
+                    key, old_value, old_has_key,
+                    user_callback, context, 0)
     );
     return true;
 }
