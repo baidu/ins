@@ -51,7 +51,7 @@ message VoteResponse {
 
 message PutRequest {
     required string key = 1;
-    required string value = 2;    
+    required string value = 2;  
 }
 
 message PutResponse {
@@ -109,6 +109,27 @@ message ScanResponse {
     required bool success = 4;
 }
 
+message LockRequest {
+    required string key = 1;
+    required string session_id = 2;
+    optional string hostname = 3;
+}
+
+message LockResponse {
+    required bool success = 1;
+    optional string leader_id = 2;
+}
+
+message KeepAliveRequest {
+    required string session_id = 1;
+    optional string host_name = 2;
+}
+
+message KeepAliveResponse {
+    required bool success = 1;
+    optional string leader_id = 2;    
+}
+
 service InsNode {
     rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse);
     rpc Vote(VoteRequest) returns (VoteResponse);
@@ -116,6 +137,8 @@ service InsNode {
     rpc Get(GetRequest) returns (GetResponse);
     rpc Delete(DelRequest) returns (DelResponse);
     rpc Scan(ScanRequest) returns (ScanResponse);
+    rpc Lock(LockRequest) returns (LockResponse);
+    rpc KeepAlive(KeepAliveRequest) returns (KeepAliveResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
 }
 

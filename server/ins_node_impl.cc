@@ -210,7 +210,7 @@ void InsNodeImpl::CommitIndexObserv() {
                 in_safe_mode_ = false;
                 LOG(INFO, "Leave safe mode now");
             }
-            if (client_ack_.find(i) != client_ack_.end()) {
+            if (status_ == kLeader && client_ack_.find(i) != client_ack_.end()) {
                 ClientAck& ack = client_ack_[i];
                 if (ack.response) {
                     ack.response->set_success(true);
@@ -221,6 +221,11 @@ void InsNodeImpl::CommitIndexObserv() {
                     ack.del_response->set_success(true);
                     ack.del_response->set_leader_id("");
                     ack.done->Run(); //client del ok;   
+                }
+                if (ack.lock_response) {
+                    ack.lock_response->set_success(true);
+                    ack.lock_response->set_leader_id("");
+                    ack.done->Run(); //client lock ok;   
                 }
                 client_ack_.erase(i);
             }
@@ -436,6 +441,8 @@ void InsNodeImpl::TryToBeLeader() {
         current_leader_ =  self_id_;
         in_safe_mode_ = false;
         commit_index_ = last_applied_index_;
+        current_term_++;
+        meta_->WriteCurrentTerm(current_term_);
         return;
     }
     if (status_ == kLeader) {
@@ -899,6 +906,86 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     return;
 }
 
+void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
+                       const ::galaxy::ins::LockRequest* request,
+                       ::galaxy::ins::LockResponse* response,
+                       ::google::protobuf::Closure* done) {
+    (void) controller;
+    MutexLock lock(&mu_);
+    if (status_ == kFollower) {
+        response->set_success(false);
+        response->set_leader_id(current_leader_);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kCandidate) {
+        response->set_success(false);
+        response->set_leader_id("");
+        done->Run();
+        return;
+    }
+
+    if (status_ == kLeader && in_safe_mode_) {
+        LOG(INFO, "leader is still in safe mode");
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
+    const std::string& key = request->key();
+    const std::string& session_id = request->session_id();
+    LOG(INFO, "client want lock key :%s, session:%s",
+        key.c_str(),
+        session_id.c_str());
+    LogEntry log_entry;
+    log_entry.key = key;
+    log_entry.value = session_id;
+    log_entry.term = current_term_;
+    log_entry.op = kPut;
+    bool lock_is_avilable = false;
+
+    mu_.Unlock();
+    leveldb::Status s;
+    std::string old_locker_session;
+    s = data_store_->Get(leveldb::ReadOptions(), key, &old_locker_session);
+    if (!s.ok()) {
+        lock_is_avilable = true;
+    } else {
+        {
+            MutexLock lock(&sessions_mu_);
+            SessionIDIndex& id_index = sessions_.get<0>();
+            SessionIDIndex::iterator old_it = id_index.find(old_locker_session);
+            SessionIDIndex::iterator self_it = id_index.find(session_id);
+            if (old_it == sessions_.end() //expired session
+                && self_it != sessions_.end()) { 
+                lock_is_avilable = true;
+            }
+        }
+    }
+    mu_.Lock();
+
+    if (lock_is_avilable) {
+        binlogger_->AppendEntry(log_entry);
+        int64_t cur_index = binlogger_->GetLength() - 1;
+        ClientAck& ack = client_ack_[cur_index];
+        ack.done = done;
+        ack.lock_response = response;
+        replication_cond_->Broadcast();
+        if (members_.size() == 1) { //single node cluster
+            UpdateCommitIndex(binlogger_->GetLength() - 1);
+        }
+    } else {
+        LOG(INFO, "the lock %s is hold by another session",
+            key.c_str());
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+    }
+    return;
+}
+
 void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::ScanRequest* request,
                        ::galaxy::ins::ScanResponse* response,
@@ -955,6 +1042,54 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
 
     mu_.Lock();    
     return;
+}
+
+void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
+                            const ::galaxy::ins::KeepAliveRequest* request,
+                            ::galaxy::ins::KeepAliveResponse* response,
+                            ::google::protobuf::Closure* done) {
+    (void) controller;
+    {
+        MutexLock lock(&mu_);
+        if (status_ == kFollower) {
+            response->set_success(false);
+            response->set_leader_id(current_leader_);
+            done->Run();
+            return;
+        }
+
+        if (status_ == kCandidate) {
+            response->set_success(false);
+            response->set_leader_id("");
+            done->Run();
+            return;
+        }
+
+        if (status_ == kLeader && in_safe_mode_) {
+            LOG(INFO, "leader is still in safe mode");
+            response->set_leader_id("");
+            response->set_success(false);
+            done->Run();
+            return;
+        }  
+    } //end of global mutex
+    Session session;
+    session.session_id = request->session_id();
+    session.last_report_time = common::timer::get_micros();
+    session.host_name = request->host_name();
+    {
+        MutexLock lock(&sessions_mu_);
+        SessionIDIndex& id_index = sessions_.get<0>();
+        SessionIDIndex::iterator it = id_index.find(session.session_id);
+        if (it == sessions_.end()) {
+            sessions_.insert(session);
+        } else {
+            sessions_.replace(it, session);
+        }
+    }
+    response->set_success(true);
+    response->set_leader_id("");
+    done->Run();
 }
 
 } //namespace ins

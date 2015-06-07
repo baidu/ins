@@ -8,10 +8,17 @@
 #include <map>
 #include <set>
 #include <boost/shared_ptr.hpp>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/identity.hpp>
+#include <boost/multi_index/member.hpp>
 #include "common/mutex.h"
 #include "common/thread_pool.h"
 #include "rpc/rpc_client.h"
 #include "leveldb/db.h"
+
+using namespace boost::multi_index;
 
 namespace galaxy {
 namespace ins {
@@ -22,9 +29,11 @@ class BinLogger;
 struct ClientAck {
     galaxy::ins::PutResponse* response;
     galaxy::ins::DelResponse* del_response;
+    galaxy::ins::LockResponse* lock_response;
     google::protobuf::Closure* done;
     ClientAck() : response(NULL),
                   del_response(NULL),
+                  lock_response(NULL),
                   done(NULL) {
     }
 };
@@ -47,6 +56,30 @@ struct ClientReadAck
     }
     typedef boost::shared_ptr<ClientReadAck> Ptr;
 };
+
+struct Session {
+  std::string session_id;
+  std::string host_name;
+  int64_t last_report_time;
+  Session() : last_report_time(0) {
+    
+  }
+};
+
+typedef multi_index_container<
+    Session,
+    indexed_by<
+       hashed_unique<
+         member<Session, std::string, &Session::session_id>
+       >,
+       ordered_non_unique<
+         member<Session, int64_t, &Session::last_report_time>
+       >
+    >
+> SessionContainer;
+
+typedef SessionContainer::nth_index<0>::type SessionIDIndex;
+typedef SessionContainer::nth_index<1>::type SessionTimeIndex;
 
 class InsNodeImpl : public InsNode {
 public:
@@ -80,6 +113,14 @@ public:
     void Scan(::google::protobuf::RpcController* controller,
               const ::galaxy::ins::ScanRequest* request,
               ::galaxy::ins::ScanResponse* response,
+              ::google::protobuf::Closure* done);
+    void KeepAlive(::google::protobuf::RpcController* controller,
+                   const ::galaxy::ins::KeepAliveRequest* request,
+                   ::galaxy::ins::KeepAliveResponse* response,
+                   ::google::protobuf::Closure* done);
+    void Lock(::google::protobuf::RpcController* controller,
+              const ::galaxy::ins::LockRequest* request,
+              ::galaxy::ins::LockResponse* response,
               ::google::protobuf::Closure* done);
 private:
     void VoteCallback(const ::galaxy::ins::VoteRequest* request,
@@ -135,6 +176,8 @@ private:
     std::set<std::string> replicating_;
     int64_t heartbeat_read_timestamp_;
     bool in_safe_mode_;
+    SessionContainer sessions_;
+    Mutex sessions_mu_;
     // for all servers
     int64_t commit_index_;
     int64_t last_applied_index_;
