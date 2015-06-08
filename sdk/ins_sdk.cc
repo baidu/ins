@@ -588,6 +588,10 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
     return false;
 }
 
+std::string InsSDK::GetSessionID() {
+    return session_id_;
+}
+
 ScanResult::ScanResult(InsSDK* sdk) : offset_(0),
                                       sdk_(sdk),
                                       error_(kOK) {

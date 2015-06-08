@@ -952,9 +952,6 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
 
     const std::string& key = request->key();
     const std::string& session_id = request->session_id();
-    LOG(INFO, "client want lock key :%s, session:%s",
-        key.c_str(),
-        session_id.c_str());
     LogEntry log_entry;
     log_entry.key = key;
     log_entry.value = session_id;
@@ -983,6 +980,9 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
     mu_.Lock();
 
     if (lock_is_avilable) {
+        LOG(INFO, "lock key :%s, session:%s",
+                   key.c_str(),
+                   session_id.c_str());
         binlogger_->AppendEntry(log_entry);
         int64_t cur_index = binlogger_->GetLength() - 1;
         ClientAck& ack = client_ack_[cur_index];
@@ -993,7 +993,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
             UpdateCommitIndex(binlogger_->GetLength() - 1);
         }
     } else {
-        LOG(INFO, "the lock %s is hold by another session",
+        LOG(DEBUG, "the lock %s is hold by another session",
             key.c_str());
         response->set_leader_id("");
         response->set_success(false);
