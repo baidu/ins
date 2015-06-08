@@ -22,7 +22,8 @@ enum SDKError {
     kOK = 0,
     kClusterDown = 1,
     kNoSuchKey = 2,
-    kTimeout = 3
+    kTimeout = 3,
+    kLockFail = 4
 };
 
 struct ClusterNodeInfo {
@@ -73,7 +74,7 @@ public:
                WatchCallback user_callback,
                void* context, 
                SDKError* error);
-
+    bool Lock(const std::string& key, SDKError* error); //may block
     static std::string StatusToString(int32_t status);
 
 private:
@@ -84,13 +85,19 @@ private:
                    WatchCallback user_callback,
                    void* context,
                    int32_t err_count);
+    bool TryLock(const std::string& key, SDKError *error);
+    void KeepAliveTask();
+    void MakeSessionID();
     std::string leader_id_;
+    std::string session_id_;
     std::vector<std::string> members_;
     galaxy::RpcClient* rpc_client_;
     common::Mutex* mu_;
     common::ThreadPool* watch_pool_;
+    common::ThreadPool* keep_alive_pool_;
+    bool is_keep_alive_bg_;
+    bool stop_;
 };
-
 
 class ScanResult {
 public:

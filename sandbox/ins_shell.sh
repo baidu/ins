@@ -28,6 +28,9 @@ do
 	"watch")
 		sh ./test_watch.sh $arg1 &
 	;;
+	"lock")
+		sh ./test_lock.sh $arg1
+	;;
 	"quit")
 		exit 0
 	;;
@@ -37,8 +40,9 @@ do
 		echo "  put (key) (value) [ update the data ] "
 	        echo "  get (key) [read the data by key ]"	
 		echo "  delete (key) [remove the data by key]"
-		echo "  scan (start key) (end key, excluded)"
-		echo "  watch (key)"
+		echo "  scan (start-key) (end-key) [scan from start-key to end-key(excluded)]"
+		echo "  watch (key) [event will be triggered once value changed or deleted]"
+		echo "  lock (key) [lock on specific key]"
 		echo "  enter quit to exit shell"
 	;;
 

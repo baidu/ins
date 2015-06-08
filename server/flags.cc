@@ -14,4 +14,4 @@ DEFINE_int32(log_rep_batch_max, 500, "maximum batch size of log replication");
 DEFINE_int32(replication_retry_timespan, 2000, "when replication fail, sleep a while before retry");
 DEFINE_int32(elect_timeout_min, 150, "mininum timeout to make a new election");
 DEFINE_int32(elect_timeout_max, 300, "maximum timeout to make a new election");
-
+DEFINE_int64(session_expire_timeout, 6000000, "timeout for session expiration, 6 seconds in default");

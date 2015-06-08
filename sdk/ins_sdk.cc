@@ -7,6 +7,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gflags/gflags.h>
+#include <uuid/uuid.h>
+#include <sys/utsname.h>
 #include "common/asm_atomic.h"
 #include "common/mutex.h"
 #include "common/this_thread.h"
@@ -36,7 +38,8 @@ void InsSDK::ParseFlagFromArgs(int argc, char* argv[],
 
 InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
                                                           mu_(NULL),
-                                                          watch_pool_(NULL) {
+                                                          watch_pool_(NULL),
+                                                          stop_(false) {
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
         exit(1);
@@ -45,12 +48,38 @@ InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
     mu_ = new Mutex();
     std::copy(members.begin(), members.end(), std::back_inserter(members_));
     watch_pool_ = new common::ThreadPool();
+    keep_alive_pool_ = new common::ThreadPool();
+    is_keep_alive_bg_ = false;
+    MakeSessionID();
+}
+
+void InsSDK::MakeSessionID () {
+    MutexLock lock(mu_);
+    std::string hostname = "";
+    struct utsname buf;
+    char cbuf_uuid[37] = {'\0'};
+    if (0 != uname(&buf)) {
+        *buf.nodename = '\0';
+    }
+    hostname = buf.nodename;
+    uuid_t uuid;
+    uuid_generate(uuid);
+    uuid_unparse(uuid, cbuf_uuid);
+    std::string str_uuid= cbuf_uuid;
+    session_id_ = hostname + "#" + str_uuid;
 }
 
 InsSDK::~InsSDK() {
+    {
+        MutexLock lock(mu_);
+        stop_ = true;
+        watch_pool_->Stop(true);
+        keep_alive_pool_->Stop(true);
+    }
     delete rpc_client_;
     delete mu_;
     delete watch_pool_;
+    delete keep_alive_pool_;
 }
 
 void InsSDK::PrepareServerList(std::vector<std::string>& server_list) {
@@ -357,6 +386,12 @@ void InsSDK::WatchTask(const std::string& key,
                        WatchCallback user_callback,
                        void* context,
                        int32_t err_count) {
+    {
+        MutexLock lock(mu_);
+        if (stop_) {
+            return;
+        }
+    }
     std::string new_value = "";
     SDKError error;
     bool ok = Get(key, &new_value, &error);
@@ -418,6 +453,139 @@ bool InsSDK::Watch(const std::string& key,
                     user_callback, context, 0)
     );
     return true;
+}
+
+void InsSDK::KeepAliveTask() {
+    {
+        MutexLock lock(mu_);
+        if (stop_) {
+            return;
+        }
+    }
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
+    std::vector<std::string>::const_iterator it ;
+    for (it = server_list.begin(); it != server_list.end(); it++){
+        std::string server_id = *it;
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
+        galaxy::ins::InsNode_Stub *stub, *stub2;
+        rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::KeepAliveRequest request;
+        galaxy::ins::KeepAliveResponse response;
+        request.set_session_id(session_id_);
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::KeepAlive,
+                                           &request, &response, 2, 1);
+        if (!ok) {
+            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            continue;
+        }
+
+        if (response.success()) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
+            break;
+        } else {
+            if (!response.leader_id().empty()) {
+                server_id = response.leader_id();
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::KeepAlive,
+                                              &request, &response, 2, 1);
+                if (ok && response.success()) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
+                    break;
+                }
+            }
+        }
+    } // end of for
+    keep_alive_pool_->DelayTask(2000,
+        boost::bind(&InsSDK::KeepAliveTask, this)
+    );
+}
+
+bool InsSDK::Lock(const std::string& key, SDKError* error) {
+    {
+        MutexLock lock(mu_);
+        if (!is_keep_alive_bg_) {
+            keep_alive_pool_->AddTask(
+                boost::bind(&InsSDK::KeepAliveTask, this)
+            );
+            is_keep_alive_bg_ = true;
+        }
+    }
+    LOG(INFO, "try lock on :%s", key.c_str());
+    while (!TryLock(key, error)) {
+        LOG(INFO, "try lock again on :%s", key.c_str());
+        ThisThread::Sleep(1000);
+        {
+            MutexLock lock(mu_);
+            if (stop_) {
+                break;
+            }
+        }
+    }
+    if (*error != kOK) {
+        return false;
+    }
+    return true;
+}
+
+bool InsSDK::TryLock(const std::string& key, SDKError *error) {
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
+    std::vector<std::string>::const_iterator it ;
+    for (it = server_list.begin(); it != server_list.end(); it++){
+        std::string server_id = *it;
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
+        galaxy::ins::InsNode_Stub *stub, *stub2;
+        rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::LockRequest request;
+        galaxy::ins::LockResponse response;
+        request.set_key(key);
+        request.set_session_id(session_id_);
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Lock,
+                                           &request, &response, 2, 1);
+        if (!ok) {
+            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            continue;
+        }
+
+        if (response.success()) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
+            *error = kOK;
+            return true;
+        } else {
+            if (!response.leader_id().empty()) {
+                server_id = response.leader_id();
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Lock,
+                                              &request, &response, 2, 1);
+                if (ok && response.success()) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
+                    *error = kOK;
+                    return true;
+                }
+            }
+        }
+    }
+    *error = kLockFail;
+    return false;
 }
 
 ScanResult::ScanResult(InsSDK* sdk) : offset_(0),

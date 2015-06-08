@@ -137,5 +137,17 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    if (FLAGS_ins_cmd == "lock") {
+        std::string key = FLAGS_ins_key;
+        SDKError error;
+        bool ret = sdk.Lock(key, &error);
+        if (!ret) {
+            fprintf(stderr, "lock error: %d", static_cast<int>(error));
+            return 1;
+        }
+        fprintf(stderr, "lock successful on %s\n", key.c_str());
+        fprintf(stderr, "Press any key to release the lock.\n");
+        getchar();
+    }
     return 0;
 }

@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
                 continue;
             }
             printf("%s\n", key_buf);
+            fflush(stdout);
         }
     } else if(strcmp("read", argv[1]) == 0) {
         fprintf(stderr, "read test\n");
@@ -55,6 +56,7 @@ int main(int argc, char* argv[]) {
                 continue;
             }
             printf("%s\n", value_buf);
+            fflush(stdout);
         }
     } 
     return 0;

@@ -19,6 +19,7 @@ DECLARE_int32(log_rep_batch_max);
 DECLARE_int32(replication_retry_timespan);
 DECLARE_int32(elect_timeout_min);
 DECLARE_int32(elect_timeout_max);
+DECLARE_int64(session_expire_timeout);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -96,6 +97,9 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
     committer_.AddTask(boost::bind(&InsNodeImpl::CommitIndexObserv, this));
     MutexLock lock(&mu_);
     CheckLeaderCrash();
+    session_checker_.AddTask( 
+        boost::bind(&InsNodeImpl::RemoveExpiredSessions, this)
+    );
 }
 
 InsNodeImpl::~InsNodeImpl() {
@@ -109,6 +113,7 @@ InsNodeImpl::~InsNodeImpl() {
     committer_.Stop(true);
     pool_.Stop(true);
     heart_beat_pool_.Stop(true);
+    session_checker_.Stop(true);
     {
         MutexLock lock(&mu_);
         delete meta_;
@@ -394,6 +399,7 @@ void InsNodeImpl::TransToLeader() {
     status_ = kLeader;
     current_leader_ = self_id_;
     LOG(INFO, "I win the election, term:%d", current_term_);
+    leader_start_timestamp_ = common::timer::get_micros();
     heart_beat_pool_.AddTask(
         boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
     StartReplicateLog();
@@ -934,6 +940,16 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
         return;
     }
 
+    int64_t tm_now = common::timer::get_micros();
+    if (status_ == kLeader && 
+        (tm_now - leader_start_timestamp_) < FLAGS_session_expire_timeout) {
+        LOG(INFO, "leader is still in safe mode for lock");
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
     const std::string& key = request->key();
     const std::string& session_id = request->session_id();
     LOG(INFO, "client want lock key :%s, session:%s",
@@ -1082,14 +1098,38 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
         SessionIDIndex& id_index = sessions_.get<0>();
         SessionIDIndex::iterator it = id_index.find(session.session_id);
         if (it == sessions_.end()) {
-            sessions_.insert(session);
+            id_index.insert(session);
         } else {
-            sessions_.replace(it, session);
+            id_index.replace(it, session);
         }
     }
     response->set_success(true);
     response->set_leader_id("");
+    LOG(DEBUG, "recv session id: %s", session.session_id.c_str());
     done->Run();
+}
+
+void InsNodeImpl::RemoveExpiredSessions() {
+    {
+        MutexLock lock(&mu_);
+        if (stop_) {
+            return;
+        }
+    }
+    MutexLock lock_session(&sessions_mu_);
+    SessionTimeIndex& time_index = sessions_.get<1>();
+    if (!sessions_.empty()) {
+        int64_t expired_line = common::timer::get_micros() -
+                               FLAGS_session_expire_timeout;
+        SessionTimeIndex::iterator it = time_index.lower_bound(expired_line);
+        if (it != time_index.begin()) {
+            LOG(INFO, "remove expired session");
+            time_index.erase(time_index.begin(), it);
+        }
+    }
+    session_checker_.DelayTask(2000, 
+        boost::bind(&InsNodeImpl::RemoveExpiredSessions, this)
+    );
 }
 
 } //namespace ins

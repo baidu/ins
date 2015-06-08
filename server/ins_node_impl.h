@@ -62,7 +62,7 @@ struct Session {
   std::string host_name;
   int64_t last_report_time;
   Session() : last_report_time(0) {
-    
+
   }
 };
 
@@ -146,6 +146,7 @@ private:
     void UpdateCommitIndex(int64_t a_index);
     void CommitIndexObserv();
     void TransToLeader();
+    void RemoveExpiredSessions();
 public:
     std::vector<std::string> members_;
 private:
@@ -176,9 +177,11 @@ private:
     std::set<std::string> replicating_;
     int64_t heartbeat_read_timestamp_;
     bool in_safe_mode_;
+    int64_t leader_start_timestamp_;
+    // for all servers
     SessionContainer sessions_;
     Mutex sessions_mu_;
-    // for all servers
+    ThreadPool session_checker_;
     int64_t commit_index_;
     int64_t last_applied_index_;
     CondVar* commit_cond_;
