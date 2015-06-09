@@ -1008,8 +1008,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
     } else {
         if (op != kLock) {
             lock_is_avilable = false;
-        }
-        {
+        } else {
             MutexLock lock(&sessions_mu_);
             SessionIDIndex& id_index = sessions_.get<0>();
             SessionIDIndex::iterator old_it = id_index.find(old_locker_session);
