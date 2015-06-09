@@ -14,7 +14,7 @@
 #include <sys/time.h>
 #include "timer.h"
 
-namespace common {
+namespace ins_common {
 
 // #define MUTEX_DEBUG
 
@@ -159,8 +159,8 @@ private:
 };
 }  // namespace common
 
-using common::Mutex;
-using common::MutexLock;
-using common::CondVar;
+using ins_common::Mutex;
+using ins_common::MutexLock;
+using ins_common::CondVar;
 
 #endif  // COMMON_MUTEX_H_

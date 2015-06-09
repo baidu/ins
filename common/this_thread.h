@@ -13,7 +13,7 @@
 #include <time.h>
 #include <unistd.h>
 
-namespace common {
+namespace ins_common {
     
 class ThisThread {
 public:
@@ -41,6 +41,6 @@ public:
 
 } // namespace common
 
-using common::ThisThread;
+using ins_common::ThisThread;
 
 #endif  // COMMON_THIS_THREAD_H_

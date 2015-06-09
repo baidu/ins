@@ -14,7 +14,7 @@ const std::string length_tag = "#BINLOG_LEN#";
 
 BinLogger::BinLogger(const std::string& data_dir) : db_(NULL),
                                                     length_(0) {
-    bool ok = common::Mkdirs(data_dir.c_str());
+    bool ok = ins_common::Mkdirs(data_dir.c_str());
     if (!ok) {
         LOG(FATAL, "failed to create dir :%s", data_dir.c_str());
         abort();

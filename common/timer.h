@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-namespace common {
+namespace ins_common {
 namespace timer {
 
 static inline int64_t get_micros() {

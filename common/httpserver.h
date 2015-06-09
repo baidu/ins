@@ -27,7 +27,7 @@
 #include "mutex.h"
 #include "thread_pool.h"
 
-namespace common {
+namespace ins_common {
 
 class HttpFileServer {
 public:

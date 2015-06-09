@@ -11,7 +11,7 @@
 
 #include <boost/function.hpp>
 
-namespace common {
+namespace ins_common {
 
 class Thread {
 public:

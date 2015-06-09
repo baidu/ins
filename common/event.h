@@ -9,7 +9,7 @@
 
 #include "mutex.h"
 
-namespace common {
+namespace ins_common {
 
 class AutoResetEvent {
 public:
@@ -48,6 +48,6 @@ private:
 
 } // namespace common
 
-using common::AutoResetEvent;
+using ins_common::AutoResetEvent;
 
 #endif  // COMMON_EVENT_H_

@@ -17,7 +17,7 @@ const std::string vote_file_name = "vote.data";
 Meta::Meta(const std::string& data_dir) : data_dir_(data_dir),
                                           term_file_(NULL),
                                           vote_file_(NULL) {
-    bool ok = common::Mkdirs(data_dir.c_str());
+    bool ok = ins_common::Mkdirs(data_dir.c_str());
     if (!ok) {
         LOG(FATAL, "failed to create dir :%s", data_dir.c_str());
         abort();

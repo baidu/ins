@@ -15,7 +15,7 @@
 #include "mutex.h"
 #include "timer.h"
 
-namespace common {
+namespace ins_common {
 
 // An unscalable thread pool implimention.
 class ThreadPool {
@@ -207,7 +207,7 @@ private:
 
 } // namespace common
 
-using common::ThreadPool;
+using ins_common::ThreadPool;
 
 #endif  // COMMON_THREAD_POOL_H_
 

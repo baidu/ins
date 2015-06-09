@@ -6,7 +6,7 @@
 #include <dirent.h>
 #include <errno.h>
 
-namespace common {
+namespace ins_common {
 
 static bool Mkdirs(const char *dir) {
     char path_buf[1024];

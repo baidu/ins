@@ -7,7 +7,7 @@
 #ifndef  COMMON_LOGGING_H_
 #define  COMMON_LOGGING_H_
 
-namespace common {
+namespace ins_common {
 
 enum LogLevel {
     DEBUG = 2,
@@ -24,10 +24,10 @@ void Log(int level, const char* fmt, ...);
 
 #define LOG(level, fmt, args...) Log(level, "[%s:%d] "fmt, __FILE__, __LINE__, ##args)
 
-using common::DEBUG;
-using common::INFO;
-using common::WARNING;
-using common::FATAL;
+using ins_common::DEBUG;
+using ins_common::INFO;
+using ins_common::WARNING;
+using ins_common::FATAL;
 
 #endif  // COMMON_LOGGING_H_
 

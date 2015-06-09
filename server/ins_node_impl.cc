@@ -320,7 +320,7 @@ void InsNodeImpl::HeartBeatForReadCallback(
         }
         context->done->Run();
         context->triggered = true;
-        heartbeat_read_timestamp_ = common::timer::get_micros();
+        heartbeat_read_timestamp_ = ins_common::timer::get_micros();
     }
     if (context->err_count > members_.size() / 2) {
         context->response->set_success(false);
@@ -399,7 +399,7 @@ void InsNodeImpl::TransToLeader() {
     status_ = kLeader;
     current_leader_ = self_id_;
     LOG(INFO, "I win the election, term:%d", current_term_);
-    leader_start_timestamp_ = common::timer::get_micros();
+    leader_start_timestamp_ = ins_common::timer::get_micros();
     heart_beat_pool_.AddTask(
         boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
     StartReplicateLog();
@@ -765,7 +765,7 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         return;
     }
 
-    int64_t now_timestamp = common::timer::get_micros();
+    int64_t now_timestamp = ins_common::timer::get_micros();
     if (members_.size() > 1
         && (now_timestamp - heartbeat_read_timestamp_) > 
               1000 * FLAGS_elect_timeout_min) {
@@ -940,7 +940,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
         return;
     }
 
-    int64_t tm_now = common::timer::get_micros();
+    int64_t tm_now = ins_common::timer::get_micros();
     if (status_ == kLeader && 
         (tm_now - leader_start_timestamp_) < FLAGS_session_expire_timeout) {
         LOG(INFO, "leader is still in safe mode for lock");
@@ -1030,6 +1030,16 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
         return;
     }
 
+    int64_t tm_now = ins_common::timer::get_micros();
+    if (status_ == kLeader && request->is_scan_locks() &&
+        (tm_now - leader_start_timestamp_) < FLAGS_session_expire_timeout) {
+        LOG(INFO, "leader is still in safe mode for lock");
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
     mu_.Unlock();
     std::string start_key = request->start_key();
     std::string end_key = request->end_key();
@@ -1040,7 +1050,6 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
     for (it->Seek(start_key);
          it->Valid() && (it->key().ToString() < end_key || end_key.empty());
          it->Next()) {
-        count ++;
         if (count > size_limit) {
             has_more = true;
             break;
@@ -1063,6 +1072,7 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
         galaxy::ins::ScanItem* item = response->add_items();
         item->set_key(it->key().ToString());
         item->set_value(it->value().ToString());
+        count ++;
     }
 
     assert(it->status().ok());
@@ -1106,7 +1116,7 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
     } //end of global mutex
     Session session;
     session.session_id = request->session_id();
-    session.last_report_time = common::timer::get_micros();
+    session.last_report_time = ins_common::timer::get_micros();
     session.host_name = request->host_name();
     {
         MutexLock lock(&sessions_mu_);
@@ -1134,7 +1144,7 @@ void InsNodeImpl::RemoveExpiredSessions() {
     MutexLock lock_session(&sessions_mu_);
     SessionTimeIndex& time_index = sessions_.get<1>();
     if (!sessions_.empty()) {
-        int64_t expired_line = common::timer::get_micros() -
+        int64_t expired_line = ins_common::timer::get_micros() -
                                FLAGS_session_expire_timeout;
         SessionTimeIndex::iterator it = time_index.lower_bound(expired_line);
         if (it != time_index.begin()) {

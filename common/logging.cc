@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-namespace common {
+namespace ins_common {
 
 int g_log_level = 4;
 

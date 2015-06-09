@@ -39,6 +39,7 @@ void InsSDK::ParseFlagFromArgs(int argc, char* argv[],
 InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
                                                           mu_(NULL),
                                                           watch_pool_(NULL),
+                                                          keep_alive_pool_(NULL),
                                                           stop_(false) {
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
@@ -47,8 +48,8 @@ InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
     rpc_client_ = new galaxy::RpcClient();
     mu_ = new Mutex();
     std::copy(members.begin(), members.end(), std::back_inserter(members_));
-    watch_pool_ = new common::ThreadPool();
-    keep_alive_pool_ = new common::ThreadPool();
+    watch_pool_ = new ins_common::ThreadPool();
+    keep_alive_pool_ = new ins_common::ThreadPool();
     is_keep_alive_bg_ = false;
     MakeSessionID();
 }

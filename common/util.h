@@ -20,7 +20,7 @@
 // use only in linux
 extern char** environ;
 
-namespace common {
+namespace ins_common {
 namespace util {
 
 static const uint32_t kMaxHostNameSize = 255;

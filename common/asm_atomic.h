@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-namespace common {
+namespace ins_common {
 
 template <typename T>
 inline void atomic_inc(volatile T* n)

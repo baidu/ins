@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-namespace common {
+namespace ins_common {
     class Mutex;
     class ThreadPool;
 }
@@ -97,9 +97,9 @@ private:
     std::string session_id_;
     std::vector<std::string> members_;
     galaxy::RpcClient* rpc_client_;
-    common::Mutex* mu_;
-    common::ThreadPool* watch_pool_;
-    common::ThreadPool* keep_alive_pool_;
+    ins_common::Mutex* mu_;
+    ins_common::ThreadPool* watch_pool_;
+    ins_common::ThreadPool* keep_alive_pool_;
     bool is_keep_alive_bg_;
     bool stop_;
 };
