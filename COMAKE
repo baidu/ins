@@ -47,6 +47,7 @@ binlog_test_sources = 'storage/binlog.cc storage/binlog_test.cc common/logging.c
 Application('ins', Sources(ins_sources))
 Application('ins_cli', Sources(ins_cli_sources))
 SharedLibrary('ins_sdk', Sources(ins_sdk_sources), LinkDeps(True))
+StaticLibrary('ins_sdk', Sources(ins_sdk_sources))
 
 Application('binlog_test', Sources(binlog_test_sources))
 Application('sample', Sources(sample_sources), Libraries('libins_sdk.a'))
