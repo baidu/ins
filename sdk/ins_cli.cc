@@ -123,20 +123,6 @@ int main(int argc, char* argv[]) {
         delete result;
     }
 
-    if (FLAGS_ins_cmd == "scan_locks") {
-        std::string start_key = FLAGS_ins_start_key;
-        std::string end_key = FLAGS_ins_end_key;
-        LOG(INFO, "scan_locks: [%s, %s)", start_key.c_str(), end_key.c_str());
-        ScanResult* result = sdk.ScanLocks(start_key, end_key);
-        int i = 0;
-        while (!result->Done()) {
-            printf("[%d]\t%s -> %s\n", ++i,
-                   result->Key().c_str(), result->Value().c_str());
-            result->Next();
-        }
-        delete result;
-    }
-
     if (FLAGS_ins_cmd == "watch") {
         std::string key = FLAGS_ins_key;
         SDKError error;

@@ -55,7 +55,11 @@ int main(int argc, char* argv[]) {
                 sleep(2);
                 continue;
             }
-            printf("%s\n", value_buf);
+            if (err == kOK) {
+                printf("%s\n", value.c_str());
+            } else if (err == kNoSuchKey) {
+                printf("NOT FOUND\n");
+            }
             fflush(stdout);
         }
     } 

@@ -147,6 +147,10 @@ private:
     void CommitIndexObserv();
     void TransToLeader();
     void RemoveExpiredSessions();
+    void ParseValue(const std::string& value,
+                    LogOperation& op, 
+                    std::string& real_value);
+    bool IsExpiredSession(const std::string& session_id);
 public:
     std::vector<std::string> members_;
 private:

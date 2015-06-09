@@ -12,6 +12,7 @@ enum NodeStatus {
 enum LogOperation {
     kPut = 1;
     kDel = 2;
+    kLock = 3;
     kNop = 10;
 };
 
@@ -95,7 +96,6 @@ message ScanRequest {
     required string start_key = 1;
     required string end_key = 2;
     required int32 size_limit = 3;    
-    optional bool is_scan_locks = 4 [default = false];
 }
 
 message ScanItem {

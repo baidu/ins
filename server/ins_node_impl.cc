@@ -188,13 +188,17 @@ void InsNodeImpl::CommitIndexObserv() {
             LogEntry log_entry;
             binlogger_->ReadSlot(i, &log_entry);
             leveldb::Status s;
+            std::string type_and_value;
             switch(log_entry.op) {
                 case kPut:
+                case kLock:
                     LOG(DEBUG, "add to data_store_, key: %s, value: %s",
                         log_entry.key.c_str(), log_entry.value.c_str());
+                    type_and_value.append(1, static_cast<char>(log_entry.op));
+                    type_and_value.append(log_entry.value);
                     s = data_store_->Put(leveldb::WriteOptions(),
                                          log_entry.key,
-                                         log_entry.value);
+                                         type_and_value);
                     assert(s.ok());
                     break;
                 case kDel:
@@ -308,11 +312,27 @@ void InsNodeImpl::HeartBeatForReadCallback(
         leveldb::Status s;
         std::string value;
         s = data_store_->Get(leveldb::ReadOptions(), key, &value);
+        std::string real_value;
+        LogOperation op;
+        ParseValue(value, op, real_value);
         if (s.ok()) {
-            context->response->set_hit(true);
-            context->response->set_success(true);
-            context->response->set_value(value);
-            context->response->set_leader_id("");
+            if (op == kLock) {
+                if (IsExpiredSession(real_value)) {
+                    context->response->set_hit(false);
+                    context->response->set_success(true);
+                    context->response->set_leader_id("");
+                } else{
+                    context->response->set_hit(true);
+                    context->response->set_success(true);
+                    context->response->set_value(real_value);
+                    context->response->set_leader_id("");
+                }
+            } else{
+                context->response->set_hit(true);
+                context->response->set_success(true);
+                context->response->set_value(real_value);
+                context->response->set_leader_id("");
+            }
         } else {
             context->response->set_hit(false);
             context->response->set_success(true);
@@ -804,11 +824,28 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         leveldb::Status s;
         std::string value;
         s = data_store_->Get(leveldb::ReadOptions(), key, &value);
+        std::string real_value;
+        LogOperation op;
+        ParseValue(value, op, real_value);
         if (s.ok()) {
-            response->set_hit(true);
-            response->set_success(true);
-            response->set_value(value);
-            response->set_leader_id("");
+            if (op == kLock) {
+                if (IsExpiredSession(real_value)) {
+                    response->set_hit(false);
+                    response->set_success(true);
+                    response->set_leader_id("");
+                } else{
+                    response->set_hit(true);
+                    response->set_success(true);
+                    response->set_value(real_value);
+                    response->set_leader_id("");
+                }
+            }
+            else {
+                response->set_hit(true);
+                response->set_success(true);
+                response->set_value(real_value);
+                response->set_leader_id("");
+            }
         } else {
             response->set_hit(false);
             response->set_success(true);
@@ -956,16 +993,22 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
     log_entry.key = key;
     log_entry.value = session_id;
     log_entry.term = current_term_;
-    log_entry.op = kPut;
+    log_entry.op = kLock;
     bool lock_is_avilable = false;
 
     mu_.Unlock();
     leveldb::Status s;
     std::string old_locker_session;
-    s = data_store_->Get(leveldb::ReadOptions(), key, &old_locker_session);
+    std::string value;
+    LogOperation op;
+    s = data_store_->Get(leveldb::ReadOptions(), key, &value);
+    ParseValue(value, op, old_locker_session);
     if (!s.ok()) {
         lock_is_avilable = true;
     } else {
+        if (op != kLock) {
+            lock_is_avilable = false;
+        }
         {
             MutexLock lock(&sessions_mu_);
             SessionIDIndex& id_index = sessions_.get<0>();
@@ -1031,9 +1074,9 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
     }
 
     int64_t tm_now = ins_common::timer::get_micros();
-    if (status_ == kLeader && request->is_scan_locks() &&
+    if (status_ == kLeader &&
         (tm_now - leader_start_timestamp_) < FLAGS_session_expire_timeout) {
-        LOG(INFO, "leader is still in safe mode for lock");
+        LOG(INFO, "leader is still in safe mode for scan");
         response->set_leader_id("");
         response->set_success(false);
         done->Run();
@@ -1054,24 +1097,21 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
             has_more = true;
             break;
         }
-        if (request->is_scan_locks()) {
-            bool expired_session = false;
-            std::string session_id = it->value().ToString();
-            {
-                MutexLock lock(&sessions_mu_);
-                SessionIDIndex& id_index = sessions_.get<0>();
-                SessionIDIndex::iterator old_it = id_index.find(session_id);
-                if (old_it == sessions_.end()) { 
-                    expired_session = true;
-                }
-            }
-            if (expired_session) {
+        if (it->key().ToString() == tag_last_applied_index) {
+            continue;
+        }
+        std::string value = it->value().ToString();
+        std::string real_value;
+        LogOperation op;
+        ParseValue(value, op, real_value);
+        if (op == kLock) {
+            if (IsExpiredSession(real_value)) {
                 continue;
             }
         }
         galaxy::ins::ScanItem* item = response->add_items();
         item->set_key(it->key().ToString());
-        item->set_value(it->value().ToString());
+        item->set_value(real_value);
         count ++;
     }
 
@@ -1155,6 +1195,29 @@ void InsNodeImpl::RemoveExpiredSessions() {
     session_checker_.DelayTask(2000, 
         boost::bind(&InsNodeImpl::RemoveExpiredSessions, this)
     );
+}
+
+
+void InsNodeImpl::ParseValue(const std::string& value,
+                LogOperation& op, 
+                std::string& real_value) {
+    if (value.size() >= 1) {
+        op = static_cast<LogOperation>(value[0]);
+        real_value = value.substr(1);
+    }
+}
+
+bool InsNodeImpl::IsExpiredSession(const std::string& session_id) {
+    bool expired_session = false;
+    {
+        MutexLock lock(&sessions_mu_);
+        SessionIDIndex& id_index = sessions_.get<0>();
+        SessionIDIndex::iterator old_it = id_index.find(session_id);
+        if (old_it == sessions_.end()) { 
+            expired_session = true;
+        }
+    }
+    return expired_session;
 }
 
 } //namespace ins
