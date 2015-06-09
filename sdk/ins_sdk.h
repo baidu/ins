@@ -66,10 +66,13 @@ public:
     bool Delete(const std::string& key, SDKError* error);
     ScanResult* Scan(const std::string& start_key, 
                      const std::string& end_key);
+    ScanResult* ScanLocks(const std::string& start_key, 
+                          const std::string& end_key);
     bool ScanOnce(const std::string& start_key,
                   const std::string& end_key,
                   std::vector<KVPair>* buffer,
-                  SDKError* error);
+                  SDKError* error,
+                  bool is_scan_locks);
     bool Watch(const std::string& key, 
                WatchCallback user_callback,
                void* context, 
@@ -104,7 +107,9 @@ private:
 class ScanResult {
 public:
     ScanResult(InsSDK* sdk);
-    void Init(const std::string& start_key, const std::string& end_key);
+    void Init(const std::string& start_key,
+              const std::string& end_key,
+              bool is_scan_locks = false);
     bool Done();
     SDKError Error();
     const std::string Key();
@@ -116,6 +121,7 @@ private:
     InsSDK* sdk_;
     SDKError error_;
     std::string end_key_;
+    bool is_scan_locks_;
 };
 
 } //namespace sdk

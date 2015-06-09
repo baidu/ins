@@ -1045,6 +1045,21 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
             has_more = true;
             break;
         }
+        if (request->is_scan_locks()) {
+            bool expired_session = false;
+            std::string session_id = it->value().ToString();
+            {
+                MutexLock lock(&sessions_mu_);
+                SessionIDIndex& id_index = sessions_.get<0>();
+                SessionIDIndex::iterator old_it = id_index.find(session_id);
+                if (old_it == sessions_.end()) { 
+                    expired_session = true;
+                }
+            }
+            if (expired_session) {
+                continue;
+            }
+        }
         galaxy::ins::ScanItem* item = response->add_items();
         item->set_key(it->key().ToString());
         item->set_value(it->value().ToString());

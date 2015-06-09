@@ -259,7 +259,8 @@ bool InsSDK::Get(const std::string& key, std::string* value,
 bool InsSDK::ScanOnce(const std::string& start_key,
                       const std::string& end_key,
                       std::vector<KVPair>* buffer,
-                      SDKError* error) {
+                      SDKError* error,
+                      bool is_scan_locks) {
     assert(buffer);
     std::string value;
     if (!Get(start_key, &value, error)) { //avoid network partition problem
@@ -280,6 +281,7 @@ bool InsSDK::ScanOnce(const std::string& start_key,
         request.set_start_key(start_key);
         request.set_end_key(end_key);
         request.set_size_limit(500);
+        request.set_is_scan_locks(is_scan_locks);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Scan,
                                            &request, &response, 5, 1);
         if (!ok) {
@@ -605,10 +607,20 @@ ScanResult* InsSDK::Scan(const std::string& start_key,
     return result;
 }
 
-void ScanResult::Init(const std::string& start_key, const std::string& end_key) {
+ScanResult* InsSDK::ScanLocks(const std::string& start_key, 
+                              const std::string& end_key) {
+    ScanResult* result =  new ScanResult(this);
+    result->Init(start_key, end_key, true);
+    return result;
+}
+
+void ScanResult::Init(const std::string& start_key,
+                      const std::string& end_key,
+                      bool is_scan_locks) {
     assert(sdk_);
     end_key_ =  end_key;
-    sdk_->ScanOnce(start_key, end_key, &buffer_, &error_);
+    is_scan_locks_ = is_scan_locks;
+    sdk_->ScanOnce(start_key, end_key, &buffer_, &error_, is_scan_locks_);
     offset_ = 0;
 }
 
@@ -637,7 +649,7 @@ void ScanResult::Next() {
         std::vector<KVPair> empty_v;
         buffer_.swap(empty_v);
         last_key.append(1,'\0');
-        sdk_->ScanOnce(last_key, end_key_, &buffer_, &error_); 
+        sdk_->ScanOnce(last_key, end_key_, &buffer_, &error_, is_scan_locks_); 
         offset_ = 0;      
     }
 }

@@ -25,6 +25,9 @@ do
 	"scan")
 		sh ./test_scan.sh $arg1 $arg2
 	;;
+	"scan_locks")
+		sh ./test_scan_locks.sh $arg1 $arg2
+	;;
 	"watch")
 		sh ./test_watch.sh $arg1 &
 	;;
@@ -41,6 +44,7 @@ do
 	        echo "  get (key) [read the data by key ]"	
 		echo "  delete (key) [remove the data by key]"
 		echo "  scan (start-key) (end-key) [scan from start-key to end-key(excluded)]"
+		echo "  scan_locks (start-key) (end-key) [only scan active locks from start-key to end-key(excluded)]"
 		echo "  watch (key) [event will be triggered once value changed or deleted]"
 		echo "  lock (key) [lock on specific key]"
 		echo "  enter quit to exit shell"
