@@ -25,6 +25,9 @@ do
 	"scan")
 		sh ./test_scan.sh $arg1 $arg2
 	;;
+	"ls")
+		sh ./test_scan.sh $arg1 $arg1"~"
+	;;
 	"watch")
 		sh ./test_watch.sh $arg1 &
 	;;
