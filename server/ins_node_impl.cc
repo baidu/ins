@@ -875,14 +875,6 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
         return;
     }
 
-    if (status_ == kLeader && in_safe_mode_) {
-        LOG(INFO, "leader is still in safe mode");
-        response->set_leader_id("");
-        response->set_success(false);
-        done->Run();
-        return;
-    }
-
     const std::string& key = request->key();
     LOG(DEBUG, "client want delete key :%s", key.c_str());
     LogEntry log_entry;
@@ -917,14 +909,6 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     if (status_ == kCandidate) {
         response->set_success(false);
         response->set_leader_id("");
-        done->Run();
-        return;
-    }
-
-    if (status_ == kLeader && in_safe_mode_) {
-        LOG(INFO, "leader is still in safe mode");
-        response->set_leader_id("");
-        response->set_success(false);
         done->Run();
         return;
     }
