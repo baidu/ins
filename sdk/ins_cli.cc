@@ -20,16 +20,13 @@ using namespace galaxy::ins::sdk;
 
 void my_watch_callback(const WatchParam& param, SDKError error) {
     printf("key: %s\n", param.key.c_str());
-    printf("new value: %s\n", param.new_value.c_str());
-    printf("old value: %s\n", param.old_value.c_str());
-    printf("now has key: %s\n", param.now_has_key? "true":"false");
-    printf("old has key: %s\n", param.old_has_key? "true":"false");
+    printf("value: %s\n", param.value.c_str());
+    printf("deleted: %s\n", param.deleted ?"true":"false");
     printf("error code: %d\n", static_cast<int>(error));
     bool* done = reinterpret_cast<bool*>(param.context);
     if (done) {
         *done = true;
     }
-    (void)error;
 }
 
 int main(int argc, char* argv[]) {
@@ -135,6 +132,7 @@ int main(int argc, char* argv[]) {
         while (!done) {
             sleep(1);
         }
+        fprintf(stderr, "done\n");
     }
 
     if (FLAGS_ins_cmd == "lock") {

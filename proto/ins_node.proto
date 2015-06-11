@@ -131,6 +131,19 @@ message KeepAliveResponse {
     optional string leader_id = 2;    
 }
 
+message WatchRequest {
+    repeated string keys = 1;
+    required string session_id = 2;
+}
+
+message WatchResponse {
+    optional bool success = 1 [default = false];
+    optional string leader_id = 2 [default = ""];
+    optional string key = 3;
+    optional string value = 4;
+    optional bool deleted = 5;
+}
+
 service InsNode {
     rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse);
     rpc Vote(VoteRequest) returns (VoteResponse);
@@ -139,6 +152,7 @@ service InsNode {
     rpc Delete(DelRequest) returns (DelResponse);
     rpc Scan(ScanRequest) returns (ScanResponse);
     rpc Lock(LockRequest) returns (LockResponse);
+    rpc Watch(WatchRequest) returns (WatchResponse);
     rpc KeepAlive(KeepAliveRequest) returns (KeepAliveResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
 }

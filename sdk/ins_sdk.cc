@@ -38,9 +38,9 @@ void InsSDK::ParseFlagFromArgs(int argc, char* argv[],
 
 InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
                                                           mu_(NULL),
-                                                          watch_pool_(NULL),
                                                           keep_alive_pool_(NULL),
-                                                          stop_(false) {
+                                                          stop_(false),
+                                                          keep_watch_pool_(NULL) {
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
         exit(1);
@@ -48,9 +48,10 @@ InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
     rpc_client_ = new galaxy::RpcClient();
     mu_ = new Mutex();
     std::copy(members.begin(), members.end(), std::back_inserter(members_));
-    watch_pool_ = new ins_common::ThreadPool();
     keep_alive_pool_ = new ins_common::ThreadPool();
+    keep_watch_pool_ = new ins_common::ThreadPool();
     is_keep_alive_bg_ = false;
+    is_keep_watch_bg_ = false;
     MakeSessionID();
 }
 
@@ -74,13 +75,13 @@ InsSDK::~InsSDK() {
     {
         MutexLock lock(mu_);
         stop_ = true;
-        watch_pool_->Stop(true);
         keep_alive_pool_->Stop(true);
+        keep_watch_pool_->Stop(true);
     }
     delete rpc_client_;
     delete mu_;
-    delete watch_pool_;
     delete keep_alive_pool_;
+    delete keep_watch_pool_;
 }
 
 void InsSDK::PrepareServerList(std::vector<std::string>& server_list) {
@@ -381,78 +382,29 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
     return false;
 }
 
-void InsSDK::WatchTask(const std::string& key,
-                       const std::string& old_value,
-                       bool old_has_key,
-                       WatchCallback user_callback,
-                       void* context,
-                       int32_t err_count) {
-    {
-        MutexLock lock(mu_);
-        if (stop_) {
-            return;
-        }
-    }
-    std::string new_value = "";
-    SDKError error;
-    bool ok = Get(key, &new_value, &error);
-    bool watch_again = false;
-    if (ok) {
-        bool now_has_key = true;
-        if (error == kNoSuchKey) {
-            now_has_key = false;
-        }
-        if (old_has_key != now_has_key || new_value != old_value) {
-            WatchParam param;
-            param.key = key;
-            param.new_value = new_value;
-            param.old_value = old_value;
-            param.now_has_key = now_has_key;
-            param.old_has_key = old_has_key;
-            param.context = context;
-            user_callback(param, kOK); //trigger callback
-            return; //dont't watch again
-        } else {
-            watch_again = true;
-        }
-    }  
-    if (!ok || watch_again) {
-        if (!ok) {
-            err_count ++;
-            if (err_count > max_watch_rpc_error) {
-                WatchParam param;
-                param.context = context;
-                user_callback(param, kClusterDown);
-                return; //dont't watch again, the cluster maybe down
-            }
-        }
-        watch_pool_->DelayTask(watch_period, 
-            boost::bind(&InsSDK::WatchTask, this,
-                        key, old_value, old_has_key,
-                        user_callback, context, err_count)
-        );
-    }
-}
-
 bool InsSDK::Watch(const std::string& key, 
                    WatchCallback user_callback, 
                    void* context,
                    SDKError* error) {
-    assert(watch_pool_);
-    std::string old_value;
-    bool ok = Get(key, &old_value, error);
-    if (!ok) {
-        return false;
+    {
+        MutexLock lock(mu_);
+        watch_keys_.insert(key);
+        watch_cbs_[key] = user_callback;
+        watch_ctx_[key] = context;
+        if (!is_keep_alive_bg_) {
+            keep_alive_pool_->AddTask(
+                boost::bind(&InsSDK::KeepAliveTask, this)
+            );
+            is_keep_alive_bg_ = true;
+        }
+        if (!is_keep_watch_bg_) {
+            keep_watch_pool_->AddTask(
+                boost::bind(&InsSDK::KeepWatchTask, this)
+            );
+            is_keep_watch_bg_ = true;
+        }
     }
-    bool old_has_key = true;
-    if (*error == kNoSuchKey) {
-        old_has_key = false;
-    }
-    watch_pool_->AddTask(
-        boost::bind(&InsSDK::WatchTask, this,
-                    key, old_value, old_has_key,
-                    user_callback, context, 0)
-    );
+    *error = kOK;
     return true;
 }
 
@@ -508,6 +460,107 @@ void InsSDK::KeepAliveTask() {
     } // end of for
     keep_alive_pool_->DelayTask(2000,
         boost::bind(&InsSDK::KeepAliveTask, this)
+    );
+}
+
+
+void InsSDK::KeepWatchTask() {
+    std::vector<std::string> keys;
+    {
+        MutexLock lock(mu_);
+        if (stop_) {
+            return;
+        }
+        std::set<std::string>::iterator it;
+        for(it = watch_keys_.begin(); it != watch_keys_.end(); it++){
+            keys.push_back(*it);
+        }
+    }
+    if (keys.empty()) {
+        keep_watch_pool_->DelayTask(50, //50ms
+            boost::bind(&InsSDK::KeepWatchTask, this)
+        );
+        return;
+    }
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
+    std::vector<std::string>::const_iterator it ;
+    for (it = server_list.begin(); it != server_list.end(); it++){
+        std::string server_id = *it;
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
+        galaxy::ins::InsNode_Stub *stub, *stub2;
+        rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::WatchRequest request;
+        galaxy::ins::WatchResponse response;
+        request.set_session_id(session_id_);
+        for(size_t i = 0; i < keys.size(); i++) {
+            std::string* kk = request.add_keys();
+            *kk = keys[i];
+        }
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Watch,
+                                           &request, &response, 60, 1);
+        if (!ok) {
+            LOG(DEBUG, "faild to rcp %s", server_id.c_str());
+            continue;
+        }
+
+        if (response.success()) {
+            WatchCallback cb = NULL;
+            void * cb_ctx = NULL;
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+                cb = watch_cbs_[response.key()];
+                cb_ctx = watch_ctx_[response.key()];
+            }
+            if (cb) {
+                WatchParam param;
+                param.key = response.key();
+                param.value = response.value();
+                param.deleted = response.deleted();
+                param.context = cb_ctx;
+                cb(param, kOK);
+            }
+            watch_keys_.erase(response.key());
+            watch_cbs_.erase(response.key());
+            watch_ctx_.erase(response.key());
+            break;
+        } else {
+            if (!response.leader_id().empty()) {
+                server_id = response.leader_id();
+                LOG(INFO, "redirect to leader :%s", server_id.c_str());
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Watch,
+                                              &request, &response, 60, 1); //60s
+                if (ok && response.success()) {
+                    WatchCallback cb = NULL;
+                    void * cb_ctx = NULL;
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                        cb = watch_cbs_[response.key()];
+                        cb_ctx = watch_ctx_[response.key()];
+                    }
+                    if (cb) {
+                        WatchParam param;
+                        param.key = response.key();
+                        param.value = response.value();
+                        param.deleted = response.deleted();
+                        param.context = cb_ctx;
+                        cb(param, kOK);
+                    }
+                    watch_keys_.erase(response.key());
+                    watch_cbs_.erase(response.key());
+                    watch_ctx_.erase(response.key());
+                    break;
+                }
+            }
+        }
+    } // end of for
+    keep_watch_pool_->AddTask(
+        boost::bind(&InsSDK::KeepWatchTask, this)
     );
 }
 

@@ -199,6 +199,10 @@ void InsNodeImpl::CommitIndexObserv() {
                     s = data_store_->Put(leveldb::WriteOptions(),
                                          log_entry.key,
                                          type_and_value);
+                    {
+                        MutexLock lock_trigger(&watch_mu_);
+                        TriggerEvent(log_entry.key, log_entry.value, false);
+                    }
                     assert(s.ok());
                     break;
                 case kDel:
@@ -206,6 +210,10 @@ void InsNodeImpl::CommitIndexObserv() {
                         log_entry.key.c_str());
                     s = data_store_->Delete(leveldb::WriteOptions(),
                                              log_entry.key);
+                    {
+                        MutexLock lock_trigger(&watch_mu_);
+                        TriggerEvent(log_entry.key, log_entry.value, true);
+                    }
                     assert(s.ok());
                     break;
                 case kNop:
@@ -1128,14 +1136,6 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
             done->Run();
             return;
         }
-
-        if (status_ == kLeader && in_safe_mode_) {
-            LOG(INFO, "leader is still in safe mode");
-            response->set_leader_id("");
-            response->set_success(false);
-            done->Run();
-            return;
-        }  
     } //end of global mutex
     Session session;
     session.session_id = request->session_id();
@@ -1164,22 +1164,40 @@ void InsNodeImpl::RemoveExpiredSessions() {
             return;
         }
     }
-    MutexLock lock_session(&sessions_mu_);
-    SessionTimeIndex& time_index = sessions_.get<1>();
-    if (!sessions_.empty()) {
-        int64_t expired_line = ins_common::timer::get_micros() -
-                               FLAGS_session_expire_timeout;
-        SessionTimeIndex::iterator it = time_index.lower_bound(expired_line);
-        if (it != time_index.begin()) {
-            LOG(INFO, "remove expired session");
-            time_index.erase(time_index.begin(), it);
+
+    std::vector<std::string> expired_sessions;
+ 
+    {
+        MutexLock lock_session(&sessions_mu_);
+        SessionTimeIndex& time_index = sessions_.get<1>();
+        if (!sessions_.empty()) {
+            int64_t expired_line = ins_common::timer::get_micros() -
+                                   FLAGS_session_expire_timeout;
+            SessionTimeIndex::iterator it = time_index.lower_bound(expired_line);
+            if (it != time_index.begin()) {
+                LOG(INFO, "remove expired session");
+                for (SessionTimeIndex::iterator dd = time_index.begin();
+                     dd != it; dd++) {
+                    expired_sessions.push_back(dd->session_id);
+                    LOG(INFO, "remove session_id %s", dd->session_id.c_str());
+                }
+                time_index.erase(time_index.begin(), it);
+            }
         }
     }
+
+    {
+        MutexLock lock_watch(&watch_mu_);
+        std::vector<std::string>::iterator it = expired_sessions.begin();
+        for ( ; it != expired_sessions.end(); it++){
+            RemoveEventBySession(*it);
+        }
+    }
+
     session_checker_.DelayTask(2000, 
         boost::bind(&InsNodeImpl::RemoveExpiredSessions, this)
     );
 }
-
 
 void InsNodeImpl::ParseValue(const std::string& value,
                 LogOperation& op, 
@@ -1201,6 +1219,82 @@ bool InsNodeImpl::IsExpiredSession(const std::string& session_id) {
         }
     }
     return expired_session;
+}
+
+
+void InsNodeImpl::TriggerEvent(const std::string& key,
+                               const std::string& value,
+                               bool deleted) {
+    watch_mu_.AssertHeld();
+    WatchEventKeyIndex& key_idx = watch_events_.get<0>();
+    WatchEventKeyIndex::iterator it_start = key_idx.lower_bound(key);
+    if (it_start != key_idx.end() 
+        && it_start->key == key) {
+        WatchEventKeyIndex::iterator it_end = key_idx.upper_bound(key);
+        for (WatchEventKeyIndex::iterator it = it_start;
+             it != it_end; it++) {
+            LOG(INFO, "trigger watch event: %s on %s",
+                it->key.c_str(), it->session_id.c_str());
+            it->ack->response->set_key(key);
+            it->ack->response->set_value(value);
+            it->ack->response->set_deleted(deleted);
+            it->ack->response->set_success(true);
+            it->ack->response->set_leader_id("");
+        }
+        key_idx.erase(it_start, it_end);
+    }
+}
+
+void InsNodeImpl::RemoveEventBySession(const std::string& session_id) {
+    watch_mu_.AssertHeld();
+    WatchEventSessionIndex& session_idx = watch_events_.get<1>();
+    WatchEventSessionIndex::iterator it_start = session_idx.lower_bound(session_id);
+    if (it_start != session_idx.end() 
+        && it_start->session_id == session_id) {
+        WatchEventSessionIndex::iterator it_end = 
+              session_idx.upper_bound(session_id);
+        for (WatchEventSessionIndex::iterator it = it_start;
+             it != it_end; it++) {
+            LOG(INFO, "remove watch event: %s on %s",
+                it->key.c_str(), it->session_id.c_str());
+        }
+        session_idx.erase(it_start, it_end);
+    }
+}
+
+void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
+                        const ::galaxy::ins::WatchRequest* request,
+                        ::galaxy::ins::WatchResponse* response,
+                        ::google::protobuf::Closure* done) {
+    (void) controller;
+    {
+        MutexLock lock(&mu_);
+        if (status_ == kFollower) {
+            response->set_success(false);
+            response->set_leader_id(current_leader_);
+            done->Run();
+            return;
+        }
+
+        if (status_ == kCandidate) {
+            response->set_success(false);
+            response->set_leader_id("");
+            done->Run();
+            return;
+        } 
+    }
+    {
+        MutexLock lock(&watch_mu_);
+        RemoveEventBySession(request->session_id());
+        WatchAck::Ptr ack_obj(new WatchAck(response, done));
+        for(int i=0 ; i < request->keys_size(); i++) {
+            WatchEvent watch_event;
+            watch_event.key = request->keys(i);
+            watch_event.session_id = request->session_id();
+            watch_event.ack = ack_obj;
+            watch_events_.insert(watch_event);
+        }
+    }
 }
 
 } //namespace ins

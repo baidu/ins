@@ -81,6 +81,43 @@ typedef multi_index_container<
 typedef SessionContainer::nth_index<0>::type SessionIDIndex;
 typedef SessionContainer::nth_index<1>::type SessionTimeIndex;
 
+struct WatchAck {
+    WatchResponse* response;
+    google::protobuf::Closure* done;
+    WatchAck(WatchResponse* rsps,
+             google::protobuf::Closure* dn) : response(rsps),
+                                              done(dn) {
+
+    }
+    ~WatchAck() {
+        if(done) {
+            done->Run();
+        }
+    }
+    typedef boost::shared_ptr<WatchAck> Ptr;
+};
+
+struct WatchEvent {
+    std::string key;
+    std::string session_id;
+    WatchAck::Ptr ack;
+};
+
+typedef multi_index_container<
+    WatchEvent,
+    indexed_by<
+        ordered_non_unique<
+            member<WatchEvent, std::string, &WatchEvent::key> 
+        >,
+        ordered_non_unique<
+            member<WatchEvent, std::string, &WatchEvent::session_id> 
+        >
+    >
+> WatchEventContainer;
+
+typedef WatchEventContainer::nth_index<0>::type WatchEventKeyIndex;
+typedef WatchEventContainer::nth_index<1>::type WatchEventSessionIndex;
+
 class InsNodeImpl : public InsNode {
 public:
    
@@ -122,6 +159,11 @@ public:
               const ::galaxy::ins::LockRequest* request,
               ::galaxy::ins::LockResponse* response,
               ::google::protobuf::Closure* done);
+    void Watch(::google::protobuf::RpcController* controller,
+               const ::galaxy::ins::WatchRequest* request,
+               ::galaxy::ins::WatchResponse* response,
+               ::google::protobuf::Closure* done);
+
 private:
     void VoteCallback(const ::galaxy::ins::VoteRequest* request,
                       ::galaxy::ins::VoteResponse* response,
@@ -151,6 +193,10 @@ private:
                     LogOperation& op, 
                     std::string& real_value);
     bool IsExpiredSession(const std::string& session_id);
+    void RemoveEventBySession(const std::string& session_id);
+    void TriggerEvent(const std::string& key,
+                      const std::string& value,
+                      bool deleted);
 public:
     std::vector<std::string> members_;
 private:
@@ -189,6 +235,8 @@ private:
     int64_t commit_index_;
     int64_t last_applied_index_;
     CondVar* commit_cond_;
+    WatchEventContainer watch_events_;
+    Mutex watch_mu_;
 };
 
 void GetHostName(std::string* hostname);

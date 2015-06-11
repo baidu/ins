@@ -2,8 +2,11 @@
 #define GALAXY_INS_SDK_H_
 
 #include <stdint.h>
+#include <set>
+#include <map>
 #include <vector>
 #include <string>
+#include <utility>
 
 namespace ins_common {
     class Mutex;
@@ -44,10 +47,8 @@ class ScanResult;
 
 struct WatchParam {
     std::string key;
-    std::string new_value;
-    std::string old_value;
-    bool old_has_key;
-    bool now_has_key;
+    std::string value;
+    bool deleted;
     void* context;
 };
 
@@ -81,24 +82,23 @@ public:
 
 private:
     void PrepareServerList(std::vector<std::string>& server_list);
-    void WatchTask(const std::string& key,
-                   const std::string& old_value,
-                   bool old_has_key,
-                   WatchCallback user_callback,
-                   void* context,
-                   int32_t err_count);
     bool TryLock(const std::string& key, SDKError *error);
     void KeepAliveTask();
+    void KeepWatchTask();
     void MakeSessionID();
     std::string leader_id_;
     std::string session_id_;
     std::vector<std::string> members_;
     galaxy::RpcClient* rpc_client_;
     ins_common::Mutex* mu_;
-    ins_common::ThreadPool* watch_pool_;
     ins_common::ThreadPool* keep_alive_pool_;
     bool is_keep_alive_bg_;
     bool stop_;
+    std::set<std::string> watch_keys_;
+    std::map<std::string, WatchCallback> watch_cbs_;
+    std::map<std::string, void*> watch_ctx_;
+    bool is_keep_watch_bg_;
+    ins_common::ThreadPool* keep_watch_pool_;
 };
 
 class ScanResult {
