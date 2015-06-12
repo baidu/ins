@@ -203,6 +203,8 @@ private:
     void TriggerEvent(const std::string& key,
                       const std::string& value,
                       bool deleted);
+    void RemoveEventBySessionAndKey(const std::string& session_id,
+                                    const std::string& key);
 public:
     std::vector<std::string> members_;
 private:

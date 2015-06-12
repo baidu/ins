@@ -1308,6 +1308,30 @@ void InsNodeImpl::TriggerEvent(const std::string& key,
     }
 }
 
+void InsNodeImpl::RemoveEventBySessionAndKey(const std::string& session_id,
+                                             const std::string& key) {
+    watch_mu_.AssertHeld();
+    WatchEventSessionIndex& session_idx = watch_events_.get<1>();
+    WatchEventSessionIndex::iterator it_start = session_idx.lower_bound(session_id);
+    if (it_start != session_idx.end() 
+        && it_start->session_id == session_id) {
+        WatchEventSessionIndex::iterator it_end = 
+              session_idx.upper_bound(session_id);
+        WatchEventSessionIndex::iterator it_right = it_start;
+        for (WatchEventSessionIndex::iterator it = it_start;
+             it != it_end; ) {
+            if (it->key == key) {
+                 LOG(DEBUG, "remove watch event: %s on %s",
+                     it->key.c_str(), it->session_id.c_str());
+                it->ack->response->set_canceled(true);
+                it = session_idx.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
+}
+
 void InsNodeImpl::RemoveEventBySession(const std::string& session_id) {
     watch_mu_.AssertHeld();
     WatchEventSessionIndex& session_idx = watch_events_.get<1>();
@@ -1355,11 +1379,11 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
             //LOG(DEBUG, "watch key :%s", watch_event.key.c_str());
             watch_event.session_id = request->session_id();
             watch_event.ack = ack_obj;
+            RemoveEventBySessionAndKey(watch_event.session_id, watch_event.key);
             watch_events_.insert(watch_event);
         }
     }
 }
-
 
 void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
                          const ::galaxy::ins::UnLockRequest* request,

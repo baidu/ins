@@ -154,6 +154,7 @@ message WatchResponse {
     optional string key = 3;
     optional string value = 4;
     optional bool deleted = 5;
+    optional bool canceled = 6 [default = false];
 }
 
 service InsNode {

@@ -398,9 +398,6 @@ bool InsSDK::Watch(const std::string& key,
             );
             is_keep_alive_bg_ = true;
         }
-        keep_watch_pool_->DelayTask(115000, //115s timeout, double check
-            boost::bind(&InsSDK::KeepWatchTask, this, key)
-        );
         keep_watch_pool_->AddTask(
             boost::bind(&InsSDK::KeepWatchTask, this, key)
         );
@@ -470,6 +467,12 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                                std::string server_id) {
     boost::scoped_ptr<const galaxy::ins::WatchRequest> request_ptr(request);
     boost::scoped_ptr<galaxy::ins::WatchResponse> response_ptr(response);
+    {
+        MutexLock lock(mu_);
+        if (stop_) {
+            return;
+        }
+    }
     if (!failed && response_ptr->success()) {
         WatchCallback cb = NULL;
         void * cb_ctx = NULL;
@@ -497,19 +500,21 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
     } else if (!failed && !response_ptr->leader_id().empty()) {
         server_id = response_ptr->leader_id();
     }
-    LOG(INFO, "rpc to %s", server_id.c_str());
-    galaxy::ins::InsNode_Stub *stub;
-    rpc_client_->GetStub(server_id, &stub);
-    boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
-    galaxy::ins::WatchRequest* req = new galaxy::ins::WatchRequest();
-    galaxy::ins::WatchResponse* rsps = new galaxy::ins::WatchResponse();
-    req->CopyFrom(*request);
-    boost::function< void (const galaxy::ins::WatchRequest*,
-                           galaxy::ins::WatchResponse*, 
-                           bool, int) > callback;
-    callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
-    rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
-                              req, rsps, callback, 120, 1); //120s timeout
+    if (!response_ptr->canceled()) { //retry, if not cancel
+        LOG(INFO, "rpc to %s", server_id.c_str());
+        galaxy::ins::InsNode_Stub *stub;
+        rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::WatchRequest* req = new galaxy::ins::WatchRequest();
+        galaxy::ins::WatchResponse* rsps = new galaxy::ins::WatchResponse();
+        req->CopyFrom(*request);
+        boost::function< void (const galaxy::ins::WatchRequest*,
+                               galaxy::ins::WatchResponse*, 
+                               bool, int) > callback;
+        callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
+        rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
+                                  req, rsps, callback, 120, 1); //120s timeout
+    }
 }
 
 void InsSDK::KeepWatchTask(const std::string& key) {
@@ -539,6 +544,9 @@ void InsSDK::KeepWatchTask(const std::string& key) {
     rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
                               request, response, callback, 120, 1); 
                               //120s timeout for long polling
+    keep_watch_pool_->DelayTask(115000, //115s timeout, double check
+        boost::bind(&InsSDK::KeepWatchTask, this, key)
+    );
 }
 
 bool InsSDK::Lock(const std::string& key, SDKError* error) {
