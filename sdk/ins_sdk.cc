@@ -499,6 +499,11 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
         return;
     } else if (!failed && !response_ptr->leader_id().empty()) {
         server_id = response_ptr->leader_id();
+    } else {
+        std::vector<std::string> server_list;
+        PrepareServerList(server_list);
+        int s_no = (int32_t) (server_list.size() * rand()/(RAND_MAX+1.0));
+        server_id = server_list[s_no];
     }
     if (!response_ptr->canceled()) { //retry, if not cancel
         LOG(INFO, "rpc to %s", server_id.c_str());
