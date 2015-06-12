@@ -76,6 +76,7 @@ public:
                void* context, 
                SDKError* error);
     bool Lock(const std::string& key, SDKError* error); //may block
+    bool UnLock(const std::string& key, SDKError* error);
     std::string GetSessionID();
     
     static std::string StatusToString(int32_t status);

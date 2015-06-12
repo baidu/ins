@@ -146,6 +146,10 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "lock successful on %s\n", key.c_str());
         fprintf(stderr, "Press any key to release the lock.\n");
         getchar();
+        ret = sdk.UnLock(key, &error);
+        if (ret) {
+            fprintf(stderr, "unlock successful on %s\n", key.c_str());
+        }
     }
     return 0;
 }

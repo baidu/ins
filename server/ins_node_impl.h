@@ -30,10 +30,12 @@ struct ClientAck {
     galaxy::ins::PutResponse* response;
     galaxy::ins::DelResponse* del_response;
     galaxy::ins::LockResponse* lock_response;
+    galaxy::ins::UnLockResponse* unlock_response;
     google::protobuf::Closure* done;
     ClientAck() : response(NULL),
                   del_response(NULL),
                   lock_response(NULL),
+                  unlock_response(NULL),
                   done(NULL) {
     }
 };
@@ -159,6 +161,10 @@ public:
               const ::galaxy::ins::LockRequest* request,
               ::galaxy::ins::LockResponse* response,
               ::google::protobuf::Closure* done);
+    void UnLock(::google::protobuf::RpcController* controller,
+                const ::galaxy::ins::UnLockRequest* request,
+                ::galaxy::ins::UnLockResponse* response,
+                ::google::protobuf::Closure* done);
     void Watch(::google::protobuf::RpcController* controller,
                const ::galaxy::ins::WatchRequest* request,
                ::galaxy::ins::WatchResponse* response,
@@ -237,6 +243,8 @@ private:
     CondVar* commit_cond_;
     WatchEventContainer watch_events_;
     Mutex watch_mu_;
+    std::map<std::string, std::vector<std::string> > session_locks_;
+    Mutex session_locks_mu_;
 };
 
 void GetHostName(std::string* hostname);

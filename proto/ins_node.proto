@@ -13,6 +13,7 @@ enum LogOperation {
     kPut = 1;
     kDel = 2;
     kLock = 3;
+    kUnLock = 4;
     kNop = 10;
 };
 
@@ -76,6 +77,17 @@ message DelRequest {
 }
 
 message DelResponse {
+    required bool success = 1;
+    optional string leader_id = 2;
+}
+
+
+message UnLockRequest {
+    required string key = 1;
+    required string session_id = 2;  
+}
+
+message UnLockResponse {
     required bool success = 1;
     optional string leader_id = 2;
 }
@@ -152,6 +164,7 @@ service InsNode {
     rpc Delete(DelRequest) returns (DelResponse);
     rpc Scan(ScanRequest) returns (ScanResponse);
     rpc Lock(LockRequest) returns (LockResponse);
+    rpc UnLock(UnLockRequest) returns (UnLockResponse);
     rpc Watch(WatchRequest) returns (WatchResponse);
     rpc KeepAlive(KeepAliveRequest) returns (KeepAliveResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);

@@ -203,6 +203,10 @@ void InsNodeImpl::CommitIndexObserv() {
                         MutexLock lock_trigger(&watch_mu_);
                         TriggerEvent(log_entry.key, log_entry.value, false);
                     }
+                    if (log_entry.op == kLock) {
+                        MutexLock lock_sk(&session_locks_mu_);
+                        session_locks_[log_entry.value].push_back(log_entry.key);
+                    }
                     assert(s.ok());
                     break;
                 case kDel:
@@ -210,16 +214,38 @@ void InsNodeImpl::CommitIndexObserv() {
                         log_entry.key.c_str());
                     s = data_store_->Delete(leveldb::WriteOptions(),
                                              log_entry.key);
+                    assert(s.ok());
                     {
                         MutexLock lock_trigger(&watch_mu_);
                         TriggerEvent(log_entry.key, log_entry.value, true);
                     }
-                    assert(s.ok());
                     break;
                 case kNop:
                     LOG(DEBUG, "kNop got, do nothing, key: %s", 
                               log_entry.key.c_str());
                     nop_committed = true;
+                    break;
+                case kUnLock:
+                    {   
+                        std::string key = log_entry.key;
+                        std::string old_session = log_entry.value;
+                        std::string value;
+                        s = data_store_->Get(leveldb::ReadOptions(), key, &value);
+                        if (s.ok()) {
+                            std::string cur_session;
+                            LogOperation op;
+                            ParseValue(value, op, cur_session);
+                            if (op == kLock && cur_session == old_session) { //DeleteIf
+                                s = data_store_->Delete(leveldb::WriteOptions(),
+                                                        key);
+                                assert(s.ok());
+                                {
+                                    MutexLock lock_trigger(&watch_mu_);
+                                    TriggerEvent(key, "", true);
+                                }
+                            }
+                        }
+                    }
                     break;
             }
             mu_.Lock();
@@ -243,6 +269,11 @@ void InsNodeImpl::CommitIndexObserv() {
                     ack.lock_response->set_success(true);
                     ack.lock_response->set_leader_id("");
                     ack.done->Run(); //client lock ok;   
+                }
+                if (ack.unlock_response) {
+                    ack.unlock_response->set_success(true);
+                    ack.unlock_response->set_leader_id("");
+                    ack.done->Run(); //client unlock ok;
                 }
                 client_ack_.erase(i);
             }
@@ -1158,8 +1189,10 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
 }
 
 void InsNodeImpl::RemoveExpiredSessions() {
+    int64_t cur_term;
     {
         MutexLock lock(&mu_);
+        cur_term = current_term_;
         if (stop_) {
             return;
         }
@@ -1192,6 +1225,34 @@ void InsNodeImpl::RemoveExpiredSessions() {
         for ( ; it != expired_sessions.end(); it++){
             RemoveEventBySession(*it);
         }
+    }
+
+    std::vector<std::pair<std::string, std::string> > unlock_keys;
+
+    {
+        MutexLock lock_sk(&session_locks_mu_);
+        std::vector<std::string>::iterator it = expired_sessions.begin();
+        for ( ; it != expired_sessions.end(); it++){
+            std::string session_id = *it;
+            if (session_locks_.find(session_id) != session_locks_.end()) {
+                std::vector<std::string>& keys = session_locks_[session_id];
+                for(size_t i = 0; i < keys.size(); i++) {
+                    unlock_keys.push_back(std::make_pair(keys[i], session_id));
+                }
+                session_locks_.erase(session_id);
+            }
+        }      
+    }
+
+    for (size_t i = 0; i < unlock_keys.size(); i++){
+        std::string key = unlock_keys[i].first;
+        std::string session_id = unlock_keys[i].second;
+        LogEntry log_entry;
+        log_entry.key = key;
+        log_entry.value = session_id;
+        log_entry.term = cur_term;
+        log_entry.op = kUnLock;
+        binlogger_->AppendEntry(log_entry);   
     }
 
     session_checker_.DelayTask(2000, 
@@ -1300,6 +1361,46 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
             watch_events_.insert(watch_event);
         }
     }
+}
+
+
+void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
+                         const ::galaxy::ins::UnLockRequest* request,
+                         ::galaxy::ins::UnLockResponse* response,
+                         ::google::protobuf::Closure* done) {
+    MutexLock lock(&mu_);
+    if (status_ == kFollower) {
+        response->set_success(false);
+        response->set_leader_id(current_leader_);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kCandidate) {
+        response->set_success(false);
+        response->set_leader_id("");
+        done->Run();
+        return;
+    }
+
+    const std::string& key = request->key();
+    const std::string& session_id = request->session_id();
+    LOG(DEBUG, "client want unlock key :%s", key.c_str());
+    LogEntry log_entry;
+    log_entry.key = key;
+    log_entry.value = session_id;
+    log_entry.term = current_term_;
+    log_entry.op = kUnLock;
+    binlogger_->AppendEntry(log_entry);
+    int64_t cur_index = binlogger_->GetLength() - 1;
+    ClientAck& ack = client_ack_[cur_index];
+    ack.done = done;
+    ack.unlock_response = response;
+    replication_cond_->Broadcast();
+    if (members_.size() == 1) { //single node cluster
+        UpdateCommitIndex(binlogger_->GetLength() - 1);
+    }
+    return;
 }
 
 } //namespace ins
