@@ -19,6 +19,13 @@ namespace galaxy {
 
 namespace galaxy {
 namespace ins {
+    class WatchRequest;
+    class WatchResponse;
+}
+}
+
+namespace galaxy {
+namespace ins {
 namespace sdk {
 
 enum SDKError {
@@ -85,8 +92,12 @@ private:
     void PrepareServerList(std::vector<std::string>& server_list);
     bool TryLock(const std::string& key, SDKError *error);
     void KeepAliveTask();
-    void KeepWatchTask();
+    void KeepWatchTask(const std::string& key);
     void MakeSessionID();
+    void KeepWatchCallback(const galaxy::ins::WatchRequest* request,
+                           galaxy::ins::WatchResponse* response,
+                           bool failed, int error,
+                           std::string server_id);
     std::string leader_id_;
     std::string session_id_;
     std::vector<std::string> members_;
@@ -98,7 +109,6 @@ private:
     std::set<std::string> watch_keys_;
     std::map<std::string, WatchCallback> watch_cbs_;
     std::map<std::string, void*> watch_ctx_;
-    bool is_keep_watch_bg_;
     ins_common::ThreadPool* keep_watch_pool_;
 };
 

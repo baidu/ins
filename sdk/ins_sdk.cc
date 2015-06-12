@@ -6,6 +6,8 @@
 #include <vector>
 #include <boost/algorithm/string.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
 #include <gflags/gflags.h>
 #include <uuid/uuid.h>
 #include <sys/utsname.h>
@@ -51,7 +53,6 @@ InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
     keep_alive_pool_ = new ins_common::ThreadPool();
     keep_watch_pool_ = new ins_common::ThreadPool();
     is_keep_alive_bg_ = false;
-    is_keep_watch_bg_ = false;
     MakeSessionID();
 }
 
@@ -397,12 +398,9 @@ bool InsSDK::Watch(const std::string& key,
             );
             is_keep_alive_bg_ = true;
         }
-        if (!is_keep_watch_bg_) {
-            keep_watch_pool_->AddTask(
-                boost::bind(&InsSDK::KeepWatchTask, this)
-            );
-            is_keep_watch_bg_ = true;
-        }
+        keep_watch_pool_->AddTask(
+            boost::bind(&InsSDK::KeepWatchTask, this, key)
+        );
     }
     *error = kOK;
     return true;
@@ -463,106 +461,81 @@ void InsSDK::KeepAliveTask() {
     );
 }
 
+void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
+                               galaxy::ins::WatchResponse* response,
+                               bool failed, int /*error*/,
+                               std::string server_id) {
+    boost::scoped_ptr<const galaxy::ins::WatchRequest> request_ptr(request);
+    boost::scoped_ptr<galaxy::ins::WatchResponse> response_ptr(response);
+    if (!failed && response_ptr->success()) {
+        WatchCallback cb = NULL;
+        void * cb_ctx = NULL;
+        {
+            MutexLock lock(mu_);
+            leader_id_ = server_id;
+            cb = watch_cbs_[response_ptr->key()];
+            cb_ctx = watch_ctx_[response_ptr->key()];
+        }
+        if (cb) {
+            WatchParam param;
+            param.key = response_ptr->key();
+            param.value = response_ptr->value();
+            param.deleted = response_ptr->deleted();
+            param.context = cb_ctx;
+            cb(param, kOK);
+        }
+        {
+            MutexLock lock(mu_);
+            watch_keys_.erase(response->key());
+            watch_cbs_.erase(response->key());
+            watch_ctx_.erase(response->key());
+        }
+        return;
+    } else if (!failed && !response_ptr->leader_id().empty()) {
+        server_id = response_ptr->leader_id();
+    }
+    LOG(INFO, "rpc to %s", server_id.c_str());
+    galaxy::ins::InsNode_Stub *stub;
+    rpc_client_->GetStub(server_id, &stub);
+    boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+    galaxy::ins::WatchRequest* req = new galaxy::ins::WatchRequest();
+    galaxy::ins::WatchResponse* rsps = new galaxy::ins::WatchResponse();
+    req->CopyFrom(*request);
+    boost::function< void (const galaxy::ins::WatchRequest*,
+                           galaxy::ins::WatchResponse*, 
+                           bool, int) > callback;
+    callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
+    rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
+                              req, rsps, callback, 120, 1); 
+}
 
-void InsSDK::KeepWatchTask() {
-    std::vector<std::string> keys;
+void InsSDK::KeepWatchTask(const std::string& key) {
     {
         MutexLock lock(mu_);
         if (stop_) {
             return;
         }
-        std::set<std::string>::iterator it;
-        for(it = watch_keys_.begin(); it != watch_keys_.end(); it++){
-            keys.push_back(*it);
-        }
-    }
-    if (keys.empty()) {
-        keep_watch_pool_->DelayTask(50, //50ms
-            boost::bind(&InsSDK::KeepWatchTask, this)
-        );
-        return;
     }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
-    std::vector<std::string>::const_iterator it ;
-    for (it = server_list.begin(); it != server_list.end(); it++){
-        std::string server_id = *it;
-        LOG(DEBUG, "rpc to %s", server_id.c_str());
-        galaxy::ins::InsNode_Stub *stub, *stub2;
-        rpc_client_->GetStub(server_id, &stub);
-        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
-        galaxy::ins::WatchRequest request;
-        galaxy::ins::WatchResponse response;
-        request.set_session_id(session_id_);
-        for(size_t i = 0; i < keys.size(); i++) {
-            std::string* kk = request.add_keys();
-            *kk = keys[i];
-        }
-        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Watch,
-                                           &request, &response, 120, 1); 
-                                           //120s timeout for long polling
-        if (!ok) {
-            LOG(INFO, "faild to rcp %s", server_id.c_str());
-            continue;
-        }
-
-        if (response.success()) {
-            WatchCallback cb = NULL;
-            void * cb_ctx = NULL;
-            {
-                MutexLock lock(mu_);
-                leader_id_ = server_id;
-                cb = watch_cbs_[response.key()];
-                cb_ctx = watch_ctx_[response.key()];
-            }
-            if (cb) {
-                WatchParam param;
-                param.key = response.key();
-                param.value = response.value();
-                param.deleted = response.deleted();
-                param.context = cb_ctx;
-                cb(param, kOK);
-            }
-            watch_keys_.erase(response.key());
-            watch_cbs_.erase(response.key());
-            watch_ctx_.erase(response.key());
-            break;
-        } else {
-            if (!response.leader_id().empty()) {
-                server_id = response.leader_id();
-                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
-                rpc_client_->GetStub(server_id, &stub2);
-                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
-                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Watch,
-                                              &request, &response, 120, 1); //120s
-                if (ok && response.success()) {
-                    WatchCallback cb = NULL;
-                    void * cb_ctx = NULL;
-                    {
-                        MutexLock lock(mu_);
-                        leader_id_ = server_id;
-                        cb = watch_cbs_[response.key()];
-                        cb_ctx = watch_ctx_[response.key()];
-                    }
-                    if (cb) {
-                        WatchParam param;
-                        param.key = response.key();
-                        param.value = response.value();
-                        param.deleted = response.deleted();
-                        param.context = cb_ctx;
-                        cb(param, kOK);
-                    }
-                    watch_keys_.erase(response.key());
-                    watch_cbs_.erase(response.key());
-                    watch_ctx_.erase(response.key());
-                    break;
-                }
-            }
-        }
-    } // end of for
-    keep_watch_pool_->AddTask(
-        boost::bind(&InsSDK::KeepWatchTask, this)
-    );
+    int s_no = (int32_t) (server_list.size() * rand()/(RAND_MAX+1.0));
+    std::string server_id = server_list[s_no];
+    LOG(INFO, "rpc to %s", server_id.c_str());
+    galaxy::ins::InsNode_Stub *stub;
+    rpc_client_->GetStub(server_id, &stub);
+    boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+    galaxy::ins::WatchRequest* request = new galaxy::ins::WatchRequest();
+    galaxy::ins::WatchResponse* response = new galaxy::ins::WatchResponse();
+    request->set_session_id(session_id_);
+    std::string* kk = request->add_keys();
+    *kk = key;
+    boost::function< void (const galaxy::ins::WatchRequest*,
+                           galaxy::ins::WatchResponse*, 
+                           bool, int) > callback;
+    callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
+    rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
+                              request, response, callback, 120, 1); 
+                              //120s timeout for long polling
 }
 
 bool InsSDK::Lock(const std::string& key, SDKError* error) {

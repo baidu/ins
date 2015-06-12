@@ -1289,7 +1289,6 @@ void InsNodeImpl::TriggerEvent(const std::string& key,
     watch_mu_.AssertHeld();
     WatchEventKeyIndex& key_idx = watch_events_.get<0>();
     WatchEventKeyIndex::iterator it_start = key_idx.lower_bound(key);
-    std::vector<std::string> remove_sessions;
     if (it_start != key_idx.end() 
         && it_start->key == key) {
         WatchEventKeyIndex::iterator it_end = key_idx.upper_bound(key);
@@ -1302,12 +1301,10 @@ void InsNodeImpl::TriggerEvent(const std::string& key,
             it->ack->response->set_deleted(deleted);
             it->ack->response->set_success(true);
             it->ack->response->set_leader_id("");
-            remove_sessions.push_back(it->session_id);
         }
         key_idx.erase(it_start, it_end);
-        for (size_t i=0 ; i < remove_sessions.size(); i++) {
-            RemoveEventBySession(remove_sessions[i]);
-        }
+    } else {
+        LOG(DEBUG, "watch list: no such key : %s", key.c_str());
     }
 }
 
@@ -1321,7 +1318,7 @@ void InsNodeImpl::RemoveEventBySession(const std::string& session_id) {
               session_idx.upper_bound(session_id);
         for (WatchEventSessionIndex::iterator it = it_start;
              it != it_end; it++) {
-            LOG(INFO, "remove watch event: %s on %s",
+            LOG(DEBUG, "remove watch event: %s on %s",
                 it->key.c_str(), it->session_id.c_str());
         }
         session_idx.erase(it_start, it_end);
@@ -1351,11 +1348,11 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
     }
     {
         MutexLock lock(&watch_mu_);
-        RemoveEventBySession(request->session_id());
         WatchAck::Ptr ack_obj(new WatchAck(response, done));
         for(int i=0 ; i < request->keys_size(); i++) {
             WatchEvent watch_event;
             watch_event.key = request->keys(i);
+            //LOG(DEBUG, "watch key :%s", watch_event.key.c_str());
             watch_event.session_id = request->session_id();
             watch_event.ack = ack_obj;
             watch_events_.insert(watch_event);
