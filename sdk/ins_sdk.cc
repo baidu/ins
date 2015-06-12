@@ -398,6 +398,9 @@ bool InsSDK::Watch(const std::string& key,
             );
             is_keep_alive_bg_ = true;
         }
+        keep_watch_pool_->DelayTask(115000, //115s timeout, double check
+            boost::bind(&InsSDK::KeepWatchTask, this, key)
+        );
         keep_watch_pool_->AddTask(
             boost::bind(&InsSDK::KeepWatchTask, this, key)
         );
@@ -506,7 +509,7 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                            bool, int) > callback;
     callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
     rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
-                              req, rsps, callback, 120, 1); 
+                              req, rsps, callback, 120, 1); //120s timeout
 }
 
 void InsSDK::KeepWatchTask(const std::string& key) {
