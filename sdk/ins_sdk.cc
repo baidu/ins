@@ -487,7 +487,7 @@ void InsSDK::KeepWatchTask() {
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
-        LOG(DEBUG, "rpc to %s", server_id.c_str());
+        LOG(INFO, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
@@ -501,7 +501,7 @@ void InsSDK::KeepWatchTask() {
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Watch,
                                            &request, &response, 60, 1);
         if (!ok) {
-            LOG(DEBUG, "faild to rcp %s", server_id.c_str());
+            LOG(INFO, "faild to rcp %s", server_id.c_str());
             continue;
         }
 

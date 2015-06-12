@@ -1228,6 +1228,7 @@ void InsNodeImpl::TriggerEvent(const std::string& key,
     watch_mu_.AssertHeld();
     WatchEventKeyIndex& key_idx = watch_events_.get<0>();
     WatchEventKeyIndex::iterator it_start = key_idx.lower_bound(key);
+    std::vector<std::string> remove_sessions;
     if (it_start != key_idx.end() 
         && it_start->key == key) {
         WatchEventKeyIndex::iterator it_end = key_idx.upper_bound(key);
@@ -1240,8 +1241,12 @@ void InsNodeImpl::TriggerEvent(const std::string& key,
             it->ack->response->set_deleted(deleted);
             it->ack->response->set_success(true);
             it->ack->response->set_leader_id("");
+            remove_sessions.push_back(it->session_id);
         }
         key_idx.erase(it_start, it_end);
+        for (size_t i=0 ; i < remove_sessions.size(); i++) {
+            RemoveEventBySession(remove_sessions[i]);
+        }
     }
 }
 

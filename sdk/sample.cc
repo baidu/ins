@@ -11,6 +11,13 @@
 
 using namespace galaxy::ins::sdk;
 
+void my_watch_cb(const WatchParam& param, SDKError error) {
+    printf("key: %s\n", param.key.c_str());
+    printf("value: %s\n", param.value.c_str());
+    printf("deleted: %s\n", param.deleted ?"true":"false");
+    printf("error code: %d\n", static_cast<int>(error));
+}
+
 int main(int argc, char* argv[]) {
     std::vector<std::string> members;
     if (argc < 2) {
@@ -61,6 +68,19 @@ int main(int argc, char* argv[]) {
                 printf("NOT FOUND\n");
             }
             fflush(stdout);
+        }
+    } else if(strcmp("watch", argv[1]) == 0) {
+        fprintf(stderr, "watch test\n");
+        InsSDK::ParseFlagFromArgs(argc, argv, &members);
+        InsSDK sdk(members);
+        char key_buf[1024] = {'\0'};
+        SDKError err;
+        for (int i=1; i<=1000; i++) {
+            snprintf(key_buf, sizeof(key_buf), "key_%d", i);
+            sdk.Watch(key_buf, my_watch_cb, NULL, &err);
+        }
+        while (true) {
+            sleep(1);
         }
     } 
     return 0;
