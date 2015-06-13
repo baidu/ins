@@ -111,9 +111,10 @@ InsNodeImpl::~InsNodeImpl() {
     }
     replicatter_.Stop(true);
     committer_.Stop(true);
-    pool_.Stop(true);
+    leader_crash_checker_.Stop(true);
     heart_beat_pool_.Stop(true);
     session_checker_.Stop(true);
+    event_trigger_.Stop(true);
     {
         MutexLock lock(&mu_);
         delete meta_;
@@ -135,7 +136,7 @@ void InsNodeImpl::CheckLeaderCrash() {
         return;
     }
     int32_t timeout = GetRandomTimeout();
-    elect_leader_task_  = pool_.DelayTask(timeout, 
+    elect_leader_task_  = leader_crash_checker_.DelayTask(timeout, 
                                         boost::bind(&InsNodeImpl::TryToBeLeader,
                                                     this)
                                         );
@@ -199,10 +200,11 @@ void InsNodeImpl::CommitIndexObserv() {
                     s = data_store_->Put(leveldb::WriteOptions(),
                                          log_entry.key,
                                          type_and_value);
-                    {
-                        MutexLock lock_trigger(&watch_mu_);
-                        TriggerEvent(log_entry.key, log_entry.value, false);
-                    }
+                    event_trigger_.AddTask(
+                        boost::bind(&InsNodeImpl::TriggerEventWithParent,
+                                    this,
+                                    log_entry.key, log_entry.value, false)
+                    );
                     if (log_entry.op == kLock) {
                         MutexLock lock_sk(&session_locks_mu_);
                         session_locks_[log_entry.value].push_back(log_entry.key);
@@ -215,10 +217,11 @@ void InsNodeImpl::CommitIndexObserv() {
                     s = data_store_->Delete(leveldb::WriteOptions(),
                                              log_entry.key);
                     assert(s.ok());
-                    {
-                        MutexLock lock_trigger(&watch_mu_);
-                        TriggerEvent(log_entry.key, log_entry.value, true);
-                    }
+                    event_trigger_.AddTask(
+                        boost::bind(&InsNodeImpl::TriggerEventWithParent,
+                                    this,
+                                    log_entry.key, log_entry.value, true)
+                    );
                     break;
                 case kNop:
                     LOG(DEBUG, "kNop got, do nothing, key: %s", 
@@ -239,10 +242,11 @@ void InsNodeImpl::CommitIndexObserv() {
                                 s = data_store_->Delete(leveldb::WriteOptions(),
                                                         key);
                                 assert(s.ok());
-                                {
-                                    MutexLock lock_trigger(&watch_mu_);
-                                    TriggerEvent(key, "", true);
-                                }
+                                event_trigger_.AddTask(
+                                  boost::bind(&InsNodeImpl::TriggerEventWithParent,
+                                              this,
+                                              key, old_session, true)
+                                );
                             }
                         }
                     }
@@ -1190,12 +1194,14 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
 
 void InsNodeImpl::RemoveExpiredSessions() {
     int64_t cur_term;
+    NodeStatus cur_status;
     {
         MutexLock lock(&mu_);
         cur_term = current_term_;
         if (stop_) {
             return;
         }
+        cur_status = status_;
     }
 
     std::vector<std::string> expired_sessions;
@@ -1244,17 +1250,18 @@ void InsNodeImpl::RemoveExpiredSessions() {
         }      
     }
 
-    for (size_t i = 0; i < unlock_keys.size(); i++){
-        std::string key = unlock_keys[i].first;
-        std::string session_id = unlock_keys[i].second;
-        LogEntry log_entry;
-        log_entry.key = key;
-        log_entry.value = session_id;
-        log_entry.term = cur_term;
-        log_entry.op = kUnLock;
-        binlogger_->AppendEntry(log_entry);   
+    if (cur_status == kLeader) {
+        for (size_t i = 0; i < unlock_keys.size(); i++){
+            std::string key = unlock_keys[i].first;
+            std::string session_id = unlock_keys[i].second;
+            LogEntry log_entry;
+            log_entry.key = key;
+            log_entry.value = session_id;
+            log_entry.term = cur_term;
+            log_entry.op = kUnLock;
+            binlogger_->AppendEntry(log_entry);   
+        }
     }
-
     session_checker_.DelayTask(2000, 
         boost::bind(&InsNodeImpl::RemoveExpiredSessions, this)
     );
@@ -1282,20 +1289,35 @@ bool InsNodeImpl::IsExpiredSession(const std::string& session_id) {
     return expired_session;
 }
 
+void InsNodeImpl::TriggerEventWithParent(const std::string& key,
+                                         const std::string& value,
+                                         bool deleted) {
+    std::string::size_type tail_index = key.rfind("/");
+    std::string parent_key = "";
+    if (tail_index != std::string::npos) {
+        parent_key = key.substr(0, tail_index);
+    }
+    TriggerEvent(key, key, value, deleted);
+    if (!parent_key.empty()) {
+        TriggerEvent(parent_key, key, value, deleted);
+    }
+}
 
-void InsNodeImpl::TriggerEvent(const std::string& key,
+void InsNodeImpl::TriggerEvent(const std::string& watch_key,
+                               const std::string& key,
                                const std::string& value,
                                bool deleted) {
-    watch_mu_.AssertHeld();
+    MutexLock lock(&watch_mu_);
     WatchEventKeyIndex& key_idx = watch_events_.get<0>();
-    WatchEventKeyIndex::iterator it_start = key_idx.lower_bound(key);
+    WatchEventKeyIndex::iterator it_start = key_idx.lower_bound(watch_key);
     if (it_start != key_idx.end() 
-        && it_start->key == key) {
-        WatchEventKeyIndex::iterator it_end = key_idx.upper_bound(key);
+        && it_start->key == watch_key) {
+        WatchEventKeyIndex::iterator it_end = key_idx.upper_bound(watch_key);
         for (WatchEventKeyIndex::iterator it = it_start;
              it != it_end; it++) {
             LOG(INFO, "trigger watch event: %s on %s",
                 it->key.c_str(), it->session_id.c_str());
+            it->ack->response->set_watch_key(watch_key);
             it->ack->response->set_key(key);
             it->ack->response->set_value(value);
             it->ack->response->set_deleted(deleted);

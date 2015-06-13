@@ -200,9 +200,13 @@ private:
                     std::string& real_value);
     bool IsExpiredSession(const std::string& session_id);
     void RemoveEventBySession(const std::string& session_id);
-    void TriggerEvent(const std::string& key,
+    void TriggerEvent(const std::string& watch_key,
+                      const std::string& key,
                       const std::string& value,
                       bool deleted);
+    void TriggerEventWithParent(const std::string& key,
+                                const std::string& value,
+                                bool deleted);
     void RemoveEventBySessionAndKey(const std::string& session_id,
                                     const std::string& key);
 public:
@@ -217,7 +221,7 @@ private:
     galaxy::RpcClient rpc_client_;
     NodeStatus status_;
     Mutex mu_;
-    ThreadPool pool_;
+    ThreadPool leader_crash_checker_;
     ThreadPool heart_beat_pool_;
     int64_t elect_leader_task_;
     std::string current_leader_;
@@ -236,6 +240,7 @@ private:
     int64_t heartbeat_read_timestamp_;
     bool in_safe_mode_;
     int64_t leader_start_timestamp_;
+    ThreadPool event_trigger_;
     // for all servers
     SessionContainer sessions_;
     Mutex sessions_mu_;

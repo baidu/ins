@@ -479,8 +479,8 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
         {
             MutexLock lock(mu_);
             leader_id_ = server_id;
-            cb = watch_cbs_[response_ptr->key()];
-            cb_ctx = watch_ctx_[response_ptr->key()];
+            cb = watch_cbs_[response_ptr->watch_key()];
+            cb_ctx = watch_ctx_[response_ptr->watch_key()];
         }
         if (cb) {
             WatchParam param;
@@ -492,9 +492,9 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
         }
         {
             MutexLock lock(mu_);
-            watch_keys_.erase(response->key());
-            watch_cbs_.erase(response->key());
-            watch_ctx_.erase(response->key());
+            watch_keys_.erase(response->watch_key());
+            watch_cbs_.erase(response->watch_key());
+            watch_ctx_.erase(response->watch_key());
         }
         return;
     } else if (!failed && !response_ptr->leader_id().empty()) {
