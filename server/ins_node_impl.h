@@ -93,6 +93,7 @@ struct WatchAck {
     }
     ~WatchAck() {
         if(done) {
+            //fprintf(stderr, "~WatchAck\n");
             done->Run();
         }
     }

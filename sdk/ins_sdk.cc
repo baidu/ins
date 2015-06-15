@@ -485,18 +485,18 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
             cb_ctx = watch_ctx_[response_ptr->watch_key()];
         }
         if (cb) {
+            {
+                MutexLock lock(mu_);
+                watch_keys_.erase(response->watch_key());
+                watch_cbs_.erase(response->watch_key());
+                watch_ctx_.erase(response->watch_key());
+            }
             WatchParam param;
             param.key = response_ptr->key();
             param.value = response_ptr->value();
             param.deleted = response_ptr->deleted();
             param.context = cb_ctx;
             cb(param, kOK);
-        }
-        {
-            MutexLock lock(mu_);
-            watch_keys_.erase(response->watch_key());
-            watch_cbs_.erase(response->watch_key());
-            watch_ctx_.erase(response->watch_key());
         }
         return;
     } else if (!failed && !response_ptr->leader_id().empty()) {

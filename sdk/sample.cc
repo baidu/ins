@@ -12,10 +12,16 @@
 using namespace galaxy::ins::sdk;
 
 void my_watch_cb(const WatchParam& param, SDKError error) {
+    InsSDK* sdk = static_cast<InsSDK*>(param.context);
     printf("key: %s\n", param.key.c_str());
     printf("value: %s\n", param.value.c_str());
     printf("deleted: %s\n", param.deleted ?"true":"false");
     printf("error code: %d\n", static_cast<int>(error));
+    if (sdk) {
+        printf("watch again\n");
+        SDKError er;
+        sdk->Watch(param.key, my_watch_cb, (void*)sdk, &er);
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -77,7 +83,7 @@ int main(int argc, char* argv[]) {
         SDKError err;
         for (int i=1; i<=1000; i++) {
             snprintf(key_buf, sizeof(key_buf), "key_%d", i);
-            sdk.Watch(key_buf, my_watch_cb, NULL, &err);
+            sdk.Watch(key_buf, my_watch_cb, &sdk, &err);
         }
         while (true) {
             sleep(1);
