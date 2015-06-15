@@ -33,7 +33,8 @@ enum SDKError {
     kClusterDown = 1,
     kNoSuchKey = 2,
     kTimeout = 3,
-    kLockFail = 4
+    kLockFail = 4,
+    kCleanBinlogFail = 5
 };
 
 struct ClusterNodeInfo {
@@ -43,6 +44,7 @@ struct ClusterNodeInfo {
     int64_t last_log_index;
     int64_t last_log_term;
     int64_t commit_index;
+    int64_t last_applied;
 };
 
 struct KVPair {
@@ -84,6 +86,9 @@ public:
                SDKError* error);
     bool Lock(const std::string& key, SDKError* error); //may block
     bool UnLock(const std::string& key, SDKError* error);
+    bool CleanBinlog(const std::string& server_id,
+                     int64_t end_index, 
+                     SDKError* error);
     std::string GetSessionID();
     
     static std::string StatusToString(int32_t status);

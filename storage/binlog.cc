@@ -54,13 +54,33 @@ int64_t BinLogger::StringToInt(const std::string& s) {
     return num;
 }
 
+bool BinLogger::RemoveSlot(int64_t slot_index) {
+    std::string value;
+    std::string key = IntToString(slot_index);
+    leveldb::Status status = db_->Get(leveldb::ReadOptions(), key, &value);
+    if (!status.ok()) {
+        return false;
+    }
+    status = db_->Delete(leveldb::WriteOptions(), key);
+    if (status.ok()) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool BinLogger::ReadSlot(int64_t slot_index, LogEntry* log_entry) {
     std::string value;
     std::string key = IntToString(slot_index);
     leveldb::Status status = db_->Get(leveldb::ReadOptions(), key, &value);
-    assert(status.ok());
-    LoadLogEntry(value, log_entry);
-    return true;
+    if (status.ok()) {
+        LoadLogEntry(value, log_entry);
+        return true;
+    } else if (status.IsNotFound()) {
+        return false;
+    } else {
+        abort();
+    }
 }
 
 void BinLogger::AppendEntryList(

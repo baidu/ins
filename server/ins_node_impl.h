@@ -169,7 +169,10 @@ public:
                const ::galaxy::ins::WatchRequest* request,
                ::galaxy::ins::WatchResponse* response,
                ::google::protobuf::Closure* done);
-
+    void CleanBinlog(::google::protobuf::RpcController* controller,
+                     const ::galaxy::ins::CleanBinlogRequest* request,
+                     ::galaxy::ins::CleanBinlogResponse* response,
+                     ::google::protobuf::Closure* done);
 private:
     void VoteCallback(const ::galaxy::ins::VoteRequest* request,
                       ::galaxy::ins::VoteResponse* response,
@@ -209,6 +212,7 @@ private:
                                 bool deleted);
     void RemoveEventBySessionAndKey(const std::string& session_id,
                                     const std::string& key);
+    void DelBinlog(int64_t index);
 public:
     std::vector<std::string> members_;
 private:
@@ -252,6 +256,7 @@ private:
     Mutex watch_mu_;
     std::map<std::string, std::vector<std::string> > session_locks_;
     Mutex session_locks_mu_;
+    ThreadPool binlog_cleaner_;
 };
 
 void GetHostName(std::string* hostname);

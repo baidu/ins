@@ -115,6 +115,7 @@ InsNodeImpl::~InsNodeImpl() {
     heart_beat_pool_.Stop(true);
     session_checker_.Stop(true);
     event_trigger_.Stop(true);
+    binlog_cleaner_.Stop(true);
     {
         MutexLock lock(&mu_);
         delete meta_;
@@ -156,6 +157,7 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* /*controller*/,
     response->set_last_log_index(last_log_index);
     response->set_last_log_term(last_log_term);
     response->set_commit_index(commit_index_);
+    response->set_last_applied(last_applied_index_);
     done->Run();
 }
 
@@ -187,7 +189,8 @@ void InsNodeImpl::CommitIndexObserv() {
         mu_.Unlock();
         for (int64_t i = from_idx + 1; i <= to_idx; i++) {
             LogEntry log_entry;
-            binlogger_->ReadSlot(i, &log_entry);
+            bool slot_ok = binlogger_->ReadSlot(i, &log_entry);
+            assert(slot_ok);
             leveldb::Status s;
             std::string type_and_value;
             switch(log_entry.op) {
@@ -282,9 +285,11 @@ void InsNodeImpl::CommitIndexObserv() {
                 client_ack_.erase(i);
             }
             last_applied_index_ += 1;
-            data_store_->Put(leveldb::WriteOptions(),
-                            tag_last_applied_index, 
-                            BinLogger::IntToString(last_applied_index_));
+            leveldb::Status sp = data_store_->Put(leveldb::WriteOptions(),
+                                                  tag_last_applied_index, 
+                                                  BinLogger::IntToString(
+                                                    last_applied_index_));
+            assert(sp.ok());
             mu_.Unlock();
         }
         mu_.Lock();
@@ -498,7 +503,8 @@ void InsNodeImpl::GetLastLogIndexAndTerm(int64_t* last_log_index,
     *last_log_term = -1;
     if (*last_log_index >= 0) {
         LogEntry log_entry;
-        binlogger_->ReadSlot(*last_log_index, &log_entry);
+        bool slot_ok = binlogger_->ReadSlot(*last_log_index, &log_entry);
+        assert(slot_ok);
         *last_log_term = log_entry.term;
     }
 }
@@ -592,8 +598,9 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
             int64_t prev_log_term = -1;
             if (request->prev_log_index() >= 0) {
                 LogEntry prev_log_entry;
-                binlogger_->ReadSlot(request->prev_log_index(),
-                                     &prev_log_entry);
+                bool slot_ok = binlogger_->ReadSlot(request->prev_log_index(),
+                                                    &prev_log_entry);
+                assert(slot_ok);
                 prev_log_term = prev_log_entry.term;
             }
             if (prev_log_term != request->prev_log_term() ) {
@@ -728,7 +735,12 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         std::string leader_id = self_id_;
         LogEntry prev_log_entry;
         if (prev_index > -1) {
-            binlogger_->ReadSlot(prev_index, &prev_log_entry);
+            bool slot_ok = binlogger_->ReadSlot(prev_index, &prev_log_entry);
+            if (!slot_ok) {
+                LOG(FATAL, "bad slot [%ld], can't replicate on %s ", 
+                    prev_index, follower_id.c_str());
+                break;
+            }
             prev_term = prev_log_entry.term;
         } 
         mu_.Unlock();
@@ -744,15 +756,24 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         request.set_prev_log_index(prev_index);
         request.set_prev_log_term(prev_term);
         request.set_leader_commit_index(cur_commit_index);
+        bool has_bad_slot = false;
         for (int idx = index; idx < (index + batch_span); idx++) {
             LogEntry log_entry;
-            binlogger_->ReadSlot(idx, &log_entry);
+            bool slot_ok = binlogger_->ReadSlot(idx, &log_entry);
+            if (!slot_ok) {
+                has_bad_slot = true;
+            }
             galaxy::ins::Entry * entry = request.add_entries();
             entry->set_term(log_entry.term);
             entry->set_key(log_entry.key);
             entry->set_value(log_entry.value);
             entry->set_op(log_entry.op);
             max_term = std::max(max_term, log_entry.term);
+        }
+        if (has_bad_slot) {
+            LOG(FATAL, "bad slot, can't replicate on server: %s", follower_id.c_str());
+            mu_.Lock();
+            break;
         }
         bool ok = rpc_client_.SendRequest(stub, 
                                           &InsNode_Stub::AppendEntries,
@@ -1444,6 +1465,43 @@ void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
         UpdateCommitIndex(binlogger_->GetLength() - 1);
     }
     return;
+}
+
+
+void InsNodeImpl::DelBinlog(int64_t index) {
+    LOG(INFO, "delete binlog [%ld]", index);
+    bool ret = binlogger_->RemoveSlot(index);
+    if (ret) {
+        binlog_cleaner_.DelayTask(10, //10ms delay
+            boost::bind(&InsNodeImpl::DelBinlog, this, index -1 )
+        );
+    } else {
+        LOG(INFO, "delete binlog stop at [%ld]", index);
+        return;
+    }
+}
+
+void InsNodeImpl::CleanBinlog(::google::protobuf::RpcController* controller,
+                              const ::galaxy::ins::CleanBinlogRequest* request,
+                              ::galaxy::ins::CleanBinlogResponse* response,
+                              ::google::protobuf::Closure* done) {
+    (void)controller;
+    int64_t del_end_index = request->end_index();
+    {
+        MutexLock lock(&mu_);
+        if (last_applied_index_ < del_end_index) {
+            response->set_success(false);
+            LOG(FATAL, "del log  %ld > %ld is unsafe", 
+                del_end_index, last_applied_index_);
+            done->Run();
+            return;
+        }
+    }
+    binlog_cleaner_.AddTask(
+        boost::bind(&InsNodeImpl::DelBinlog, this, del_end_index -1 )
+    );
+    response->set_success(true);
+    done->Run();
 }
 
 } //namespace ins

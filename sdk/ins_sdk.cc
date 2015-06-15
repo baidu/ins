@@ -113,12 +113,14 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
             node_info.last_log_index = -1;
             node_info.last_log_term = -1;
             node_info.commit_index = -1;
+            node_info.last_applied = -1;
         } else {
             node_info.status = response.status();
             node_info.term = response.term();
             node_info.last_log_index = response.last_log_index();
             node_info.last_log_term = response.last_log_term();
             node_info.commit_index = response.commit_index();
+            node_info.last_applied = response.last_applied();
         }
         cluster_info->push_back(node_info);
     }
@@ -682,6 +684,29 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
     }
     *error = kClusterDown;
     return false;
+}
+
+bool InsSDK::CleanBinlog(const std::string& server_id,
+                         int64_t end_index, 
+                         SDKError* error) {
+    galaxy::ins::InsNode_Stub *stub;
+    rpc_client_->GetStub(server_id, &stub);
+    boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+    galaxy::ins::CleanBinlogRequest request;
+    galaxy::ins::CleanBinlogResponse response;
+    request.set_end_index(end_index);
+    bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::CleanBinlog,
+                                       &request, &response, 2, 1);
+    if (!ok) {
+        *error = kTimeout;
+        return false;
+    }
+    if (ok && !response.success()) {
+        *error = kCleanBinlogFail;
+        LOG(FATAL, "remove binlog at %ld is unsafe", end_index);
+        return false;
+    }
+    return true;
 }
 
 std::string InsSDK::GetSessionID() {

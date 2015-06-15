@@ -32,6 +32,7 @@ public:
     void AppendEntryList(
        const ::google::protobuf::RepeatedPtrField< ::galaxy::ins::Entry > &entries
     );
+    bool RemoveSlot(int64_t slot_index);
     static std::string IntToString(int64_t num);
     static int64_t StringToInt(const std::string& s);
 private:
