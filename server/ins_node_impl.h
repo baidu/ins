@@ -214,6 +214,8 @@ private:
     void RemoveEventBySessionAndKey(const std::string& session_id,
                                     const std::string& key);
     void DelBinlog(int64_t index);
+    bool LockIsAvilable(const std::string& key,
+                        const std::string& session_id);
 public:
     std::vector<std::string> members_;
 private:

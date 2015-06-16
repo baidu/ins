@@ -198,6 +198,7 @@ void InsNodeImpl::CommitIndexObserv() {
             assert(slot_ok);
             leveldb::Status s;
             std::string type_and_value;
+            bool lock_succ = true;
             switch(log_entry.op) {
                 case kPut:
                 case kLock:
@@ -250,6 +251,7 @@ void InsNodeImpl::CommitIndexObserv() {
                                 s = data_store_->Delete(leveldb::WriteOptions(),
                                                         key);
                                 assert(s.ok());
+                                LOG(INFO, "unlock on %s", key.c_str());
                                 event_trigger_.AddTask(
                                   boost::bind(&InsNodeImpl::TriggerEventWithParent,
                                               this,
@@ -278,8 +280,13 @@ void InsNodeImpl::CommitIndexObserv() {
                     ack.done->Run(); //client del ok;   
                 }
                 if (ack.lock_response) {
-                    ack.lock_response->set_success(true);
-                    ack.lock_response->set_leader_id("");
+                    if (lock_succ) {
+                        ack.lock_response->set_success(true);
+                        ack.lock_response->set_leader_id("");
+                    } else {
+                        ack.lock_response->set_success(false);
+                        ack.lock_response->set_leader_id("");
+                    }
                     ack.done->Run(); //client lock ok;   
                 }
                 if (ack.unlock_response) {
@@ -383,6 +390,7 @@ void InsNodeImpl::HeartBeatForReadCallback(
             } else{
                 context->response->set_hit(true);
                 context->response->set_success(true);
+                LOG(INFO, "get value: %s", real_value.c_str());
                 context->response->set_value(real_value);
                 context->response->set_leader_id("");
             }
@@ -913,6 +921,7 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
                 response->set_hit(true);
                 response->set_success(true);
                 response->set_value(real_value);
+                LOG(INFO, "get value: %s", real_value.c_str());
                 response->set_leader_id("");
             }
         } else {
@@ -1002,6 +1011,39 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     return;
 }
 
+bool InsNodeImpl::LockIsAvilable(const std::string& key, 
+                                 const std::string& session_id) {
+    leveldb::Status s;
+    std::string old_locker_session;
+    std::string value;
+    LogOperation op;
+    s = data_store_->Get(leveldb::ReadOptions(), key, &value);
+    ParseValue(value, op, old_locker_session);
+    bool lock_is_avilable = false;
+    if (!s.ok()) {
+        MutexLock lock(&sessions_mu_);
+        SessionIDIndex& id_index = sessions_.get<0>();
+        SessionIDIndex::iterator self_it = id_index.find(session_id);
+        if (self_it != sessions_.end()) {
+            lock_is_avilable = true;
+        }
+    } else {
+        if (op != kLock) {
+            lock_is_avilable = false;
+        } else {
+            MutexLock lock(&sessions_mu_);
+            SessionIDIndex& id_index = sessions_.get<0>();
+            SessionIDIndex::iterator old_it = id_index.find(old_locker_session);
+            SessionIDIndex::iterator self_it = id_index.find(session_id);
+            if (old_it == sessions_.end() //expired session
+                && self_it != sessions_.end()) { 
+                lock_is_avilable = true;
+            }
+        }
+    }
+    return lock_is_avilable;
+}
+
 void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
                        const ::galaxy::ins::LockRequest* request,
                        ::galaxy::ins::LockResponse* response,
@@ -1048,36 +1090,17 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
     log_entry.term = current_term_;
     log_entry.op = kLock;
     bool lock_is_avilable = false;
-
-    mu_.Unlock();
-    leveldb::Status s;
-    std::string old_locker_session;
-    std::string value;
-    LogOperation op;
-    s = data_store_->Get(leveldb::ReadOptions(), key, &value);
-    ParseValue(value, op, old_locker_session);
-    if (!s.ok()) {
-        lock_is_avilable = true;
-    } else {
-        if (op != kLock) {
-            lock_is_avilable = false;
-        } else {
-            MutexLock lock(&sessions_mu_);
-            SessionIDIndex& id_index = sessions_.get<0>();
-            SessionIDIndex::iterator old_it = id_index.find(old_locker_session);
-            SessionIDIndex::iterator self_it = id_index.find(session_id);
-            if (old_it == sessions_.end() //expired session
-                && self_it != sessions_.end()) { 
-                lock_is_avilable = true;
-            }
-        }
-    }
-    mu_.Lock();
-
+    lock_is_avilable = LockIsAvilable(key, session_id);
     if (lock_is_avilable) {
         LOG(INFO, "lock key :%s, session:%s",
                    key.c_str(),
                    session_id.c_str());
+        std::string type_and_value;
+        type_and_value.append(1, static_cast<char>(kLock));
+        type_and_value.append(session_id);
+        leveldb::Status st = data_store_->Put(leveldb::WriteOptions(),
+                                              key, type_and_value);
+        assert(st.ok());
         binlogger_->AppendEntry(log_entry);
         int64_t cur_index = binlogger_->GetLength() - 1;
         ClientAck& ack = client_ack_[cur_index];
@@ -1158,6 +1181,7 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
         ParseValue(value, op, real_value);
         if (op == kLock) {
             if (IsExpiredSession(real_value)) {
+                LOG(INFO, "expired value: %s", real_value.c_str());
                 continue;
             }
         }

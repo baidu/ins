@@ -24,6 +24,11 @@ void my_watch_cb(const WatchParam& param, SDKError error) {
     }
 }
 
+void on_session_timeout() {
+    fprintf(stderr, "in session timeout\n");
+    exit(1);
+}
+
 int main(int argc, char* argv[]) {
     std::vector<std::string> members;
     if (argc < 2) {
@@ -79,6 +84,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "watch test\n");
         InsSDK::ParseFlagFromArgs(argc, argv, &members);
         InsSDK sdk(members);
+        sdk.RegisterSessionTimeout(on_session_timeout);
         char key_buf[1024] = {'\0'};
         SDKError err;
         for (int i=1; i<=1000; i++) {

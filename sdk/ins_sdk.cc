@@ -34,8 +34,15 @@ void InsSDK::ParseFlagFromArgs(int argc, char* argv[],
                  boost::is_any_of(","), boost::token_compress_on);
     if (members->size() < 1) {
         LOG(FATAL, "invalid cluster size");
-        exit(1);
+        abort();
     }
+}
+
+InsSDK::InsSDK(const std::string& server_list) { //sperated by comma
+    std::vector<std::string> members;
+    boost::split(members, server_list,
+                 boost::is_any_of(","), boost::token_compress_on);
+    Init(members);
 }
 
 InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
@@ -43,9 +50,20 @@ InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
                                                           keep_alive_pool_(NULL),
                                                           stop_(false),
                                                           keep_watch_pool_(NULL) {
+    Init(members);
+}
+
+void InsSDK::Init(const std::vector<std::string>& members) {
+    rpc_client_ = NULL;
+    mu_ = NULL;
+    keep_alive_pool_ = NULL;
+    stop_ = false;
+    keep_watch_pool_ = NULL;
+    handle_session_timeout_ = NULL;
+    last_succ_alive_timestamp_ = ins_common::timer::get_micros();
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
-        exit(1);
+        abort();
     }
     rpc_client_ = new galaxy::RpcClient();
     mu_ = new Mutex();
@@ -413,7 +431,7 @@ void InsSDK::KeepAliveTask() {
         MutexLock lock(mu_);
         if (stop_) {
             return;
-        }
+        }  
     }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
@@ -426,7 +444,7 @@ void InsSDK::KeepAliveTask() {
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::KeepAliveRequest request;
         galaxy::ins::KeepAliveResponse response;
-        request.set_session_id(session_id_);
+        request.set_session_id(GetSessionID());
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::KeepAlive,
                                            &request, &response, 2, 1);
         if (!ok) {
@@ -438,6 +456,7 @@ void InsSDK::KeepAliveTask() {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
+                last_succ_alive_timestamp_ = ins_common::timer::get_micros();
             }
             break;
         } else {
@@ -452,12 +471,35 @@ void InsSDK::KeepAliveTask() {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
+                        last_succ_alive_timestamp_ = ins_common::timer::get_micros();
                     }
                     break;
                 }
             }
         }
     } // end of for
+    
+    bool session_expire = false;
+    {
+        MutexLock lock(mu_);
+        int64_t now = ins_common::timer::get_micros();
+        int64_t span = now - last_succ_alive_timestamp_;
+        if (span > 30000000) {// 30 seconds
+            if (handle_session_timeout_) { //session timeout callback
+                mu_->Unlock();
+                LOG(INFO, "call user callback of session timeout: %x",
+                    handle_session_timeout_);
+                handle_session_timeout_();
+                mu_->Lock();
+            }
+            session_expire = true;
+        }
+    }
+    if (session_expire) {
+        MakeSessionID();
+        LOG(INFO, "create a new session: %s", GetSessionID().c_str());
+    }
+    
     keep_alive_pool_->DelayTask(2000,
         boost::bind(&InsSDK::KeepAliveTask, this)
     );
@@ -596,7 +638,7 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
         galaxy::ins::LockRequest request;
         galaxy::ins::LockResponse response;
         request.set_key(key);
-        request.set_session_id(session_id_);
+        request.set_session_id(GetSessionID());
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Lock,
                                            &request, &response, 2, 1);
         if (!ok) {
@@ -647,7 +689,7 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
         galaxy::ins::UnLockRequest request;
         galaxy::ins::UnLockResponse response;
         request.set_key(key);
-        request.set_session_id(session_id_);
+        request.set_session_id(GetSessionID());
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::UnLock,
                                           &request, &response, 2, 1);
         if (!ok) {
@@ -710,7 +752,15 @@ bool InsSDK::CleanBinlog(const std::string& server_id,
 }
 
 std::string InsSDK::GetSessionID() {
+    MutexLock lock(mu_);
     return session_id_;
+}
+
+void InsSDK::RegisterSessionTimeout(void (*handle_session_timeout)()) {
+    assert(handle_session_timeout);
+    MutexLock lock(mu_);
+    handle_session_timeout_ = handle_session_timeout;
+    LOG(INFO, "session timeout handler: %x", handle_session_timeout_);
 }
 
 ScanResult::ScanResult(InsSDK* sdk) : offset_(0),

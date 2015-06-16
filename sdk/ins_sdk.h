@@ -68,6 +68,7 @@ public:
     static void ParseFlagFromArgs(int argc, char* argv[],
                                   std::vector<std::string>* members);
     InsSDK(const std::vector<std::string>& members);
+    InsSDK(const std::string& server_list); //seperated by comma
     ~InsSDK();
     bool ShowCluster(std::vector<ClusterNodeInfo>* cluster_info);
     bool Put(const std::string& key, const std::string& value, SDKError* error);
@@ -85,17 +86,18 @@ public:
                void* context, 
                SDKError* error);
     bool Lock(const std::string& key, SDKError* error); //may block
+    bool TryLock(const std::string& key, SDKError *error); //none block
     bool UnLock(const std::string& key, SDKError* error);
     bool CleanBinlog(const std::string& server_id,
                      int64_t end_index, 
                      SDKError* error);
     std::string GetSessionID();
-    
+    void RegisterSessionTimeout(void (*handle_session_timeout)());
     static std::string StatusToString(int32_t status);
 
 private:
+    void Init(const std::vector<std::string>& members);
     void PrepareServerList(std::vector<std::string>& server_list);
-    bool TryLock(const std::string& key, SDKError *error);
     void KeepAliveTask();
     void KeepWatchTask(const std::string& key);
     void MakeSessionID();
@@ -115,6 +117,8 @@ private:
     std::map<std::string, WatchCallback> watch_cbs_;
     std::map<std::string, void*> watch_ctx_;
     ins_common::ThreadPool* keep_watch_pool_;
+    void (*handle_session_timeout_) ();
+    int64_t last_succ_alive_timestamp_;
 };
 
 class ScanResult {
