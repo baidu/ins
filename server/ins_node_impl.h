@@ -258,6 +258,7 @@ private:
     std::map<std::string, std::vector<std::string> > session_locks_;
     Mutex session_locks_mu_;
     ThreadPool binlog_cleaner_;
+    bool single_node_mode_;
 };
 
 void GetHostName(std::string* hostname);

@@ -47,7 +47,8 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                               heartbeat_read_timestamp_(0),
                               in_safe_mode_(true),
                               commit_index_(-1),
-                              last_applied_index_(-1) {
+                              last_applied_index_(-1),
+                              single_node_mode_(false){
     srand(time(NULL));
     replication_cond_ = new CondVar(&mu_);
     commit_cond_ = new CondVar(&mu_);
@@ -70,6 +71,10 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
     if (members_.size() > static_cast<size_t>(FLAGS_max_cluster_size)) {
         LOG(FATAL, "cluster size is larger than configuration: %d > %d",
             members_.size(), FLAGS_max_cluster_size);
+        exit(-1);
+    }
+    if (members_.size() == 1) {
+        single_node_mode_ = true;
     }
     std::string sub_dir = self_id_;
     boost::replace_all(sub_dir, ":", "_");
@@ -511,7 +516,7 @@ void InsNodeImpl::GetLastLogIndexAndTerm(int64_t* last_log_index,
 
 void InsNodeImpl::TryToBeLeader() {
     MutexLock lock(&mu_);
-    if (members_.size() == 1) { //single node mode
+    if (single_node_mode_) { //single node mode
         status_ = kLeader;
         current_leader_ =  self_id_;
         in_safe_mode_ = false;
@@ -952,7 +957,7 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
     ack.done = done;
     ack.del_response = response;
     replication_cond_->Broadcast();
-    if (members_.size() == 1) { //single node cluster
+    if (single_node_mode_) { //single node cluster
         UpdateCommitIndex(binlogger_->GetLength() - 1);
     }
     return;
@@ -991,7 +996,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     ack.done = done;
     ack.response = response;
     replication_cond_->Broadcast();
-    if (members_.size() == 1) { //single node cluster
+    if (single_node_mode_) { //single node cluster
         UpdateCommitIndex(binlogger_->GetLength() - 1);
     }
     return;
@@ -1079,7 +1084,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
         ack.done = done;
         ack.lock_response = response;
         replication_cond_->Broadcast();
-        if (members_.size() == 1) { //single node cluster
+        if (single_node_mode_) { //single node cluster
             UpdateCommitIndex(binlogger_->GetLength() - 1);
         }
     } else {
@@ -1282,6 +1287,10 @@ void InsNodeImpl::RemoveExpiredSessions() {
             log_entry.op = kUnLock;
             binlogger_->AppendEntry(log_entry);   
         }
+        if (single_node_mode_) { //single node cluster
+            MutexLock lock(&mu_);
+            UpdateCommitIndex(binlogger_->GetLength() - 1);
+        }
     }
     session_checker_.DelayTask(2000, 
         boost::bind(&InsNodeImpl::RemoveExpiredSessions, this)
@@ -1461,7 +1470,7 @@ void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
     ack.done = done;
     ack.unlock_response = response;
     replication_cond_->Broadcast();
-    if (members_.size() == 1) { //single node cluster
+    if (single_node_mode_) { //single node cluster
         UpdateCommitIndex(binlogger_->GetLength() - 1);
     }
     return;
