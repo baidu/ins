@@ -407,6 +407,13 @@ bool InsSDK::Watch(const std::string& key,
                    WatchCallback user_callback, 
                    void* context,
                    SDKError* error) {
+    std::string old_value;
+    Get(key, &old_value, error);
+    if (*error != kOK && *error != kNoSuchKey) {
+        LOG(FATAL, "faild to issue a watch: %s", key.c_str());
+        return false;
+    }
+
     {
         MutexLock lock(mu_);
         watch_keys_.insert(key);
@@ -419,7 +426,7 @@ bool InsSDK::Watch(const std::string& key,
             is_keep_alive_bg_ = true;
         }
         keep_watch_pool_->AddTask(
-            boost::bind(&InsSDK::KeepWatchTask, this, key)
+            boost::bind(&InsSDK::KeepWatchTask, this, key, old_value)
         );
     }
     *error = kOK;
@@ -511,9 +518,6 @@ void InsSDK::KeepAliveTask() {
         {
             MutexLock lock(mu_);
             lock_keys_.clear();
-            watch_keys_.clear();
-            watch_cbs_.clear();
-            watch_ctx_.clear();
         }
     }
     
@@ -583,7 +587,7 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
     }
 }
 
-void InsSDK::KeepWatchTask(const std::string& key) {
+void InsSDK::KeepWatchTask(const std::string& key, const std::string& old_value) {
     {
         MutexLock lock(mu_);
         if (stop_) {
@@ -603,6 +607,7 @@ void InsSDK::KeepWatchTask(const std::string& key) {
     request->set_session_id(session_id_);
     std::string* kk = request->add_keys();
     *kk = key;
+    request->set_old_value(old_value);
     boost::function< void (const galaxy::ins::WatchRequest*,
                            galaxy::ins::WatchResponse*, 
                            bool, int) > callback;
@@ -611,7 +616,7 @@ void InsSDK::KeepWatchTask(const std::string& key) {
                               request, response, callback, 120, 1); 
                               //120s timeout for long polling
     keep_watch_pool_->DelayTask(115000, //115s timeout, double check
-        boost::bind(&InsSDK::KeepWatchTask, this, key)
+        boost::bind(&InsSDK::KeepWatchTask, this, key, old_value)
     );
 }
 

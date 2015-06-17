@@ -99,7 +99,7 @@ private:
     void Init(const std::vector<std::string>& members);
     void PrepareServerList(std::vector<std::string>& server_list);
     void KeepAliveTask();
-    void KeepWatchTask(const std::string& key);
+    void KeepWatchTask(const std::string& key, const std::string& old_value);
     void MakeSessionID();
     void KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                            galaxy::ins::WatchResponse* response,
