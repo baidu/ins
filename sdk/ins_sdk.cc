@@ -427,11 +427,16 @@ bool InsSDK::Watch(const std::string& key,
 }
 
 void InsSDK::KeepAliveTask() {
+    std::set<std::string> my_locks;
     {
         MutexLock lock(mu_);
         if (stop_) {
             return;
-        }  
+        }
+        std::set<std::string>::iterator it;
+        for (it = lock_keys_.begin(); it != lock_keys_.end(); it++) {
+            my_locks.insert(*it);
+        }
     }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
@@ -445,6 +450,11 @@ void InsSDK::KeepAliveTask() {
         galaxy::ins::KeepAliveRequest request;
         galaxy::ins::KeepAliveResponse response;
         request.set_session_id(GetSessionID());
+        std::set<std::string>::iterator si;
+        for (si = my_locks.begin(); si != my_locks.end(); si++) {
+            std::string* lock_key = request.add_locks();
+            *lock_key = *si;
+        }
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::KeepAlive,
                                            &request, &response, 2, 1);
         if (!ok) {
@@ -498,6 +508,13 @@ void InsSDK::KeepAliveTask() {
     if (session_expire) {
         MakeSessionID();
         LOG(INFO, "create a new session: %s", GetSessionID().c_str());
+        {
+            MutexLock lock(mu_);
+            lock_keys_.clear();
+            watch_keys_.clear();
+            watch_cbs_.clear();
+            watch_ctx_.clear();
+        }
     }
     
     keep_alive_pool_->DelayTask(2000,
@@ -622,6 +639,10 @@ bool InsSDK::Lock(const std::string& key, SDKError* error) {
     if (*error != kOK) {
         return false;
     }
+    {
+        MutexLock lock(mu_);
+        lock_keys_.insert(key);
+    }
     return true;
 }
 
@@ -701,6 +722,7 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
+                lock_keys_.erase(key);
             }
             *error = kOK;
             return true;
@@ -716,6 +738,7 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
+                        lock_keys_.erase(key);
                     }
                     *error = kOK;
                     return true;

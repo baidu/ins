@@ -114,6 +114,7 @@ private:
     bool is_keep_alive_bg_;
     bool stop_;
     std::set<std::string> watch_keys_;
+    std::set<std::string> lock_keys_;
     std::map<std::string, WatchCallback> watch_cbs_;
     std::map<std::string, void*> watch_ctx_;
     ins_common::ThreadPool* keep_watch_pool_;

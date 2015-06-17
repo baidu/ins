@@ -216,12 +216,12 @@ void InsNodeImpl::CommitIndexObserv() {
                     );
                     if (log_entry.op == kLock) {
                         MutexLock lock_sk(&session_locks_mu_);
-                        session_locks_[log_entry.value].push_back(log_entry.key);
+                        session_locks_[log_entry.value].insert(log_entry.key);
                     }
                     assert(s.ok());
                     break;
                 case kDel:
-                    LOG(DEBUG, "delete from data_store_, key: %s",
+                    LOG(INFO, "delete from data_store_, key: %s",
                         log_entry.key.c_str());
                     s = data_store_->Delete(leveldb::WriteOptions(),
                                              log_entry.key);
@@ -1181,7 +1181,7 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
         ParseValue(value, op, real_value);
         if (op == kLock) {
             if (IsExpiredSession(real_value)) {
-                LOG(INFO, "expired value: %s", real_value.c_str());
+                LOG(DEBUG, "expired value: %s", real_value.c_str());
                 continue;
             }
         }
@@ -1234,6 +1234,13 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
             id_index.insert(session);
         } else {
             id_index.replace(it, session);
+        }
+    }
+    {
+        MutexLock lock_sk(&session_locks_mu_);
+        session_locks_[session.session_id].clear();
+        for (int i = 0; i < request->locks_size(); i++) {
+            session_locks_[session.session_id].insert(request->locks(i));
         }
     }
     response->set_success(true);
@@ -1291,9 +1298,10 @@ void InsNodeImpl::RemoveExpiredSessions() {
         for ( ; it != expired_sessions.end(); it++){
             std::string session_id = *it;
             if (session_locks_.find(session_id) != session_locks_.end()) {
-                std::vector<std::string>& keys = session_locks_[session_id];
-                for(size_t i = 0; i < keys.size(); i++) {
-                    unlock_keys.push_back(std::make_pair(keys[i], session_id));
+                std::set<std::string>& keys = session_locks_[session_id];
+                std::set<std::string>::iterator jt = keys.begin();
+                for(; jt != keys.end(); jt++) {
+                    unlock_keys.push_back(std::make_pair(*jt, session_id));
                 }
                 session_locks_.erase(session_id);
             }

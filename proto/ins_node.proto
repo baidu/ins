@@ -137,6 +137,7 @@ message LockResponse {
 message KeepAliveRequest {
     required string session_id = 1;
     optional string host_name = 2;
+    repeated string locks = 3;
 }
 
 message KeepAliveResponse {
