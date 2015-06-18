@@ -1472,11 +1472,13 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
             leveldb::Status s;
             std::string raw_value;
             s = data_store_->Get(leveldb::ReadOptions(), key, &raw_value);
+            bool key_exist = s.ok();
             std::string real_value;
             LogOperation op;
             ParseValue(raw_value, op, real_value);
             LOG(INFO, "key:%s, fresh_v: %s", key.c_str(), real_value.c_str());
-            if (real_value != request->old_value()) {
+            if (real_value != request->old_value() || 
+                key_exist != request->key_exist()) {
                 TriggerEventWithParent(key, real_value, s.IsNotFound());
             } else if (op == kLock && IsExpiredSession(real_value)) {
                 TriggerEventWithParent(key, "", true);

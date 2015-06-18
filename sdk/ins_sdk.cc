@@ -413,7 +413,10 @@ bool InsSDK::Watch(const std::string& key,
         LOG(FATAL, "faild to issue a watch: %s", key.c_str());
         return false;
     }
-
+    bool key_exist = true;
+    if (*error == kNoSuchKey) {
+        key_exist = false;
+    }
     {
         MutexLock lock(mu_);
         watch_keys_.insert(key);
@@ -426,7 +429,7 @@ bool InsSDK::Watch(const std::string& key,
             is_keep_alive_bg_ = true;
         }
         keep_watch_pool_->AddTask(
-            boost::bind(&InsSDK::KeepWatchTask, this, key, old_value)
+            boost::bind(&InsSDK::KeepWatchTask, this, key, old_value, key_exist)
         );
     }
     *error = kOK;
@@ -587,7 +590,9 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
     }
 }
 
-void InsSDK::KeepWatchTask(const std::string& key, const std::string& old_value) {
+void InsSDK::KeepWatchTask(const std::string& key, 
+                           const std::string& old_value,
+                           bool key_exist) {
     {
         MutexLock lock(mu_);
         if (stop_) {
@@ -608,6 +613,7 @@ void InsSDK::KeepWatchTask(const std::string& key, const std::string& old_value)
     std::string* kk = request->add_keys();
     *kk = key;
     request->set_old_value(old_value);
+    request->set_key_exist(key_exist);
     boost::function< void (const galaxy::ins::WatchRequest*,
                            galaxy::ins::WatchResponse*, 
                            bool, int) > callback;
@@ -616,7 +622,7 @@ void InsSDK::KeepWatchTask(const std::string& key, const std::string& old_value)
                               request, response, callback, 120, 1); 
                               //120s timeout for long polling
     keep_watch_pool_->DelayTask(115000, //115s timeout, double check
-        boost::bind(&InsSDK::KeepWatchTask, this, key, old_value)
+        boost::bind(&InsSDK::KeepWatchTask, this, key, old_value, key_exist)
     );
 }
 
