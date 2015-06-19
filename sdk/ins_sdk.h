@@ -101,10 +101,8 @@ private:
     void KeepAliveTask();
     void KeepWatchTask(const std::string& key, 
                        const std::string& old_value,
-                       bool key_exist);
-    void KeepWatchTaskInternal(const std::string& key,
-                               const std::string& old_value,
-                               bool key_exist);
+                       bool key_exist,
+                       std::string session_id);
     void MakeSessionID();
     void KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                            galaxy::ins::WatchResponse* response,

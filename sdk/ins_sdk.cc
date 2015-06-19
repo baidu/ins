@@ -20,6 +20,7 @@
 
 DECLARE_string(cluster_members);
 DECLARE_int32(ins_watch_timeout);
+DECLARE_int32(ins_backup_watch_timeout);
 
 namespace galaxy {
 namespace ins {
@@ -430,7 +431,8 @@ bool InsSDK::Watch(const std::string& key,
             is_keep_alive_bg_ = true;
         }
         keep_watch_pool_->AddTask(
-            boost::bind(&InsSDK::KeepWatchTask, this, key, old_value, key_exist)
+            boost::bind(&InsSDK::KeepWatchTask, this, key,
+                        old_value, key_exist, session_id_)
         );
     }
     *error = kOK;
@@ -575,6 +577,17 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
         server_id = server_list[s_no];
     }
     if (!response_ptr->canceled()) { //retry, if not cancel
+        if (request->session_id() != GetSessionID()) {
+            LOG(INFO, "callback, no retry on expried watch");
+            return;        
+        }
+        {
+            MutexLock lock(mu_);
+            if (watch_keys_.find(request->key()) == watch_keys_.end()) {
+                LOG(INFO, "watcher has been triggered");
+                return;
+            }
+        }
         LOG(INFO, "watch again to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub *stub;
         rpc_client_->GetStub(server_id, &stub);
@@ -596,13 +609,24 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
 
 void InsSDK::KeepWatchTask(const std::string& key, 
                            const std::string& old_value,
-                           bool key_exist) {
+                           bool key_exist,
+                           std::string session_id) {
     {
         MutexLock lock(mu_);
         if (stop_) {
             return;
         }
     }
+
+    if (session_id != GetSessionID()) {
+        LOG(INFO, "expried watch on %s", key.c_str());
+        return;
+    }
+
+    keep_watch_pool_->DelayTask(FLAGS_ins_backup_watch_timeout * 1000, //ms
+        boost::bind(&InsSDK::KeepWatchTask, this, key,
+                    old_value, key_exist, session_id)
+    );
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
     int s_no = (int32_t) (server_list.size() * rand()/(RAND_MAX+1.0));
