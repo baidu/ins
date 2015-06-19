@@ -26,9 +26,6 @@ namespace galaxy {
 namespace ins {
 namespace sdk {
 
-const static int32_t watch_period = 2000; //ms
-const static int32_t max_watch_rpc_error = 15; 
-
 void InsSDK::ParseFlagFromArgs(int argc, char* argv[], 
                                std::vector<std::string> * members) {
     google::ParseCommandLineFlags(&argc, &argv, true);
@@ -607,6 +604,21 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
     }
 }
 
+void InsSDK::BackupWatchTask(const std::string& key) {
+    std::string old_value;
+    SDKError error;
+    Get(key, &old_value, &error);
+    if (error != kOK && error != kNoSuchKey) {
+        LOG(FATAL, "faild to issue a backup watch: %s", key.c_str());
+        return;
+    }
+    bool key_exist = true;
+    if (error == kNoSuchKey) {
+        key_exist = false;
+    }
+    KeepWatchTask(key, old_value, key_exist, GetSessionID());
+}
+
 void InsSDK::KeepWatchTask(const std::string& key, 
                            const std::string& old_value,
                            bool key_exist,
@@ -624,8 +636,7 @@ void InsSDK::KeepWatchTask(const std::string& key,
     }
 
     keep_watch_pool_->DelayTask(FLAGS_ins_backup_watch_timeout * 1000, //ms
-        boost::bind(&InsSDK::KeepWatchTask, this, key,
-                    old_value, key_exist, session_id)
+        boost::bind(&InsSDK::BackupWatchTask, this, key)
     );
     std::vector<std::string> server_list;
     PrepareServerList(server_list);

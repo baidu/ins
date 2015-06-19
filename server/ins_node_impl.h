@@ -211,6 +211,10 @@ private:
     void TriggerEventWithParent(const std::string& key,
                                 const std::string& value,
                                 bool deleted);
+    void TriggerEventBySessionAndKey(const std::string& session_id,
+                                     const std::string& key,
+                                     const std::string& value,
+                                     bool deleted);
     void RemoveEventBySessionAndKey(const std::string& session_id,
                                     const std::string& key);
     void DelBinlog(int64_t index);

@@ -1375,18 +1375,20 @@ void InsNodeImpl::TriggerEvent(const std::string& watch_key,
     if (it_start != key_idx.end() 
         && it_start->key == watch_key) {
         WatchEventKeyIndex::iterator it_end = key_idx.upper_bound(watch_key);
+        int event_count = 0;
         for (WatchEventKeyIndex::iterator it = it_start;
              it != it_end; it++) {
-            LOG(INFO, "trigger watch event: %s on %s",
-                it->key.c_str(), it->session_id.c_str());
             it->ack->response->set_watch_key(watch_key);
             it->ack->response->set_key(key);
             it->ack->response->set_value(value);
             it->ack->response->set_deleted(deleted);
             it->ack->response->set_success(true);
             it->ack->response->set_leader_id("");
+            event_count++;
         }
         key_idx.erase(it_start, it_end);
+        LOG(INFO, "trigger #%d watch event: %s",
+                  event_count, key.c_str());
     } else {
         LOG(DEBUG, "watch list: no such key : %s", key.c_str());
     }
@@ -1408,6 +1410,38 @@ void InsNodeImpl::RemoveEventBySessionAndKey(const std::string& session_id,
                  LOG(DEBUG, "remove watch event: %s on %s",
                      it->key.c_str(), it->session_id.c_str());
                 it->ack->response->set_canceled(true);
+                it = session_idx.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
+}
+
+
+void InsNodeImpl::TriggerEventBySessionAndKey(const std::string& session_id,
+                                              const std::string& key,
+                                              const std::string& value,
+                                              bool deleted) {
+    MutexLock lock(&watch_mu_);
+    WatchEventSessionIndex& session_idx = watch_events_.get<1>();
+    WatchEventSessionIndex::iterator it_start = session_idx.lower_bound(session_id);
+    if (it_start != session_idx.end() 
+        && it_start->session_id == session_id) {
+        WatchEventSessionIndex::iterator it_end = 
+              session_idx.upper_bound(session_id);
+        WatchEventSessionIndex::iterator it_right = it_start;
+        for (WatchEventSessionIndex::iterator it = it_start;
+             it != it_end; ) {
+            if (it->key == key) {
+                LOG(INFO, "trigger watch event: %s on %s",
+                           it->key.c_str(), it->session_id.c_str());
+                it->ack->response->set_watch_key(key);
+                it->ack->response->set_key(key);
+                it->ack->response->set_value(value);
+                it->ack->response->set_deleted(deleted);
+                it->ack->response->set_success(true);
+                it->ack->response->set_leader_id("");
                 it = session_idx.erase(it);
             } else {
                 it++;
@@ -1476,12 +1510,17 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
         std::string real_value;
         LogOperation op;
         ParseValue(raw_value, op, real_value);
-        LOG(INFO, "key:%s, fresh_v: %s", key.c_str(), real_value.c_str());
         if (real_value != request->old_value() || 
             key_exist != request->key_exist()) {
-            TriggerEventWithParent(key, real_value, s.IsNotFound());
+            LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
+                key.c_str(), real_value.c_str(), request->old_value().c_str());
+            TriggerEventBySessionAndKey(request->session_id(),
+                                        key, real_value, s.IsNotFound());
         } else if (op == kLock && IsExpiredSession(real_value)) {
-            TriggerEventWithParent(key, "", true);
+            LOG(INFO, "key(lock):%s, new_v: %s, old_v:%s", 
+                key.c_str(), real_value.c_str(), request->old_value().c_str());
+            TriggerEventBySessionAndKey(request->session_id(),
+                                        key, "", true);
         }
     }
 }

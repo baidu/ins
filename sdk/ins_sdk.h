@@ -108,6 +108,7 @@ private:
                            galaxy::ins::WatchResponse* response,
                            bool failed, int error,
                            std::string server_id);
+    void BackupWatchTask(const std::string& key);
     std::string leader_id_;
     std::string session_id_;
     std::vector<std::string> members_;
