@@ -84,8 +84,8 @@ void Logv(const char* format, va_list ap) {
         }
 
         assert(p <= limit);
-        fwrite(base, 1, p - base, stdout);
-        fflush(stdout);
+        fwrite(base, 1, p - base, stderr);
+        fflush(stderr);
         if (base != buffer) {
             delete[] base;
         }
