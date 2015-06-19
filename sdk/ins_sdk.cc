@@ -590,10 +590,10 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
     }
 }
 
-void InsSDK::KeepWatchTask(const std::string& key, 
-                           const std::string& old_value,
-                           bool key_exist) {
-    {
+void InsSDK::KeepWatchTaskInternal(const std::string& key,
+                                   const std::string& old_value,
+                                   bool key_exist) {
+   {
         MutexLock lock(mu_);
         if (stop_) {
             return;
@@ -620,9 +620,15 @@ void InsSDK::KeepWatchTask(const std::string& key,
     callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
     rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
                               request, response, callback, 120, 1); 
-                              //120s timeout for long polling
+                              //120s timeout for long polling 
+}
+
+void InsSDK::KeepWatchTask(const std::string& key, 
+                           const std::string& old_value,
+                           bool key_exist) {
+    KeepWatchTaskInternal(key, old_value, key_exist);
     keep_watch_pool_->DelayTask(115000, //115s timeout, double check
-        boost::bind(&InsSDK::KeepWatchTask, this, key, old_value, key_exist)
+        boost::bind(&InsSDK::KeepWatchTaskInternal, this, key, old_value, key_exist)
     );
 }
 
