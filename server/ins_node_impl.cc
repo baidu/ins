@@ -1456,36 +1456,34 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
     }
     
     WatchAck::Ptr ack_obj(new WatchAck(response, done));
-    for(int i=0 ; i < request->keys_size(); i++) {
-        std::string key = request->keys(i);
-        {
-            MutexLock lock(&watch_mu_);
-            WatchEvent watch_event;
-            watch_event.key = key;
-            watch_event.session_id = request->session_id();
-            watch_event.ack = ack_obj;
-            RemoveEventBySessionAndKey(watch_event.session_id, watch_event.key);
-            watch_events_.insert(watch_event);
-        }
-        int64_t tm_now = ins_common::timer::get_micros(); 
-        if (tm_now - leader_start_timestamp_ > FLAGS_session_expire_timeout) {
-            leveldb::Status s;
-            std::string raw_value;
-            s = data_store_->Get(leveldb::ReadOptions(), key, &raw_value);
-            bool key_exist = s.ok();
-            std::string real_value;
-            LogOperation op;
-            ParseValue(raw_value, op, real_value);
-            LOG(INFO, "key:%s, fresh_v: %s", key.c_str(), real_value.c_str());
-            if (real_value != request->old_value() || 
-                key_exist != request->key_exist()) {
-                TriggerEventWithParent(key, real_value, s.IsNotFound());
-            } else if (op == kLock && IsExpiredSession(real_value)) {
-                TriggerEventWithParent(key, "", true);
-            }
+    
+    std::string key = request->key();
+    {
+        MutexLock lock(&watch_mu_);
+        WatchEvent watch_event;
+        watch_event.key = key;
+        watch_event.session_id = request->session_id();
+        watch_event.ack = ack_obj;
+        RemoveEventBySessionAndKey(watch_event.session_id, watch_event.key);
+        watch_events_.insert(watch_event);
+    }
+    int64_t tm_now = ins_common::timer::get_micros(); 
+    if (tm_now - leader_start_timestamp_ > FLAGS_session_expire_timeout) {
+        leveldb::Status s;
+        std::string raw_value;
+        s = data_store_->Get(leveldb::ReadOptions(), key, &raw_value);
+        bool key_exist = s.ok();
+        std::string real_value;
+        LogOperation op;
+        ParseValue(raw_value, op, real_value);
+        LOG(INFO, "key:%s, fresh_v: %s", key.c_str(), real_value.c_str());
+        if (real_value != request->old_value() || 
+            key_exist != request->key_exist()) {
+            TriggerEventWithParent(key, real_value, s.IsNotFound());
+        } else if (op == kLock && IsExpiredSession(real_value)) {
+            TriggerEventWithParent(key, "", true);
         }
     }
-    
 }
 
 void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,

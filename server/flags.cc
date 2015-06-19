@@ -19,3 +19,4 @@ DEFINE_string(ins_end_key, "", "end key of scan (excluded)");
 DEFINE_string(ins_value, "v123", "");
 DEFINE_int64(ins_rm_binlog_index, 0, "end index of binlog clean operation");
 DEFINE_string(ins_rm_binlog_server_id, "", "servier id of binlog clean operation");
+DEFINE_int32(ins_watch_timeout, 120, "wath timeout(seconds)");

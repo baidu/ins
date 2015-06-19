@@ -19,6 +19,7 @@
 #include "proto/ins_node.pb.h"
 
 DECLARE_string(cluster_members);
+DECLARE_int32(ins_watch_timeout);
 
 namespace galaxy {
 namespace ins {
@@ -574,7 +575,7 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
         server_id = server_list[s_no];
     }
     if (!response_ptr->canceled()) { //retry, if not cancel
-        LOG(INFO, "rpc to %s", server_id.c_str());
+        LOG(INFO, "watch again to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub *stub;
         rpc_client_->GetStub(server_id, &stub);
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
@@ -586,14 +587,17 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                                bool, int) > callback;
         callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
         rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
-                                  req, rsps, callback, 120, 1); //120s timeout
+                                  req, rsps, callback, 
+                                  FLAGS_ins_watch_timeout, 1); //120s timeout
+    } else {
+        LOG(INFO, "the previous watch is canceled");
     }
 }
 
-void InsSDK::KeepWatchTaskInternal(const std::string& key,
-                                   const std::string& old_value,
-                                   bool key_exist) {
-   {
+void InsSDK::KeepWatchTask(const std::string& key, 
+                           const std::string& old_value,
+                           bool key_exist) {
+    {
         MutexLock lock(mu_);
         if (stop_) {
             return;
@@ -603,15 +607,14 @@ void InsSDK::KeepWatchTaskInternal(const std::string& key,
     PrepareServerList(server_list);
     int s_no = (int32_t) (server_list.size() * rand()/(RAND_MAX+1.0));
     std::string server_id = server_list[s_no];
-    LOG(INFO, "rpc to %s", server_id.c_str());
+    LOG(INFO, "watch to %s", server_id.c_str());
     galaxy::ins::InsNode_Stub *stub;
     rpc_client_->GetStub(server_id, &stub);
     boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
     galaxy::ins::WatchRequest* request = new galaxy::ins::WatchRequest();
     galaxy::ins::WatchResponse* response = new galaxy::ins::WatchResponse();
-    request->set_session_id(session_id_);
-    std::string* kk = request->add_keys();
-    *kk = key;
+    request->set_session_id(GetSessionID());
+    request->set_key(key);
     request->set_old_value(old_value);
     request->set_key_exist(key_exist);
     boost::function< void (const galaxy::ins::WatchRequest*,
@@ -619,17 +622,8 @@ void InsSDK::KeepWatchTaskInternal(const std::string& key,
                            bool, int) > callback;
     callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
     rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
-                              request, response, callback, 120, 1); 
-                              //120s timeout for long polling 
-}
-
-void InsSDK::KeepWatchTask(const std::string& key, 
-                           const std::string& old_value,
-                           bool key_exist) {
-    KeepWatchTaskInternal(key, old_value, key_exist);
-    keep_watch_pool_->DelayTask(115000, //115s timeout, double check
-        boost::bind(&InsSDK::KeepWatchTaskInternal, this, key, old_value, key_exist)
-    );
+                              request, response, callback, 
+                              FLAGS_ins_watch_timeout, 1); 
 }
 
 bool InsSDK::Lock(const std::string& key, SDKError* error) {
