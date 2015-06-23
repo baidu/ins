@@ -17,4 +17,4 @@ install:
     - tar xf v2.1.2.tar.gz
     - ( cd gflags-2.1.2 && cmake -DGFLAGS_NAMESPACE=google && make -j4 && sudo make install )
 script: 
-    - make -j4 && make cp
+    - make -j4 && make install
