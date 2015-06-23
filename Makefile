@@ -100,6 +100,8 @@ sdk: $(LIB)
 	mkdir -p output/lib
 	cp sdk/ins_sdk.h output/include
 	cp libins_sdk.a output/lib
+	cp sdk/ins_sdk.h $(PREFIX)/include
+	cp libins_sdk.a $(PREFIX)/lib
 
 install: $(LIB)
 	cp sdk/ins_sdk.h $(PREFIX)/include
