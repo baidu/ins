@@ -1403,7 +1403,6 @@ void InsNodeImpl::RemoveEventBySessionAndKey(const std::string& session_id,
         && it_start->session_id == session_id) {
         WatchEventSessionIndex::iterator it_end = 
               session_idx.upper_bound(session_id);
-        WatchEventSessionIndex::iterator it_right = it_start;
         for (WatchEventSessionIndex::iterator it = it_start;
              it != it_end; ) {
             if (it->key == key) {
@@ -1430,7 +1429,6 @@ void InsNodeImpl::TriggerEventBySessionAndKey(const std::string& session_id,
         && it_start->session_id == session_id) {
         WatchEventSessionIndex::iterator it_end = 
               session_idx.upper_bound(session_id);
-        WatchEventSessionIndex::iterator it_right = it_start;
         for (WatchEventSessionIndex::iterator it = it_start;
              it != it_end; ) {
             if (it->key == key) {

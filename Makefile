@@ -68,7 +68,7 @@ ins: $(INS_OBJ) $(OBJS)
 ins_cli: $(INS_CLI_OBJ) $(OBJS)
 	$(CXX) $(INS_CLI_OBJ) $(OBJS) -o $@ $(LDFLAGS)
 
-sample: $(SAMPLE_OBJ) $(SDK_OBJ)
+sample: $(SAMPLE_OBJ) $(SDK_OBJ) $(LIB)
 	$(CXX) $(SAMPLE_OBJ) $(LIB) -o $@ $(LDFLAGS)
 
 $(LIB): $(SDK_OBJ)
