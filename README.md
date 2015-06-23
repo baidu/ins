@@ -10,7 +10,7 @@ integrated naming service (based on raft)
 
 # build default
 * read .travis.yml and install the depends libs
-* make && make cp
+* make && make install
 
 # try it
 
