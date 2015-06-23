@@ -105,7 +105,7 @@ install: $(LIB)
 	cp sdk/ins_sdk.h $(PREFIX)/include
 	cp $(LIB) $(PREFIX)/lib
 
-install_sdk: $(sdk)
+install_sdk: $(LIB)
 	cp sdk/ins_sdk.h $(PREFIX)/include
 	cp libins_sdk.a $(PREFIX)/lib
 
