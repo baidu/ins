@@ -7,7 +7,7 @@ SNAPPY_PATH=./thirdparty/snappy/
 PROTOBUF_PATH=./thirdparty/protobuf/
 PROTOC_PATH=./thirdparty/protobuf/bin/
 PROTOC=protoc
-PBRPC_PATH=./thirdparty/sofa-pbrpc/output/
+PBRPC_PATH ?=./thirdparty/sofa-pbrpc/output/
 BOOST_PATH=./thirdparty/boost/
 GFLAGS_PATH=./thirdparty/gflags/
 LEVELDB_PATH=./thirdparty/leveldb/
@@ -92,6 +92,12 @@ cp: $(BIN) $(LIB)
 	cp ins output/bin
 	cp ins_cli output/bin
 	cp sample output/bin
+	cp sdk/ins_sdk.h output/include
+	cp libins_sdk.a output/lib
+
+sdk: $(LIB)
+	mkdir -p output/include
+	mkdir -p output/lib
 	cp sdk/ins_sdk.h output/include
 	cp libins_sdk.a output/lib
 
