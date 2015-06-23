@@ -13,14 +13,14 @@ GFLAGS_PATH=./thirdparty/gflags/
 LEVELDB_PATH=./thirdparty/leveldb/
 PREFIX=/usr/local/
 
-INCLUDE_PATH = -I./ -I$(PROTOBUF_PATH)/include \
+INCLUDE_PATH = -I./ -I$(PREFIX)/include -I$(PROTOBUF_PATH)/include \
                -I$(PBRPC_PATH)/include \
                -I$(SNAPPY_PATH)/include \
 	       -I$(GFLAGS_PATH)/include \
 	       -I$(LEVELDB_PATH)/include \
                -I$(BOOST_PATH)/include
 
-LDFLAGS = -L$(PROTOBUF_PATH)/lib \
+LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(PBRPC_PATH)/lib -lsofa-pbrpc -lprotobuf \
           -L$(SNAPPY_PATH)/lib -lsnappy \
           -L$(GFLAGS_PATH)/lib -lgflags \
