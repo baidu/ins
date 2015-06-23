@@ -92,7 +92,7 @@ public:
                      int64_t end_index, 
                      SDKError* error);
     std::string GetSessionID();
-    void RegisterSessionTimeout(void (*handle_session_timeout)());
+    void RegisterSessionTimeout(void (*handle_session_timeout)(void*), void* ctx );
     static std::string StatusToString(int32_t status);
 
 private:
@@ -122,7 +122,8 @@ private:
     std::map<std::string, WatchCallback> watch_cbs_;
     std::map<std::string, void*> watch_ctx_;
     ins_common::ThreadPool* keep_watch_pool_;
-    void (*handle_session_timeout_) ();
+    void (*handle_session_timeout_) (void*);
+    void * session_timeout_ctx_;
     int64_t last_succ_alive_timestamp_;
 };
 
