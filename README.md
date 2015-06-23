@@ -1,5 +1,5 @@
-# ins
-integrated naming service (based on raft)
+# INS
+Ivy Naming Service (based on Raft)
 
 [![Build Status](https://travis-ci.org/fxsjy/ins.svg?branch=master)](https://travis-ci.org/fxsjy/ins)
 
