@@ -33,6 +33,7 @@ https://github.com/fxsjy/ins/wiki
 	  watch (key) [event will be triggered once value changed or deleted]
 	  lock (key) [lock on specific key]
 	  enter quit to exit shell
+  ![Screenshot](https://raw.githubusercontent.com/fxsjy/thirdparty/master/ins_screen_shot.png)
   
 # 读写性能 (multiple clients， 5 cluster-nodes in LAN)
 * 53200 read per second
