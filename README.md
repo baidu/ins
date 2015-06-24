@@ -1,5 +1,6 @@
-# INS
-Ivy Naming Service (based on Raft)
+# iNexus
+iNexus is a high aviable key-value store, which can be used to coordinate large scale services.
+(based on Raft protocol)
 
 [![Build Status](https://travis-ci.org/fxsjy/ins.svg?branch=master)](https://travis-ci.org/fxsjy/ins)
 
