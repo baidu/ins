@@ -1,19 +1,23 @@
 # iNexus
 iNexus is a high available key-value store, which can be used to coordinate large scale services.
+iNexus (简称ins) 是一个基于Raft协议实现的高可用的分布式Key-Value数据库，支持数据变更通知（Watch）和分布式锁，可用于大型分布式系统的协调工作
 (based on Raft protocol)
 
 [![Build Status](https://travis-ci.org/fxsjy/ins.svg?branch=master)](https://travis-ci.org/fxsjy/ins)
+
+# 使用说明
+https://github.com/fxsjy/ins/wiki
 
 # build for Baiduer
 * comake2 -UB
 * comake2
 * make
 
-# build default
+# 通用的编译方式
 * read .travis.yml and install the depends libs
 * make && make install
 
-# try it
+# 快速体验（只需要一台机器，通过多个进程模拟分布式）
 
 	cd sandbox
 	./start_all.sh
@@ -29,7 +33,7 @@ iNexus is a high available key-value store, which can be used to coordinate larg
 	  lock (key) [lock on specific key]
 	  enter quit to exit shell
   
-# performance (multiple clients， 5 cluster-nodes in LAN)
+# 读写性能 (multiple clients， 5 cluster-nodes in LAN)
 * 55200 read per second
 * 5300 write per second
 
