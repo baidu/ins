@@ -35,8 +35,8 @@ https://github.com/fxsjy/ins/wiki
 	  enter quit to exit shell
   
 # 读写性能 (multiple clients， 5 cluster-nodes in LAN)
-* 55200 read per second
-* 5300 write per second
+* 53200 read per second
+* 9100 write per second
 
 # use the SDK (client library)
 * include [ins_sdk.h](https://github.com/fxsjy/ins/blob/master/sdk/ins_sdk.h) , link the static library libins_sdk.a
