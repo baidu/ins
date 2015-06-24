@@ -1,5 +1,5 @@
 # iNexus
-iNexus is a high aviable key-value store, which can be used to coordinate large scale services.
+iNexus is a high available key-value store, which can be used to coordinate large scale services.
 (based on Raft protocol)
 
 [![Build Status](https://travis-ci.org/fxsjy/ins.svg?branch=master)](https://travis-ci.org/fxsjy/ins)
@@ -32,3 +32,7 @@ iNexus is a high aviable key-value store, which can be used to coordinate large 
 # performance (multiple clients， 5 cluster-nodes in LAN)
 * 55200 read per second
 * 5300 write per second
+
+# use the SDK (client library)
+* include [ins_sdk.h](https://github.com/fxsjy/ins/blob/master/sdk/ins_sdk.h) , link the static library libins_sdk.a
+* usage example: https://github.com/fxsjy/ins/blob/master/sdk/sample.cc
