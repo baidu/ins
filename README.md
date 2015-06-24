@@ -1,7 +1,6 @@
 # iNexus
-iNexus is a high available key-value store, which can be used to coordinate large scale services.
+iNexus is a high available key-value store, which can be used to coordinate large scale services. (based on Raft protocol)
 iNexus (简称ins) 是一个基于Raft协议实现的高可用的分布式Key-Value数据库，支持数据变更通知（Watch）和分布式锁，可用于大型分布式系统的协调工作
-(based on Raft protocol)
 
 [![Build Status](https://travis-ci.org/fxsjy/ins.svg?branch=master)](https://travis-ci.org/fxsjy/ins)
 
