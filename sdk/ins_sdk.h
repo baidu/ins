@@ -102,13 +102,15 @@ private:
     void KeepWatchTask(const std::string& key, 
                        const std::string& old_value,
                        bool key_exist,
-                       std::string session_id);
+                       std::string session_id,
+                       int64_t watch_id);
     void MakeSessionID();
     void KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                            galaxy::ins::WatchResponse* response,
                            bool failed, int error,
-                           std::string server_id);
-    void BackupWatchTask(const std::string& key);
+                           std::string server_id,
+                           int64_t watch_id);
+    void BackupWatchTask(const std::string& key, int64_t watch_id);
     std::string leader_id_;
     std::string session_id_;
     std::vector<std::string> members_;
@@ -125,6 +127,8 @@ private:
     void (*handle_session_timeout_) (void*);
     void * session_timeout_ctx_;
     int64_t last_succ_alive_timestamp_;
+    int64_t watch_task_id_;
+    std::set<int64_t> pending_watches_;
 };
 
 class ScanResult {

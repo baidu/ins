@@ -61,6 +61,7 @@ void InsSDK::Init(const std::vector<std::string>& members) {
     keep_watch_pool_ = NULL;
     handle_session_timeout_ = NULL;
     session_timeout_ctx_ = NULL;
+    watch_task_id_ = 0;
     last_succ_alive_timestamp_ = ins_common::timer::get_micros();
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
@@ -423,6 +424,8 @@ bool InsSDK::Watch(const std::string& key,
         watch_keys_.insert(key);
         watch_cbs_[key] = user_callback;
         watch_ctx_[key] = context;
+        int64_t watch_id = (++watch_task_id_);
+        pending_watches_.insert(watch_id);
         if (!is_keep_alive_bg_) {
             keep_alive_pool_->AddTask(
                 boost::bind(&InsSDK::KeepAliveTask, this)
@@ -431,7 +434,7 @@ bool InsSDK::Watch(const std::string& key,
         }
         keep_watch_pool_->AddTask(
             boost::bind(&InsSDK::KeepWatchTask, this, key,
-                        old_value, key_exist, session_id_)
+                        old_value, key_exist, session_id_, watch_id)
         );
     }
     *error = kOK;
@@ -532,7 +535,8 @@ void InsSDK::KeepAliveTask() {
 void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                                galaxy::ins::WatchResponse* response,
                                bool failed, int /*error*/,
-                               std::string server_id) {
+                               std::string server_id,
+                               int64_t watch_id) {
     boost::scoped_ptr<const galaxy::ins::WatchRequest> request_ptr(request);
     boost::scoped_ptr<galaxy::ins::WatchResponse> response_ptr(response);
     {
@@ -556,6 +560,8 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                 watch_keys_.erase(response->watch_key());
                 watch_cbs_.erase(response->watch_key());
                 watch_ctx_.erase(response->watch_key());
+                pending_watches_.erase(watch_id);
+                LOG(INFO, "watch #%ld trigger", watch_id);
             }
             WatchParam param;
             param.key = response_ptr->key();
@@ -595,7 +601,8 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
         boost::function< void (const galaxy::ins::WatchRequest*,
                                galaxy::ins::WatchResponse*, 
                                bool, int) > callback;
-        callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
+        callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, 
+                               server_id, watch_id);
         rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
                                   req, rsps, callback, 
                                   FLAGS_ins_watch_timeout, 1); //120s timeout
@@ -604,7 +611,7 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
     }
 }
 
-void InsSDK::BackupWatchTask(const std::string& key) {
+void InsSDK::BackupWatchTask(const std::string& key, int64_t watch_id) {
     std::string old_value;
     SDKError error;
     Get(key, &old_value, &error);
@@ -616,16 +623,21 @@ void InsSDK::BackupWatchTask(const std::string& key) {
     if (error == kNoSuchKey) {
         key_exist = false;
     }
-    KeepWatchTask(key, old_value, key_exist, GetSessionID());
+    KeepWatchTask(key, old_value, key_exist, GetSessionID(), watch_id);
 }
 
 void InsSDK::KeepWatchTask(const std::string& key, 
                            const std::string& old_value,
                            bool key_exist,
-                           std::string session_id) {
+                           std::string session_id,
+                           int64_t watch_id) {
     {
         MutexLock lock(mu_);
         if (stop_) {
+            return;
+        }
+        if (pending_watches_.find(watch_id) == pending_watches_.end()) {
+            LOG(INFO, "expried watch id :%ld", watch_id);
             return;
         }
     }
@@ -636,7 +648,7 @@ void InsSDK::KeepWatchTask(const std::string& key,
     }
 
     keep_watch_pool_->DelayTask(FLAGS_ins_backup_watch_timeout * 1000, //ms
-        boost::bind(&InsSDK::BackupWatchTask, this, key)
+        boost::bind(&InsSDK::BackupWatchTask, this, key, watch_id)
     );
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
@@ -655,7 +667,8 @@ void InsSDK::KeepWatchTask(const std::string& key,
     boost::function< void (const galaxy::ins::WatchRequest*,
                            galaxy::ins::WatchResponse*, 
                            bool, int) > callback;
-    callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, server_id);
+    callback = boost::bind(&InsSDK::KeepWatchCallback, this, _1, _2, _3, _4, 
+                           server_id, watch_id);
     rpc_client_->AsyncRequest(stub, &InsNode_Stub::Watch,
                               request, response, callback, 
                               FLAGS_ins_watch_timeout, 1); 
