@@ -15,7 +15,7 @@ https://github.com/fxsjy/ins/wiki
 * make
 
 # 通用的编译方式
-* read .travis.yml and install the depends libs
+* read [.travis.yml](https://github.com/fxsjy/ins/blob/master/.travis.yml) and install the depends libs
 * make && make install
 
 # 快速体验（只需要一台机器，通过多个进程模拟分布式）
