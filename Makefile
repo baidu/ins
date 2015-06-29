@@ -18,7 +18,7 @@ INCLUDE_PATH = -I./ -I$(PREFIX)/include -I$(PROTOBUF_PATH)/include \
                -I$(SNAPPY_PATH)/include \
 	       -I$(GFLAGS_PATH)/include \
 	       -I$(LEVELDB_PATH)/include \
-               -I$(BOOST_PATH)/include
+               -I$(BOOST_PATH)
 
 LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(PBRPC_PATH)/lib -lsofa-pbrpc -lprotobuf \
