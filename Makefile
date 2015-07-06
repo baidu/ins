@@ -25,7 +25,7 @@ LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(SNAPPY_PATH)/lib -lsnappy \
           -L$(GFLAGS_PATH)/lib -lgflags \
           -L$(LEVELDB_PATH)/lib -lleveldb \
-          -lz -lleveldb -lpthread -luuid
+          -lz -lleveldb -lpthread
 
 CXXFLAGS += $(OPT)
 
