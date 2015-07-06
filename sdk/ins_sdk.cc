@@ -3,13 +3,16 @@
 #include <assert.h>
 #include <algorithm>
 #include <iterator>
+#include <sstream>
 #include <vector>
 #include <boost/algorithm/string.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <gflags/gflags.h>
-#include <uuid/uuid.h>
 #include <sys/utsname.h>
 #include "common/asm_atomic.h"
 #include "common/mutex.h"
@@ -80,15 +83,14 @@ void InsSDK::MakeSessionID () {
     MutexLock lock(mu_);
     std::string hostname = "";
     struct utsname buf;
-    char cbuf_uuid[37] = {'\0'};
     if (0 != uname(&buf)) {
         *buf.nodename = '\0';
     }
     hostname = buf.nodename;
-    uuid_t uuid;
-    uuid_generate(uuid);
-    uuid_unparse(uuid, cbuf_uuid);
-    std::string str_uuid= cbuf_uuid;
+    boost::uuids::uuid uuid = boost::uuids::random_generator()();
+    std::stringstream sm_uuid;
+    sm_uuid << uuid;
+    std::string str_uuid= sm_uuid.str();
     session_id_ = hostname + "#" + str_uuid;
 }
 

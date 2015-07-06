@@ -24,7 +24,7 @@ CXXFLAGS('-g -pipe -W -Wall -Werror -fPIC')
 PROTOC('../../../third-64/protobuf/bin/protoc')
 
 #链接参数.
-LDFLAGS('-lpthread -lcrypto -luuid -lrt -lz')
+LDFLAGS('-lpthread -lcrypto -lrt -lz')
 
 #依赖模块
 CONFIGS('public/sofa-pbrpc@trunk@comake')
