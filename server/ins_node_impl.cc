@@ -26,14 +26,6 @@ const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 namespace galaxy {
 namespace ins {
 
-void GetHostName(std::string* hostname) {
-  struct utsname buf;
-  if (0 != uname(&buf)) {
-    *buf.nodename = '\0';
-  }
-  *hostname = buf.nodename;
-}
-
 InsNodeImpl::InsNodeImpl (std::string& server_id,
                           const std::vector<std::string>& members
                           ) : stop_(false),

@@ -1,7 +1,6 @@
 #!/bin/bash
 n_th=$1
-let port=$n_th+8867
-pid=`ps aux | grep ins | grep $port | awk '{print $2}'`
+pid=`ps aux | grep ins | grep -F "server_id=$n_th" | awk '{print $2}'`
 kill -9 $pid
 
 
