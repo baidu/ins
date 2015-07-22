@@ -253,7 +253,7 @@ private:
     std::set<std::string> replicating_;
     int64_t heartbeat_read_timestamp_;
     bool in_safe_mode_;
-    int64_t leader_start_timestamp_;
+    int64_t server_start_timestamp_;
     ThreadPool event_trigger_;
     // for all servers
     SessionContainer sessions_;

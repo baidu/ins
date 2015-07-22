@@ -38,6 +38,7 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                               replicatter_(FLAGS_max_cluster_size),
                               heartbeat_read_timestamp_(0),
                               in_safe_mode_(true),
+                              server_start_timestamp_(0),
                               commit_index_(-1),
                               last_applied_index_(-1),
                               single_node_mode_(false){
@@ -90,7 +91,7 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
     if (status.ok()) {
         last_applied_index_ =  BinLogger::StringToInt(tag_value);
     }
-
+    server_start_timestamp_ = ins_common::timer::get_micros();
     committer_.AddTask(boost::bind(&InsNodeImpl::CommitIndexObserv, this));
     MutexLock lock(&mu_);
     CheckLeaderCrash();
@@ -483,7 +484,6 @@ void InsNodeImpl::TransToLeader() {
     status_ = kLeader;
     current_leader_ = self_id_;
     LOG(INFO, "I win the election, term:%d", current_term_);
-    leader_start_timestamp_ = ins_common::timer::get_micros();
     heart_beat_pool_.AddTask(
         boost::bind(&InsNodeImpl::BroadCastHeartBeat, this));
     StartReplicateLog();
@@ -1075,6 +1075,16 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
         return;
     }
 
+    int64_t tm_now = ins_common::timer::get_micros();
+    if (status_ == kLeader && 
+        (tm_now - server_start_timestamp_) < FLAGS_session_expire_timeout) {
+        LOG(INFO, "leader is still in safe mode for lock");
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
     const std::string& key = request->key();
     const std::string& session_id = request->session_id();
     LogEntry log_entry;
@@ -1135,6 +1145,16 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
 
     if (status_ == kLeader && in_safe_mode_) {
         LOG(INFO, "leader is still in safe mode");
+        response->set_leader_id("");
+        response->set_success(false);
+        done->Run();
+        return;
+    }
+
+    int64_t tm_now = ins_common::timer::get_micros();
+    if (status_ == kLeader &&
+        (tm_now - server_start_timestamp_) < FLAGS_session_expire_timeout) {
+        LOG(INFO, "leader is still in safe mode for scan");
         response->set_leader_id("");
         response->set_success(false);
         done->Run();
@@ -1228,7 +1248,7 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
     }
     response->set_success(true);
     response->set_leader_id("");
-    LOG(DEBUG, "recv session id: %s", session.session_id.c_str());
+    LOG(INFO, "recv session id: %s", session.session_id.c_str());
     //forward heartbeat of clients
     {
         MutexLock lock(&mu_);
@@ -1513,25 +1533,27 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
         RemoveEventBySessionAndKey(watch_event.session_id, watch_event.key);
         watch_events_.insert(watch_event);
     }
-         
-    leveldb::Status s;
-    std::string raw_value;
-    s = data_store_->Get(leveldb::ReadOptions(), key, &raw_value);
-    bool key_exist = s.ok();
-    std::string real_value;
-    LogOperation op;
-    ParseValue(raw_value, op, real_value);
-    if (real_value != request->old_value() || 
-        key_exist != request->key_exist()) {
-        LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
-            key.c_str(), real_value.c_str(), request->old_value().c_str());
-        TriggerEventBySessionAndKey(request->session_id(),
-                                    key, real_value, s.IsNotFound());
-    } else if (op == kLock && IsExpiredSession(real_value)) {
-        LOG(INFO, "key(lock):%s, new_v: %s, old_v:%s", 
-            key.c_str(), real_value.c_str(), request->old_value().c_str());
-        TriggerEventBySessionAndKey(request->session_id(),
-                                    key, "", true);
+    int64_t tm_now = ins_common::timer::get_micros(); 
+    if (tm_now - server_start_timestamp_ > FLAGS_session_expire_timeout) {
+        leveldb::Status s;
+        std::string raw_value;
+        s = data_store_->Get(leveldb::ReadOptions(), key, &raw_value);
+        bool key_exist = s.ok();
+        std::string real_value;
+        LogOperation op;
+        ParseValue(raw_value, op, real_value);
+        if (real_value != request->old_value() || 
+            key_exist != request->key_exist()) {
+            LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
+                key.c_str(), real_value.c_str(), request->old_value().c_str());
+            TriggerEventBySessionAndKey(request->session_id(),
+                                        key, real_value, s.IsNotFound());
+        } else if (op == kLock && IsExpiredSession(real_value)) {
+            LOG(INFO, "key(lock):%s, new_v: %s, old_v:%s", 
+                key.c_str(), real_value.c_str(), request->old_value().c_str());
+            TriggerEventBySessionAndKey(request->session_id(),
+                                        key, "", true);
+        }
     }
 }
 
