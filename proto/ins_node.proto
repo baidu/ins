@@ -138,6 +138,7 @@ message KeepAliveRequest {
     required string session_id = 1;
     optional string host_name = 2;
     repeated string locks = 3;
+    optional bool forward_from_leader = 4 [default = false];
 }
 
 message KeepAliveResponse {

@@ -300,6 +300,17 @@ void InsNodeImpl::CommitIndexObserv() {
     }
 }
 
+void InsNodeImpl::ForwardKeepAliveCallback(
+                                  const ::galaxy::ins::KeepAliveRequest* request,
+                                  ::galaxy::ins::KeepAliveResponse* response,
+                                  bool failed, int error) {
+    (void)failed;
+    (void)error;
+    boost::scoped_ptr<const galaxy::ins::KeepAliveRequest> request_ptr(request);
+    boost::scoped_ptr<galaxy::ins::KeepAliveResponse> response_ptr(response);
+    LOG(DEBUG, "heartbeat from clients forwarded");
+}
+
 void InsNodeImpl::HearBeatCallback(const ::galaxy::ins::AppendEntriesRequest* request,
                                   ::galaxy::ins::AppendEntriesResponse* response,
                                   bool failed, int /*error*/) {
@@ -1064,16 +1075,6 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
         return;
     }
 
-    int64_t tm_now = ins_common::timer::get_micros();
-    if (status_ == kLeader && 
-        (tm_now - leader_start_timestamp_) < FLAGS_session_expire_timeout) {
-        LOG(INFO, "leader is still in safe mode for lock");
-        response->set_leader_id("");
-        response->set_success(false);
-        done->Run();
-        return;
-    }
-
     const std::string& key = request->key();
     const std::string& session_id = request->session_id();
     LogEntry log_entry;
@@ -1140,16 +1141,6 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
         return;
     }
 
-    int64_t tm_now = ins_common::timer::get_micros();
-    if (status_ == kLeader &&
-        (tm_now - leader_start_timestamp_) < FLAGS_session_expire_timeout) {
-        LOG(INFO, "leader is still in safe mode for scan");
-        response->set_leader_id("");
-        response->set_success(false);
-        done->Run();
-        return;
-    }
-
     mu_.Unlock();
     std::string start_key = request->start_key();
     std::string end_key = request->end_key();
@@ -1200,14 +1191,14 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
     (void) controller;
     {
         MutexLock lock(&mu_);
-        if (status_ == kFollower) {
+        if (status_ == kFollower && !request->forward_from_leader()) {
             response->set_success(false);
             response->set_leader_id(current_leader_);
             done->Run();
             return;
         }
 
-        if (status_ == kCandidate) {
+        if (status_ == kCandidate && !request->forward_from_leader()) {
             response->set_success(false);
             response->set_leader_id("");
             done->Run();
@@ -1238,6 +1229,37 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
     response->set_success(true);
     response->set_leader_id("");
     LOG(DEBUG, "recv session id: %s", session.session_id.c_str());
+    //forward heartbeat of clients
+    {
+        MutexLock lock(&mu_);
+        if (status_ == kLeader) {
+            std::vector<std::string>::iterator it = members_.begin();
+            for(; it!= members_.end(); it++) {
+                if (*it == self_id_) {
+                    continue;
+                }
+                InsNode_Stub* stub;
+                rpc_client_.GetStub(*it, &stub);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+                ::galaxy::ins::KeepAliveRequest* forward_request = 
+                    new ::galaxy::ins::KeepAliveRequest();
+                ::galaxy::ins::KeepAliveResponse* forward_response =
+                    new ::galaxy::ins::KeepAliveResponse();
+                forward_request->CopyFrom(*request);
+                forward_response->CopyFrom(*response);
+                forward_request->set_forward_from_leader(true);
+                boost::function<void (const ::galaxy::ins::KeepAliveRequest*,
+                                ::galaxy::ins::KeepAliveResponse*,
+                                bool, int) > callback;
+                callback = boost::bind(&InsNodeImpl::ForwardKeepAliveCallback,
+                                       this,
+                                       _1, _2, _3, _4);
+                rpc_client_.AsyncRequest(stub, &InsNode_Stub::KeepAlive, 
+                                         forward_request, 
+                                         forward_response, callback, 2, 1);
+            }
+        }
+    }
     done->Run();
 }
 
@@ -1491,27 +1513,25 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
         RemoveEventBySessionAndKey(watch_event.session_id, watch_event.key);
         watch_events_.insert(watch_event);
     }
-    int64_t tm_now = ins_common::timer::get_micros(); 
-    if (tm_now - leader_start_timestamp_ > FLAGS_session_expire_timeout) {
-        leveldb::Status s;
-        std::string raw_value;
-        s = data_store_->Get(leveldb::ReadOptions(), key, &raw_value);
-        bool key_exist = s.ok();
-        std::string real_value;
-        LogOperation op;
-        ParseValue(raw_value, op, real_value);
-        if (real_value != request->old_value() || 
-            key_exist != request->key_exist()) {
-            LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
-                key.c_str(), real_value.c_str(), request->old_value().c_str());
-            TriggerEventBySessionAndKey(request->session_id(),
-                                        key, real_value, s.IsNotFound());
-        } else if (op == kLock && IsExpiredSession(real_value)) {
-            LOG(INFO, "key(lock):%s, new_v: %s, old_v:%s", 
-                key.c_str(), real_value.c_str(), request->old_value().c_str());
-            TriggerEventBySessionAndKey(request->session_id(),
-                                        key, "", true);
-        }
+         
+    leveldb::Status s;
+    std::string raw_value;
+    s = data_store_->Get(leveldb::ReadOptions(), key, &raw_value);
+    bool key_exist = s.ok();
+    std::string real_value;
+    LogOperation op;
+    ParseValue(raw_value, op, real_value);
+    if (real_value != request->old_value() || 
+        key_exist != request->key_exist()) {
+        LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
+            key.c_str(), real_value.c_str(), request->old_value().c_str());
+        TriggerEventBySessionAndKey(request->session_id(),
+                                    key, real_value, s.IsNotFound());
+    } else if (op == kLock && IsExpiredSession(real_value)) {
+        LOG(INFO, "key(lock):%s, new_v: %s, old_v:%s", 
+            key.c_str(), real_value.c_str(), request->old_value().c_str());
+        TriggerEventBySessionAndKey(request->session_id(),
+                                    key, "", true);
     }
 }
 

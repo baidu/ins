@@ -185,6 +185,9 @@ private:
                                  ::galaxy::ins::AppendEntriesResponse* response,
                                  bool failed, int error,
                                  ClientReadAck::Ptr context);
+    void ForwardKeepAliveCallback(const ::galaxy::ins::KeepAliveRequest* request,
+                                  ::galaxy::ins::KeepAliveResponse* response,
+                                  bool failed, int error); 
 
     void BroadCastHeartBeat();
     void CheckLeaderCrash();
