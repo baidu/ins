@@ -1248,7 +1248,7 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
     }
     response->set_success(true);
     response->set_leader_id("");
-    LOG(INFO, "recv session id: %s", session.session_id.c_str());
+    LOG(DEBUG, "recv session id: %s", session.session_id.c_str());
     //forward heartbeat of clients
     {
         MutexLock lock(&mu_);
