@@ -223,6 +223,8 @@ private:
     void DelBinlog(int64_t index);
     bool LockIsAvilable(const std::string& key,
                         const std::string& session_id);
+    void ForwardKeepAlive(const ::galaxy::ins::KeepAliveRequest * request,
+                          ::galaxy::ins::KeepAliveResponse * response);
 public:
     std::vector<std::string> members_;
 private:

@@ -1250,37 +1250,48 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
     response->set_leader_id("");
     LOG(DEBUG, "recv session id: %s", session.session_id.c_str());
     //forward heartbeat of clients
+    ForwardKeepAlive(request, response);
+    done->Run();
+}
+
+void InsNodeImpl::ForwardKeepAlive(const ::galaxy::ins::KeepAliveRequest * request,
+                                   ::galaxy::ins::KeepAliveResponse * response) {
+    std::vector<std::string> followers;
     {
         MutexLock lock(&mu_);
-        if (status_ == kLeader) {
-            std::vector<std::string>::iterator it = members_.begin();
-            for(; it!= members_.end(); it++) {
-                if (*it == self_id_) {
-                    continue;
-                }
-                InsNode_Stub* stub;
-                rpc_client_.GetStub(*it, &stub);
-                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
-                ::galaxy::ins::KeepAliveRequest* forward_request = 
-                    new ::galaxy::ins::KeepAliveRequest();
-                ::galaxy::ins::KeepAliveResponse* forward_response =
-                    new ::galaxy::ins::KeepAliveResponse();
-                forward_request->CopyFrom(*request);
-                forward_response->CopyFrom(*response);
-                forward_request->set_forward_from_leader(true);
-                boost::function<void (const ::galaxy::ins::KeepAliveRequest*,
-                                ::galaxy::ins::KeepAliveResponse*,
-                                bool, int) > callback;
-                callback = boost::bind(&InsNodeImpl::ForwardKeepAliveCallback,
-                                       this,
-                                       _1, _2, _3, _4);
-                rpc_client_.AsyncRequest(stub, &InsNode_Stub::KeepAlive, 
-                                         forward_request, 
-                                         forward_response, callback, 2, 1);
+        if (status_ != kLeader) {
+            return;
+        }
+        std::vector<std::string>::iterator it = members_.begin();
+        for(; it!= members_.end(); it++) {
+            if (*it == self_id_) {
+                continue;
             }
+            followers.push_back(*it);
         }
     }
-    done->Run();
+    std::vector<std::string>::iterator it;
+    for (it = followers.begin(); it != followers.end(); it++) {
+        InsNode_Stub* stub;
+        rpc_client_.GetStub(*it, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        ::galaxy::ins::KeepAliveRequest* forward_request = 
+            new ::galaxy::ins::KeepAliveRequest();
+        ::galaxy::ins::KeepAliveResponse* forward_response =
+            new ::galaxy::ins::KeepAliveResponse();
+        forward_request->CopyFrom(*request);
+        forward_response->CopyFrom(*response);
+        forward_request->set_forward_from_leader(true);
+        boost::function<void (const ::galaxy::ins::KeepAliveRequest*,
+                        ::galaxy::ins::KeepAliveResponse*,
+                        bool, int) > callback;
+        callback = boost::bind(&InsNodeImpl::ForwardKeepAliveCallback,
+                               this,
+                               _1, _2, _3, _4);
+        rpc_client_.AsyncRequest(stub, &InsNode_Stub::KeepAlive, 
+                                 forward_request, 
+                                 forward_response, callback, 2, 1);
+    }
 }
 
 void InsNodeImpl::RemoveExpiredSessions() {
