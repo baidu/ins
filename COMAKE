@@ -38,6 +38,7 @@ INCPATHS('. ./src ./output/include')
 ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc storage/meta.cc common/logging.cc storage/binlog.cc proto/ins_node.proto'
 
 ins_sdk_sources = 'sdk/ins_sdk.cc common/logging.cc proto/ins_node.proto server/flags.cc'
+ins_sdk_headers = 'sdk/ins_sdk.h'
 
 ins_cli_sources = 'sdk/ins_sdk.cc proto/ins_node.proto common/logging.cc sdk/ins_cli.cc server/flags.cc'
 sample_sources = 'sdk/sample.cc'
@@ -47,7 +48,7 @@ binlog_test_sources = 'storage/binlog.cc storage/binlog_test.cc common/logging.c
 Application('ins', Sources(ins_sources))
 Application('ins_cli', Sources(ins_cli_sources))
 SharedLibrary('ins_sdk', Sources(ins_sdk_sources), LinkDeps(True))
-StaticLibrary('ins_sdk', Sources(ins_sdk_sources))
+StaticLibrary('ins_sdk', Sources(ins_sdk_sources), HeaderFiles(ins_sdk_headers))
 
 Application('binlog_test', Sources(binlog_test_sources))
 Application('sample', Sources(sample_sources), Libraries('libins_sdk.a'))
