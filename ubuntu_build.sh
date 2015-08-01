@@ -1,6 +1,5 @@
 #! /bin/bash
 
-
 sudo apt-get install libleveldb-dev
 sudo apt-get install libboost-dev libsnappy-dev
 
