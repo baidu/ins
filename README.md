@@ -18,7 +18,7 @@ https://github.com/fxsjy/ins/wiki
 * read [.travis.yml](https://github.com/fxsjy/ins/blob/master/.travis.yml) and install the depends libs
 * make && make install
 
-#Unbuntu系统下的编译
+#Ubuntu系统下的编译
 * [./ubuntu_build.sh ](https://github.com/fxsjy/ins/blob/master/ubuntu_build.sh)
 
 # 快速体验（只需要一台机器，通过多个进程模拟分布式）
