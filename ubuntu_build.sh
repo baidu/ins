@@ -9,10 +9,6 @@ tar xf protobuf-$PROTOBUF_VERSION.tar.gz
 cd protobuf-$PROTOBUF_VERSION && ./configure && make -j4 && sudo make install && sudo ldconfig
 cd -
 
-git clone https://github.com/google/snappy
-cd snappy && sh ./autogen.sh && ./configure && make -j2 && sudo make install
-cd -
-
 sudo apt-get install zlib1g-dev
 git clone https://github.com/baidu/sofa-pbrpc.git ./thirdparty/sofa-pbrpc
 cd thirdparty/sofa-pbrpc && make -j4 && make install
