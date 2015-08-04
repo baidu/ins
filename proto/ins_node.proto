@@ -107,7 +107,7 @@ message ShowStatusResponse {
 
 message ScanRequest {
     required string start_key = 1;
-    required string end_key = 2;
+    required bytes end_key = 2;
     required int32 size_limit = 3;    
 }
 
@@ -149,7 +149,7 @@ message KeepAliveResponse {
 message WatchRequest {
     required string key = 1;
     required string session_id = 2;
-    optional string old_value = 3;
+    optional bytes old_value = 3;
     optional bool key_exist = 4;
 }
 
@@ -157,7 +157,7 @@ message WatchResponse {
     optional bool success = 1 [default = false];
     optional string leader_id = 2 [default = ""];
     optional string key = 3;
-    optional string value = 4;
+    optional bytes value = 4;
     optional bool deleted = 5;
     optional bool canceled = 6 [default = false];
     optional string watch_key = 7;
