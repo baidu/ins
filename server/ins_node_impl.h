@@ -221,7 +221,7 @@ private:
     void RemoveEventBySessionAndKey(const std::string& session_id,
                                     const std::string& key);
     void DelBinlog(int64_t index);
-    bool LockIsAvilable(const std::string& key,
+    bool LockIsAvailable(const std::string& key,
                         const std::string& session_id);
     void ForwardKeepAlive(const ::galaxy::ins::KeepAliveRequest * request,
                           ::galaxy::ins::KeepAliveResponse * response);

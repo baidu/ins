@@ -1014,7 +1014,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     return;
 }
 
-bool InsNodeImpl::LockIsAvilable(const std::string& key, 
+bool InsNodeImpl::LockIsAvailable(const std::string& key,
                                  const std::string& session_id) {
     leveldb::Status s;
     std::string old_locker_session;
@@ -1022,17 +1022,17 @@ bool InsNodeImpl::LockIsAvilable(const std::string& key,
     LogOperation op;
     s = data_store_->Get(leveldb::ReadOptions(), key, &value);
     ParseValue(value, op, old_locker_session);
-    bool lock_is_avilable = false;
+    bool lock_is_available = false;
     if (!s.ok()) {
         MutexLock lock(&sessions_mu_);
         SessionIDIndex& id_index = sessions_.get<0>();
         SessionIDIndex::iterator self_it = id_index.find(session_id);
         if (self_it != sessions_.end()) {
-            lock_is_avilable = true;
+            lock_is_available = true;
         }
     } else {
         if (op != kLock) {
-            lock_is_avilable = false;
+            lock_is_available = false;
         } else {
             MutexLock lock(&sessions_mu_);
             SessionIDIndex& id_index = sessions_.get<0>();
@@ -1040,11 +1040,11 @@ bool InsNodeImpl::LockIsAvilable(const std::string& key,
             SessionIDIndex::iterator self_it = id_index.find(session_id);
             if (old_it == sessions_.end() //expired session
                 && self_it != sessions_.end()) { 
-                lock_is_avilable = true;
+                lock_is_available = true;
             }
         }
     }
-    return lock_is_avilable;
+    return lock_is_available;
 }
 
 void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
@@ -1092,9 +1092,9 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* controller,
     log_entry.value = session_id;
     log_entry.term = current_term_;
     log_entry.op = kLock;
-    bool lock_is_avilable = false;
-    lock_is_avilable = LockIsAvilable(key, session_id);
-    if (lock_is_avilable) {
+    bool lock_is_available = false;
+    lock_is_available = LockIsAvailable(key, session_id);
+    if (lock_is_available) {
         LOG(INFO, "lock key :%s, session:%s",
                    key.c_str(),
                    session_id.c_str());
