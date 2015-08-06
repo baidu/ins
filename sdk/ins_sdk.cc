@@ -708,6 +708,15 @@ bool InsSDK::Lock(const std::string& key, SDKError* error) {
 }
 
 bool InsSDK::TryLock(const std::string& key, SDKError *error) {
+    {
+        MutexLock lock(mu_);
+        if (!is_keep_alive_bg_) {
+            keep_alive_pool_->AddTask(
+                    boost::bind(&InsSDK::KeepAliveTask, this)
+                    );
+            is_keep_alive_bg_ = true;
+        }
+    }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it ;
