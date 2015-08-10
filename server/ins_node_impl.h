@@ -272,8 +272,6 @@ private:
     bool single_node_mode_;
 };
 
-void GetHostName(std::string* hostname);
-
 } //namespace ins
 } //namespace galaxy
 
