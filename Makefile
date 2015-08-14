@@ -34,7 +34,7 @@ PROTO_SRC = $(patsubst %.proto,%.pb.cc,$(PROTO_FILE))
 PROTO_HEADER = $(patsubst %.proto,%.pb.h,$(PROTO_FILE))
 PROTO_OBJ = $(patsubst %.proto,%.pb.o,$(PROTO_FILE))
 
-INS_SRC = $(wildcard server/ins_*.cc) storage/binlog.cc storage/meta.cc
+INS_SRC = $(wildcard server/ins_*.cc) storage/binlog.cc storage/meta.cc storage/storage_manage.cc
 INS_OBJ = $(patsubst %.cc, %.o, $(INS_SRC))
 INS_HEADER = $(wildcard server/*.h)
 
@@ -81,9 +81,10 @@ $(LIB): $(SDK_OBJ)
 	$(PROTOC) --proto_path=./proto/ --proto_path=/usr/local/include --cpp_out=./proto/ $<
 
 clean:
-	rm -rf $(BIN)
-	rm -rf $(INS_OBJ) $(INS_CLI_OBJ) $(OBJS)
+	rm -rf $(BIN) $(LIB)
+	rm -rf $(INS_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) $(SDK_OBJ)
 	rm -rf $(PROTO_SRC) $(PROTO_HEADER)
+	rm -rf output/
 
 cp: $(BIN) $(LIB)
 	mkdir -p output/bin

@@ -17,6 +17,12 @@ enum LogOperation {
     kNop = 10;
 };
 
+enum DBStatus {
+    kOk = 0;
+    kNotFound = 1;
+    kError = 2;
+};
+
 message Entry {
     required string key = 1;
     required bytes value = 2;

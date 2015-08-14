@@ -475,7 +475,7 @@ void InsSDK::KeepAliveTask() {
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::KeepAlive,
                                            &request, &response, 2, 1);
         if (!ok) {
-            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            LOG(FATAL, "faild to rpc %s", server_id.c_str());
             continue;
         }
 
