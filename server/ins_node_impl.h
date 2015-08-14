@@ -60,12 +60,12 @@ struct ClientReadAck
 };
 
 struct Session {
-  std::string session_id;
-  std::string host_name;
-  int64_t last_report_time;
-  Session() : last_report_time(0) {
+    std::string session_id;
+    std::string host_name;
+    int64_t last_report_time;
+    Session() : last_report_time(0) {
 
-  }
+    }
 };
 
 typedef multi_index_container<
@@ -170,6 +170,14 @@ public:
                const ::galaxy::ins::WatchRequest* request,
                ::galaxy::ins::WatchResponse* response,
                ::google::protobuf::Closure* done);
+    void Login(::google::protobuf::RpcController* controller,
+               const ::galaxy::ins::LoginRequest* request,
+               ::galaxy::ins::LoginResponse* response,
+               ::google::protobuf::Closure* done);
+    void Logout(::google::protobuf::RpcController* controller,
+                const ::galaxy::ins::LogoutRequest* request,
+                ::galaxy::ins::LogoutResponse* response,
+                ::google::protobuf::Closure* done);
     void CleanBinlog(::google::protobuf::RpcController* controller,
                      const ::galaxy::ins::CleanBinlogRequest* request,
                      ::galaxy::ins::CleanBinlogResponse* response,

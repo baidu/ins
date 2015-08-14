@@ -1607,6 +1607,17 @@ void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
     return;
 }
 
+void InsNodeImpl::Login(::google::protobuf::RpcController* /*controller*/,
+                        const ::galaxy::ins::LoginRequest* request,
+                        ::galaxy::ins::LoginResponse* response,
+                        ::google::protobuf::Closure* done) {
+}
+
+void InsNodeImpl::Logout(::google::protobuf::RpcController* /*controller*/,
+                         const ::galaxy::ins::LogoutRequest* request,
+                         ::galaxy::ins::LogoutResponse* response,
+                         ::google::protobuf::Closure* done) {
+}
 
 void InsNodeImpl::DelBinlog(int64_t index) {
     LOG(INFO, "delete binlog [%ld]", index);

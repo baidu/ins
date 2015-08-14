@@ -17,11 +17,17 @@ enum LogOperation {
     kNop = 10;
 };
 
-enum DBStatus {
+enum Status {
     kOk = 0;
     kNotFound = 1;
     kError = 2;
 };
+
+message UserInfo {
+    required string username = 1;
+    required string passwd = 2;
+    optional string uuid = 3;
+}
 
 message Entry {
     required string key = 1;
@@ -169,6 +175,25 @@ message WatchResponse {
     optional string watch_key = 7;
 }
 
+message LoginRequest {
+    required string username = 1;
+    required string passwd = 2;
+//  optional string encrypt_method = 3;
+}
+
+message LoginResponse {
+	optional Status status = 1;
+	optional string uuid = 2;
+}
+
+message LogoutRequest {
+	required string uuid = 1;
+}
+
+message LogoutResponse {
+	optional bool success = 1;
+}
+
 message CleanBinlogRequest {
     required int64 end_index = 1;
 }
@@ -187,6 +212,8 @@ service InsNode {
     rpc Lock(LockRequest) returns (LockResponse);
     rpc UnLock(UnLockRequest) returns (UnLockResponse);
     rpc Watch(WatchRequest) returns (WatchResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc Logout(LogoutRequest) returns (LogoutResponse);
     rpc KeepAlive(KeepAliveRequest) returns (KeepAliveResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
     rpc CleanBinlog(CleanBinlogRequest) returns (CleanBinlogResponse);
