@@ -46,6 +46,12 @@ std::string UserManager::CalcName(const std::string& uuid) {
     return name.str();
 }
 
+UserManager::UserManager(const UserInfo& root) {
+    root.set_username("root");
+    root.clear_uuid();
+    user_list_["root"] = root;
+}
+
 Status UserManager::Login(const std::string& name,
                           const std::string& password,
                           std::string* uuid) {
@@ -98,13 +104,27 @@ Status UserManager::Register(const std::string& name, const std::string& passwor
     }
     user_list_[name].set_username(name);
     user_list_[name].set_passwd(password);
-    // TODO Flush to config file here
     return kOk;
 }
 
-Status UserManager::DeleteUser(const std::string& name) {
-    // XXX Maybe only admin can perform this operation
+Status UserManager::ForceOffline(const std::string& myid, const std::string uuid) {
     MutexLock lock(&mu_);
+    std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
+    if (online_it == logged_users_.end()) {
+        return kNotFound;
+    }
+    if (online_it->second == "root" || myid == uuid) {
+        return Logout(uuid);
+    }
+    return kError;
+}
+
+Status UserManager::DeleteUser(const std::string& myid, const std::string& name) {
+    MutexLock lock(&mu_);
+    std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
+    if (online_it == logged_users_.end() || online_it->second != "root") {
+        return kError;
+    }
     std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
     if (user_it == user_list_.end()) {
         LOG(WARNING, "Try to delete an inexist user :%s", name.c_str());
@@ -128,15 +148,21 @@ bool UserManager::IsValidUser(const std::string& name) {
     return user_list_.find(name) != user_list_.end();
 }
 
-void UserManager::TruncateOnlineUsers() {
-    // XXX Maybe only admin can perform this operation
+void UserManager::TruncateOnlineUsers(const std::string& myid) {
     MutexLock lock(&mu_);
+    std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
+    if (online_it == logged_users_.end() || online_it->second != "root") {
+        return kError;
+    }
     logged_users_.clear();
 }
 
-void UserManager::TruncateAllUsers() {
-    // XXX Maybe only admin can perform this operation
+void UserManager::TruncateAllUsers(const std::string& myid) {
     MutexLock lock(&mu_);
+    std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
+    if (online_it == logged_users_.end() || online_it->second != "root") {
+        return kError;
+    }
     logged_users_.clear();
     user_list_.clear();
 }

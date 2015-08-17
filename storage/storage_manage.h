@@ -29,6 +29,8 @@ public:
     Status Get(const std::string& name, const std::string& key, std::string* value);
     Status Put(const std::string& name, const std::string& key, const std::string& value);
     Status Delete(const std::string& name, const std::string& key);
+
+	static const std::string anonymous_user;
 private:
     std::string data_dir_;
     std::map<std::string, DBEntry> dbs_;

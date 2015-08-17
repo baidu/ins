@@ -7,30 +7,36 @@
 #include <unistd.h>
 #include "common/logging.h"
 #include "utils.h"
+#include "server/user_manage.h"
 
 namespace galaxy {
 namespace ins {
 
 const std::string term_file_name = "term.data";
 const std::string vote_file_name = "vote.data";
+const std::string user_file_name = "user.data";
 
 Meta::Meta(const std::string& data_dir) : data_dir_(data_dir),
                                           term_file_(NULL),
-                                          vote_file_(NULL) {
+                                          vote_file_(NULL),
+                                          user_file_(NULL) {
     bool ok = ins_common::Mkdirs(data_dir.c_str());
     if (!ok) {
         LOG(FATAL, "failed to create dir :%s", data_dir.c_str());
         abort();
     }
-    term_file_ = fopen((data_dir+"/"+term_file_name).c_str(), "a+");
-    vote_file_ = fopen((data_dir+"/"+vote_file_name).c_str(), "a+");
+    term_file_ = fopen((data_dir + "/" + term_file_name).c_str(), "a+");
+    vote_file_ = fopen((data_dir + "/" + vote_file_name).c_str(), "a+");
+    user_file_ = fopen((data_dir + "/" + user_file_name).c_str(), "a+");
     assert(term_file_);
     assert(vote_file_);
+    assert(user_file_);
 }
 
 Meta::~Meta() {
     fclose(term_file_);
     fclose(vote_file_);
+    fclose(user_file_);
 }
 
 int64_t Meta::ReadCurrentTerm() {
@@ -56,6 +62,21 @@ void Meta::ReadVotedFor(std::map<int64_t, std::string>& voted_for) {
     }
 }
 
+void Meta::ReadUserList(UserManager* manager) {
+    manager->logged_list_.clear();
+    manager->user_list_.clear();
+    char buf[1024] = {'\0'};
+    // TODO Need fseek here ?
+    while (fgets(buf, 1023, user_file_) != NULL) {
+        char *p;
+        for (p = buf; *p != '\t'; ++p);
+        *p++ = 0;
+        std::string username = buf;
+        manager[username].set_username(username);
+        manager[username].set_passwd(p);
+    }
+}
+
 void Meta::WriteCurrentTerm(int64_t current_term) {
     fprintf(term_file_, "%ld\n", current_term);
     if (fflush(term_file_) != 0) {
@@ -69,6 +90,15 @@ void Meta::WriteVotedFor(int64_t term, const std::string& server_id) {
     if (fflush(vote_file_) != 0) {
         LOG(FATAL, "Meta::WriteVotedFor failed, term:%ld, server_id:%s",
             term, server_id.c_str());
+        abort();
+    }
+}
+
+void Meta::WriteUserList(const UserInfo* user) {
+    fprintf(user_file_, "%s\t%s\n", user->username(), user->passwd());
+    if (fflush(user_file) != 0) {
+        LOG(FATAL, "Meta::WriteUserList failed, username:%s",
+            user->username().c_str());
         abort();
     }
 }

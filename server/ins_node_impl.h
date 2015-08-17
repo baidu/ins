@@ -16,7 +16,8 @@
 #include "common/mutex.h"
 #include "common/thread_pool.h"
 #include "rpc/rpc_client.h"
-#include "leveldb/db.h"
+#include "storage/storage_manage.h"
+#include "server/user_manage.h"
 
 using namespace boost::multi_index;
 
@@ -250,10 +251,11 @@ private:
     int64_t elect_leader_task_;
     std::string current_leader_;
     int32_t heartbeat_count_;
-    Meta * meta_;
+    Meta* meta_;
     BinLogger* binlogger_;
+	UserManager* user_manager_;
     //for leaders
-    leveldb::DB* data_store_;
+    StorageManager* data_store_;
     ThreadPool replicatter_;
     ThreadPool committer_;
     std::map<std::string, int64_t> next_index_;

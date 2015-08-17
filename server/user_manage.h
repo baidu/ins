@@ -5,6 +5,7 @@
 #include <map>
 #include "common/mutex.h"
 #include "proto/ins_node.pb.h"
+#include "storage/meta.h"
 
 namespace galaxy {
 namespace ins {
@@ -12,21 +13,28 @@ namespace ins {
 class UserManager {
 public:
     UserManager() { }
+    // User manager will automatically name the root user `root'
+    UserManager(const UserInfo& root);
     virtual ~UserManager() { }
 
     Status Login(const std::string& name, const std::string& password, std::string* uuid);
     Status Logout(const std::string& uuid);
     Status Register(const std::string& name, const std::string& password);
-    Status DeleteUser(const std::string& name);
+    Status ForceOffline(const std::string& myid, const std::string& uuid);
+    Status DeleteUser(const std::string& myid, const std::string& name);
 
     bool IsLoggedIn(const std::string& name);
     bool IsValidUser(const std::string& name);
 
-    void TruncateOnlineUsers();
-    void TruncateAllUsers();
+    void TruncateOnlineUsers(const std::string& myid);
+    void TruncateAllUsers(const std::string& myid);
 
     static std::string CalcUuid(const std::string& name);
     static std::string CalcName(const std::string& uuid);
+private:
+    // Friend for accessing data more elegant
+    //friend void Meta::ReadUserList(UserManager* manager);
+    //friend void Meta::WriteUserList(UserManager* manager);
 private:
     Mutex mu_;
     std::map<std::string, std::string> logged_users_;

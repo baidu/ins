@@ -8,6 +8,8 @@
 namespace galaxy {
 namespace ins {
 
+static const std::string UserManager::anonymous_user = "";
+
 StorageManager::StorageManager(const std::string& data_dir) : data_dir_(data_dir) {
     bool ok = ins_common::Mkdirs(data_dir.c_str());
     if (!ok) {
