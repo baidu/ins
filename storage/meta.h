@@ -4,11 +4,13 @@
 #include <string>
 #include <map>
 #include <stdint.h>
-
-class UserManager;
+#include "proto/ins_node.pb.h"
 
 namespace galaxy {
 namespace ins {
+
+class UserManager;
+
 class Meta {
 public:
     Meta(const std::string& data_dir);
@@ -18,7 +20,7 @@ public:
     void ReadUserList(UserManager* manager);
     void WriteCurrentTerm(int64_t term); 
     void WriteVotedFor(int64_t term, const std::string& server_id);
-    void WriteUserList(const UserInfo* user);
+    void WriteUserList(const UserInfo& user);
 private:
     std::string data_dir_;
     FILE* term_file_;

@@ -7,12 +7,15 @@
 #include <string>
 #include <sstream>
 #include "common/logging.h"
+#include "common/timer.h"
 
 namespace galaxy {
 namespace ins {
 
 std::string UserManager::CalcUuid(const std::string& name) {
     using namespace boost::archive::iterators;
+    int64_t now = ins::common::get_micros();
+    std::string text = name + std::to_string(now);
     std::stringstream uuid;
     typedef base64_from_binary <
         transform_width <
@@ -22,8 +25,8 @@ std::string UserManager::CalcUuid(const std::string& name) {
         >
     > base64_text;
 
-    std::copy(base64_text(name.c_str()),
-              base64_text(name.c_str() + name.size()),
+    std::copy(base64_text(text.c_str()),
+              base64_text(text.c_str() + text.size()),
               std::ostream_iterator<char>(uuid));
 
     return uuid.str();
@@ -31,6 +34,8 @@ std::string UserManager::CalcUuid(const std::string& name) {
 
 std::string UserManager::CalcName(const std::string& uuid) {
     using namespace boost::archive::iterators;
+    int64_t now = ins::common::get_micros();
+    std::string text = uuid + std::to_string(now);
     std::stringstream name;
     typedef transform_width <
         binary_from_base64 <
@@ -40,8 +45,8 @@ std::string UserManager::CalcName(const std::string& uuid) {
         6
     > base64_code;
 
-    std::copy(base64_code(uuid.c_str()),
-              base64_code(uuid.c_str() + uuid.size()),
+    std::copy(base64_code(text.c_str()),
+              base64_code(text.c_str() + text.size()),
               std::ostream_iterator<char>(name));
     return name.str();
 }

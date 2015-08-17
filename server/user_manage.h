@@ -33,8 +33,8 @@ public:
     static std::string CalcName(const std::string& uuid);
 private:
     // Friend for accessing data more elegant
-    //friend void Meta::ReadUserList(UserManager* manager);
-    //friend void Meta::WriteUserList(UserManager* manager);
+    friend void Meta::ReadUserList(UserManager* manager);
+    friend void Meta::WriteUserList(const UserInfo& user);
 private:
     Mutex mu_;
     std::map<std::string, std::string> logged_users_;

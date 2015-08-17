@@ -94,11 +94,11 @@ void Meta::WriteVotedFor(int64_t term, const std::string& server_id) {
     }
 }
 
-void Meta::WriteUserList(const UserInfo* user) {
-    fprintf(user_file_, "%s\t%s\n", user->username(), user->passwd());
+void Meta::WriteUserList(const UserInfo& user) {
+    fprintf(user_file_, "%s\t%s\n", user.username(), user.passwd());
     if (fflush(user_file) != 0) {
         LOG(FATAL, "Meta::WriteUserList failed, username:%s",
-            user->username().c_str());
+            user.username().c_str());
         abort();
     }
 }

@@ -1619,14 +1619,14 @@ void InsNodeImpl::Login(::google::protobuf::RpcController* /*controller*/,
                         ::google::protobuf::Closure* done) {
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
-        response->set_state(kError);
+        response->set_status(kError);
         response->set_leader_id(current_leader_);
         done->Run();
         return;
     }
 
     if (status_ == kCandidate) {
-        response->set_state(kError);
+        response->set_status(kError);
         response->set_leader_id("");
         done->Run();
         return;
