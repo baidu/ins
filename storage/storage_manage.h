@@ -11,10 +11,11 @@
 namespace galaxy {
 namespace ins {
 
-struct UserEntry {
-    std::string username;
+struct DBEntry {
     leveldb::DB* db;
-    UserEntry() : username(), db(NULL) { }
+    Mutex* mu;
+    DBEntry() : db(NULL), mu(NULL) {
+	}
 };
 
 class StorageManager {
@@ -22,14 +23,15 @@ public:
     StorageManager(const std::string& data_dir);
     ~StorageManager();
 
-    bool OpenDatabase(const std::string& uuid);
-    void CloseDatabase(const std::string& uuid);
+    bool OpenDatabase(const std::string& name);
+    void CloseDatabase(const std::string& name);
 
-    DBStatus Get(const std::string& uuid, const std::string& key, std::string* value);
-    DBStatus Put(const std::string& uuid, const std::string& key, const std::string& value);
+    Status Get(const std::string& name, const std::string& key, std::string* value);
+    Status Put(const std::string& name, const std::string& key, const std::string& value);
+    Status Delete(const std::string& name, const std::string& key);
 private:
     std::string data_dir_;
-    std::map<std::string, std::pair<Mutex*, leveldb::DB*> > dbs_;
+    std::map<std::string, DBEntry> dbs_;
 };
 
 }

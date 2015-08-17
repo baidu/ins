@@ -24,7 +24,7 @@ TEST(StorageManageTest, GetPutTest) {
 	bool ok = storage_manager.OpenDatabase("user1");
 	EXPECT_TRUE(ok);
 	std::string value;
-	DBStatus ret = storage_manager.Put("", "Hello", "World");
+	Status ret = storage_manager.Put("", "Hello", "World");
 	EXPECT_EQ(ret, kOk);
 	ret = storage_manager.Put("user1", "Name", "User1");
 	EXPECT_EQ(ret, kOk);

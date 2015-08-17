@@ -14,9 +14,12 @@ namespace ins {
 
 struct LogEntry {
     LogOperation op;
+    std::string user;
     std::string key;
     std::string value;
     int64_t term;
+    LogEntry() : op(kNop), user("") {
+    }
 };
 
 class BinLogger {

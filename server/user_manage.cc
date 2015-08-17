@@ -1,13 +1,17 @@
-#include "user_manage.h"
+#include "server/user_manage.h"
 
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
-#include <boost/archive/iterators/transfrom_width.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
 #include <string>
 #include <sstream>
+#include "common/logging.h"
 
-static std::string UserManager::CalcUuid(const std::string& name) {
+namespace galaxy {
+namespace ins {
+
+std::string UserManager::CalcUuid(const std::string& name) {
     using namespace boost::archive::iterators;
     std::stringstream uuid;
     typedef base64_from_binary <
@@ -25,7 +29,7 @@ static std::string UserManager::CalcUuid(const std::string& name) {
     return uuid.str();
 }
 
-static std::string UserManager::CalcName(const std::string& uuid) {
+std::string UserManager::CalcName(const std::string& uuid) {
     using namespace boost::archive::iterators;
     std::stringstream name;
     typedef transform_width <
@@ -70,17 +74,17 @@ Status UserManager::Login(const std::string& name,
 
 Status UserManager::Logout(const std::string& uuid) {
     MutexLock lock(&mu_);
-    std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
+    std::map<std::string, UserInfo>::iterator user_it = user_list_.find(uuid);
     if (user_it == user_list_.end()) {
-        LOG(WARNING, "Logout for an inexist user :%s", name.c_str());
+        LOG(WARNING, "Logout for an inexist user :%s", uuid.c_str());
         return kNotFound;
     }
     if (!user_it->second.has_uuid()) {
-        LOG(WARNING, "Try to log in a logged account :%s", name.c_str());
+        LOG(WARNING, "Try to log in a logged account :%s", uuid.c_str());
         return kError;
     }
 
-    logged_user_.erase(uuid);
+    logged_users_.erase(uuid);
     user_it->second.clear_uuid();
     return kOk;
 }
@@ -93,22 +97,22 @@ Status UserManager::Register(const std::string& name, const std::string& passwor
         return kError;
     }
     user_list_[name].set_username(name);
-    user_list_[name].set_passwd(passwd);
+    user_list_[name].set_passwd(password);
     // TODO Flush to config file here
     return kOk;
 }
 
-void UserManager::DeleteUser(const std::string& name) {
+Status UserManager::DeleteUser(const std::string& name) {
     // XXX Maybe only admin can perform this operation
     MutexLock lock(&mu_);
-    std::map<std::string, UserInfo>::iterator user_it = user_it_.find(name);
-    if (user_it == user_it_.end()) {
+    std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
+    if (user_it == user_list_.end()) {
         LOG(WARNING, "Try to delete an inexist user :%s", name.c_str());
         return kNotFound;
     }
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(name);
     if (online_it != logged_users_.end()) {
-        logged_user_.erase(name);
+        logged_users_.erase(name);
     }
     user_list_.erase(name);
     return kOk;
@@ -126,14 +130,16 @@ bool UserManager::IsValidUser(const std::string& name) {
 
 void UserManager::TruncateOnlineUsers() {
     // XXX Maybe only admin can perform this operation
-    MutexLock(&mu_);
+    MutexLock lock(&mu_);
     logged_users_.clear();
 }
 
 void UserManager::TruncateAllUsers() {
     // XXX Maybe only admin can perform this operation
     MutexLock lock(&mu_);
-    logged_user_.clear();
+    logged_users_.clear();
     user_list_.clear();
 }
 
+}
+}

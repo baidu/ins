@@ -3,7 +3,8 @@
 
 #include <string>
 #include <map>
-#include "mutex.h"
+#include "common/mutex.h"
+#include "proto/ins_node.pb.h"
 
 namespace galaxy {
 namespace ins {
@@ -16,7 +17,7 @@ public:
     Status Login(const std::string& name, const std::string& password, std::string* uuid);
     Status Logout(const std::string& uuid);
     Status Register(const std::string& name, const std::string& password);
-    void DeleteUser(const std::string& name);
+    Status DeleteUser(const std::string& name);
 
     bool IsLoggedIn(const std::string& name);
     bool IsValidUser(const std::string& name);
@@ -27,7 +28,7 @@ public:
     static std::string CalcUuid(const std::string& name);
     static std::string CalcName(const std::string& uuid);
 private:
-    Mutex mu_
+    Mutex mu_;
     std::map<std::string, std::string> logged_users_;
     std::map<std::string, UserInfo> user_list_;
 };

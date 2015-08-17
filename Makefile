@@ -34,9 +34,9 @@ PROTO_SRC = $(patsubst %.proto,%.pb.cc,$(PROTO_FILE))
 PROTO_HEADER = $(patsubst %.proto,%.pb.h,$(PROTO_FILE))
 PROTO_OBJ = $(patsubst %.proto,%.pb.o,$(PROTO_FILE))
 
-INS_SRC = $(wildcard server/ins_*.cc) storage/*.cc server/user_manage.cc
+INS_SRC = $(filter-out $(wildcard */*test.cc), $(wildcard server/ins_*.cc) $(wildcard storage/*.cc) server/user_manage.cc)
 INS_OBJ = $(patsubst %.cc, %.o, $(INS_SRC))
-INS_HEADER = $(wildcard server/*.h)
+INS_HEADER = $(wildcard server/*.h) $(wildcard storage/*.h)
 
 INS_CLI_SRC = $(wildcard sdk/ins_*.cc)
 INS_CLI_OBJ = $(patsubst %.cc, %.o, $(INS_CLI_SRC))

@@ -21,74 +21,82 @@ StorageManager::StorageManager(const std::string& data_dir) : data_dir_(data_dir
     leveldb::DB* default_db = NULL;
     leveldb::Status status = leveldb::DB::Open(options, full_name, &default_db);
     assert(status.ok());
-    dbs_[""].first = new Mutex();
-    dbs_[""].second = default_db;
+    dbs_[""].db = default_db;
+	dbs_[""].mu = new Mutex();
 }
 
 StorageManager::~StorageManager() {
-    for (std::map<std::string, std::pair<Mutex*, leveldb::DB*> >::iterator it = dbs_.begin();
+    for (std::map<std::string, DBEntry>::iterator it = dbs_.begin();
          it != dbs_.end(); ++it) {
-        delete it->second.first;
-        it->second.first = NULL;
-        delete it->second.second;
-        it->second.second = NULL;
+        delete it->second.db;
+        it->second.db = NULL;
+        delete it->second.mu;
+        it->second.mu = NULL;
     }
 }
 
-bool StorageManager::OpenDatabase(const std::string& uuid) {
-    if (dbs_.find(uuid) != dbs_.end()) {
-        LOG(INFO, "Log in a logged account :%s", uuid.c_str());
+bool StorageManager::OpenDatabase(const std::string& name) {
+    if (dbs_.find(name) != dbs_.end()) {
         return true;
     }
-    dbs_[uuid].first = new Mutex();
-    std::string full_name = data_dir_ + "/" + uuid + "@db";
+    std::string full_name = data_dir_ + "/" + name + "@db";
     leveldb::Options options;
     options.create_if_missing = true;
-    leveldb::Status status = leveldb::DB::Open(options, full_name, &(dbs_[uuid].second));
+    leveldb::DB* current_db = NULL;
+    leveldb::Status status = leveldb::DB::Open(options, full_name, &current_db);
+    dbs_[name].db = current_db;
     return status.ok();
 }
 
-void StorageManager::CloseDatabase(const std::string& uuid) {
-    if (dbs_.find(uuid) == dbs_.end()) {
-        LOG(WARNING, "Try to close an inexist database :%s", uuid.c_str());
+void StorageManager::CloseDatabase(const std::string& name) {
+    std::map<std::string, DBEntry>::iterator dbs_it = dbs_.find(name);
+    if (dbs_it == dbs_.end()) {
         return;
     }
-    {
-    MutexLock lock(dbs_[uuid].first);
-    delete dbs_[uuid].second;
-    dbs_[uuid].second = NULL;
-    }
-    delete dbs_[uuid].first;
-    dbs_[uuid].first = NULL;
+    MutexLock lock(dbs_it->second.mu);
+    delete dbs_it->second.db;
+    dbs_it->second.db = NULL;
+    dbs_.erase(name);
 }
 
-DBStatus StorageManager::Get(const std::string& uuid,
-                             const std::string& key,
-                             std::string* value) {
-    if (dbs_.find(uuid) == dbs_.end()) {
-        LOG(WARNING, "Inexist or unlogged user :%s", uuid.c_str());
+Status StorageManager::Get(const std::string& name,
+                           const std::string& key,
+                           std::string* value) {
+    if (value == NULL) {
+        return kError;
+    }
+    if (dbs_.find(name) == dbs_.end()) {
+        LOG(WARNING, "Inexist or unlogged user :%s", name.c_str());
         return kNotFound;
     }
-	if (value == NULL) {
-		return kError;
-	}
-    MutexLock lock(dbs_[uuid].first);
-    leveldb::Status status = dbs_[uuid].second->Get(leveldb::ReadOptions(), key, value);
-	if (status.ok()) {
-		return (value->empty()) ? kNotFound : kOk;
-	}
-	return kError;
+    MutexLock lock(dbs_[name].mu);
+    leveldb::Status status = dbs_[name].db->Get(leveldb::ReadOptions(), key, value);
+    if (status.ok()) {
+        return (value->empty()) ? kNotFound : kOk;
+    }
+    return kError;
 }
 
-DBStatus StorageManager::Put(const std::string& uuid,
-                             const std::string& key,
-                             const std::string& value) {
-    if (dbs_.find(uuid) == dbs_.end()) {
-        LOG(WARNING, "Inexist or unlogged user :%s", uuid.c_str());
+Status StorageManager::Put(const std::string& name,
+                           const std::string& key,
+                           const std::string& value) {
+    if (dbs_.find(name) == dbs_.end()) {
+        LOG(WARNING, "Inexist or unlogged user :%s", name.c_str());
         return kNotFound;
     }
-    MutexLock lock(dbs_[uuid].first);
-    leveldb::Status status = dbs_[uuid].second->Put(leveldb::WriteOptions(), key, value);
+    MutexLock lock(dbs_[name].mu);
+    leveldb::Status status = dbs_[name].db->Put(leveldb::WriteOptions(), key, value);
+    return (status.ok()) ? kOk : kError;
+}
+
+Status StorageManager::Delete(const std::string& name,
+                              const std::string& key) {
+    if (dbs_.find(name) == dbs_.end()) {
+        LOG(WARNING, "Inexist or unlogged user :%s", name.c_str());
+        return kNotFound;
+    }
+    MutexLock lock(dbs_[name].mu);
+    leveldb::Status status = dbs_[name].db->Delete(leveldb::WriteOptions(), key);
     return (status.ok()) ? kOk : kError;
 }
 
