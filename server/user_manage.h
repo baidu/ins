@@ -21,7 +21,8 @@ public:
     bool IsLoggedIn(const std::string& name);
     bool IsValidUser(const std::string& name);
 
-    void Truncate();
+    void TruncateOnlineUsers();
+    void TruncateAllUsers();
 
     static std::string CalcUuid(const std::string& name);
     static std::string CalcName(const std::string& uuid);

@@ -51,8 +51,7 @@ Status UserManager::Login(const std::string& name,
         LOG(WARNING, "Inexist user tried to login :%s", name.c_str());
         return kNotFound;
     }
-    // TODO Seems that undefined optional field has undefined behaviour while reading
-    if (user_it->second.uuid() != "") {
+    if (!user_it->second.has_uuid()) {
         LOG(WARNING, "Try to log in a logged account :%s", name.c_str());
         return kError;
     }
@@ -76,13 +75,65 @@ Status UserManager::Logout(const std::string& uuid) {
         LOG(WARNING, "Logout for an inexist user :%s", name.c_str());
         return kNotFound;
     }
-    if (user_it->second.uuid() == "") {
+    if (!user_it->second.has_uuid()) {
         LOG(WARNING, "Try to log in a logged account :%s", name.c_str());
         return kError;
     }
 
     logged_user_.erase(uuid);
-    user_it->second.set_uuid("");
+    user_it->second.clear_uuid();
     return kOk;
+}
+
+Status UserManager::Register(const std::string& name, const std::string& password) {
+    MutexLock lock(&mu_);
+    std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
+    if (user_it != user_list_.end()) {
+        LOG(WARNING, "Try to register an exist user :%s", name.c_str());
+        return kError;
+    }
+    user_list_[name].set_username(name);
+    user_list_[name].set_passwd(passwd);
+    // TODO Flush to config file here
+    return kOk;
+}
+
+void UserManager::DeleteUser(const std::string& name) {
+    // XXX Maybe only admin can perform this operation
+    MutexLock lock(&mu_);
+    std::map<std::string, UserInfo>::iterator user_it = user_it_.find(name);
+    if (user_it == user_it_.end()) {
+        LOG(WARNING, "Try to delete an inexist user :%s", name.c_str());
+        return kNotFound;
+    }
+    std::map<std::string, std::string>::iterator online_it = logged_users_.find(name);
+    if (online_it != logged_users_.end()) {
+        logged_user_.erase(name);
+    }
+    user_list_.erase(name);
+    return kOk;
+}
+
+bool UserManager::IsLoggedIn(const std::string& name) {
+    MutexLock lock(&mu_);
+    return logged_users_.find(name) != logged_users_.end();
+}
+
+bool UserManager::IsValidUser(const std::string& name) {
+    MutexLock lock(&mu_);
+    return user_list_.find(name) != user_list_.end();
+}
+
+void UserManager::TruncateOnlineUsers() {
+    // XXX Maybe only admin can perform this operation
+    MutexLock(&mu_);
+    logged_users_.clear();
+}
+
+void UserManager::TruncateAllUsers() {
+    // XXX Maybe only admin can perform this operation
+    MutexLock lock(&mu_);
+    logged_user_.clear();
+    user_list_.clear();
 }
 
