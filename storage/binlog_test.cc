@@ -41,7 +41,7 @@ TEST(BinLogTest, SlotWriteTest) {
 }
 
 TEST(BinLogTest, SlotBatchWriteTest) {
-    BinLogger bin_logger("/tmp/");
+    BinLogger bin_logger("/tmp/", true);
     char key_buf[1024] = {'\0'};
     char value_buf[1024] = {'\0'};
     ::google::protobuf::RepeatedPtrField< ::galaxy::ins::Entry > entries;

@@ -21,7 +21,7 @@ struct LogEntry {
 
 class BinLogger {
 public:
-    BinLogger(const std::string& data_dir);
+    BinLogger(const std::string& data_dir, bool compress = false);
     ~BinLogger();
     int64_t GetLength();
     bool ReadSlot(int64_t slot_index, LogEntry* log_entry);

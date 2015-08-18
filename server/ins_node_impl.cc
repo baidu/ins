@@ -20,6 +20,7 @@ DECLARE_int32(replication_retry_timespan);
 DECLARE_int32(elect_timeout_min);
 DECLARE_int32(elect_timeout_max);
 DECLARE_int64(session_expire_timeout);
+DECLARE_bool(ins_data_compress);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -73,7 +74,8 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
     boost::replace_all(sub_dir, ":", "_");
     
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
-    binlogger_ = new BinLogger(FLAGS_ins_binlog_dir + "/" + sub_dir);
+    binlogger_ = new BinLogger(FLAGS_ins_binlog_dir + "/" + sub_dir, 
+                               FLAGS_ins_data_compress);
     current_term_ = meta_->ReadCurrentTerm();
     meta_->ReadVotedFor(voted_for_);
     
@@ -81,6 +83,10 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
                                   + sub_dir + "/store" ;
     leveldb::Options options;
     options.create_if_missing = true;
+    if (FLAGS_ins_data_compress) {
+        options.compression = leveldb::kSnappyCompression;
+        LOG(INFO, "enalbe snappy compress for data storage");
+    }
     leveldb::Status status = leveldb::DB::Open(options, 
                                                data_store_path, &data_store_);
     assert(status.ok());
