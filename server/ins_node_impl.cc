@@ -117,6 +117,8 @@ InsNodeImpl::~InsNodeImpl() {
         MutexLock lock(&mu_);
         delete meta_;
         delete binlogger_;
+        delete user_manager_;
+        delete data_store_;
     }
 }
 
@@ -190,7 +192,9 @@ void InsNodeImpl::CommitIndexObserv() {
             assert(slot_ok);
             Status s;
             std::string type_and_value;
+            std::string new_uuid;
             bool lock_succ = true;
+            Status log_status = kError;
             switch(log_entry.op) {
                 case kPut:
                 case kLock:
@@ -227,9 +231,9 @@ void InsNodeImpl::CommitIndexObserv() {
                     nop_committed = true;
                     break;
                 case kUnLock:
-                    {   
-                        std::string key = log_entry.key;
-                        std::string old_session = log_entry.value;
+                    {
+                        const std::string& key = log_entry.key;
+                        const std::string& old_session = log_entry.value;
                         std::string value;
                         s = data_store_->Get(log_entry.user, key, &value);
                         if (s == kOk) {
@@ -249,6 +253,21 @@ void InsNodeImpl::CommitIndexObserv() {
                         }
                     }
                     break;
+                case kLogin:
+                    log_status = user_manager_->Login(log_entry.user, log_entry.key, &new_uuid);
+                    if (log_status == kOk) {
+                        data_store_->OpenDatabase(log_entry.user);
+                    }
+                    break;
+                case kLogout:
+                    if (user_manager_->IsLoggedIn(log_entry.user)) {
+                        data_store_->CloseDatabase(
+                                user_manager_->GetUsernameFromUuid(log_entry.user));
+                        log_status = user_manager_->Logout(log_entry.user);
+                    }
+                    break;
+                default:
+                    LOG(WARNING, "Unfamiliar op :%d", static_cast<int>(log_entry.op));
             }
             mu_.Lock();
             if (status_ == kLeader && nop_committed) {
@@ -281,6 +300,17 @@ void InsNodeImpl::CommitIndexObserv() {
                     ack.unlock_response->set_success(true);
                     ack.unlock_response->set_leader_id("");
                     ack.done->Run(); //client unlock ok;
+                }
+                if (ack.login_response) {
+                    ack.login_response->set_status(log_status);
+                    ack.login_response->set_uuid(new_uuid);
+                    ack.login_response->set_leader_id("");
+                    ack.done->Run();
+                }
+                if (ack.logout_response) {
+                    ack.logout_response->set_status(log_status);
+                    ack.logout_response->set_leader_id("");
+                    ack.done->Run();
                 }
                 client_ack_.erase(i);
             }
@@ -1632,7 +1662,23 @@ void InsNodeImpl::Login(::google::protobuf::RpcController* /*controller*/,
         return;
     }
 
-    // TODO DO something here
+    const std::string& username = request->username();
+    const std::string& passwd = request->passwd();
+    LOG(DEBUG, "client wants to login :%s", username.c_str());
+    LogEntry log_entry;
+    log_entry.user = username;
+    log_entry.key = passwd;
+    log_entry.op = kLogin;
+    binlogger_->AppendEntry(log_entry);
+    int64_t cur_index = binlogger_->GetLength() - 1;
+    ClientAck& ack = client_ack_[cur_index];
+    ack.done = done;
+    ack.login_response = response;
+    replication_cond_->Broadcast();
+    if (single_node_mode_) {
+        UpdateCommitIndex(binlogger_->GetLength() - 1);
+    }
+    return;
 }
 
 void InsNodeImpl::Logout(::google::protobuf::RpcController* /*controller*/,
@@ -1641,20 +1687,34 @@ void InsNodeImpl::Logout(::google::protobuf::RpcController* /*controller*/,
                          ::google::protobuf::Closure* done) {
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
-        response->set_success(false);
+        response->set_status(kError);
         response->set_leader_id(current_leader_);
         done->Run();
         return;
     }
 
     if (status_ == kCandidate) {
-        response->set_success(false);
+        response->set_status(kError);
         response->set_leader_id("");
         done->Run();
         return;
     }
 
-    // TODO Do something here
+    const std::string& uuid = request->uuid();
+    LOG(DEBUG, "client wants to logout :%s", uuid.c_str());
+    LogEntry log_entry;
+    log_entry.user = uuid;
+    log_entry.op = kLogout;
+    binlogger_->AppendEntry(log_entry);
+    int64_t cur_index = binlogger_->GetLength() - 1;
+    ClientAck& ack = client_ack_[cur_index];
+    ack.done = done;
+    ack.logout_response = response;
+    replication_cond_->Broadcast();
+    if (single_node_mode_) {
+        UpdateCommitIndex(binlogger_->GetLength() - 1);
+    }
+    return;
 }
 
 void InsNodeImpl::DelBinlog(int64_t index) {

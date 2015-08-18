@@ -29,6 +29,11 @@ public:
     Status TruncateOnlineUsers(const std::string& myid);
     Status TruncateAllUsers(const std::string& myid);
 
+    // Use it after valid uuid assured
+    std::string GetUsernameFromUuid(const std::string& uuid) {
+        return logged_users_[uuid];
+    }
+
     static std::string CalcUuid(const std::string& name);
     static std::string CalcName(const std::string& uuid);
 private:

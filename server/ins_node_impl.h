@@ -32,11 +32,15 @@ struct ClientAck {
     galaxy::ins::DelResponse* del_response;
     galaxy::ins::LockResponse* lock_response;
     galaxy::ins::UnLockResponse* unlock_response;
+    galaxy::ins::LoginResponse* login_response;
+    galaxy::ins::LogoutResponse* logout_response;
     google::protobuf::Closure* done;
     ClientAck() : response(NULL),
                   del_response(NULL),
                   lock_response(NULL),
                   unlock_response(NULL),
+                  login_response(NULL),
+                  logout_response(NULL),
                   done(NULL) {
     }
 };
@@ -253,7 +257,7 @@ private:
     int32_t heartbeat_count_;
     Meta* meta_;
     BinLogger* binlogger_;
-	UserManager* user_manager_;
+    UserManager* user_manager_;
     //for leaders
     StorageManager* data_store_;
     ThreadPool replicatter_;
