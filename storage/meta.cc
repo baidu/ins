@@ -63,7 +63,7 @@ void Meta::ReadVotedFor(std::map<int64_t, std::string>& voted_for) {
 }
 
 void Meta::ReadUserList(UserManager* manager) {
-    manager->logged_list_.clear();
+    manager->logged_users_.clear();
     manager->user_list_.clear();
     char buf[1024] = {'\0'};
     // TODO Need fseek here ?
@@ -72,8 +72,8 @@ void Meta::ReadUserList(UserManager* manager) {
         for (p = buf; *p != '\t'; ++p);
         *p++ = 0;
         std::string username = buf;
-        manager[username].set_username(username);
-        manager[username].set_passwd(p);
+        manager->user_list_[username].set_username(username);
+        manager->user_list_[username].set_passwd(p);
     }
 }
 
@@ -95,8 +95,8 @@ void Meta::WriteVotedFor(int64_t term, const std::string& server_id) {
 }
 
 void Meta::WriteUserList(const UserInfo& user) {
-    fprintf(user_file_, "%s\t%s\n", user.username(), user.passwd());
-    if (fflush(user_file) != 0) {
+    fprintf(user_file_, "%s\t%s\n", user.username().c_str(), user.passwd().c_str());
+    if (fflush(user_file_) != 0) {
         LOG(FATAL, "Meta::WriteUserList failed, username:%s",
             user.username().c_str());
         abort();

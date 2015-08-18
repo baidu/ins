@@ -15,7 +15,7 @@ struct DBEntry {
     leveldb::DB* db;
     Mutex* mu;
     DBEntry() : db(NULL), mu(NULL) {
-	}
+    }
 };
 
 class StorageManager {
@@ -30,7 +30,34 @@ public:
     Status Put(const std::string& name, const std::string& key, const std::string& value);
     Status Delete(const std::string& name, const std::string& key);
 
-	static const std::string anonymous_user;
+    static const std::string anonymous_user;
+public:
+    class Iterator {
+    public:
+        Iterator() : it_(NULL) { }
+        Iterator(leveldb::DB* db, const leveldb::ReadOptions& option) {
+            it_ = db->NewIterator(option);
+        }
+        ~Iterator() {
+            if (it_ != NULL) {
+                delete it_;
+                it_ = NULL;
+            }
+        }
+
+        std::string key() const;
+        std::string value() const;
+
+        Iterator *Seek(std::string key);
+        Iterator *Next();
+
+        bool Valid() const;
+        Status status() const;
+    private:
+        leveldb::Iterator* it_;
+    };
+
+    Iterator *NewIterator(const std::string& name);
 private:
     std::string data_dir_;
     std::map<std::string, DBEntry> dbs_;

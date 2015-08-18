@@ -1167,21 +1167,21 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
     std::string start_key = request->start_key();
     std::string end_key = request->end_key();
     int32_t size_limit = request->size_limit();
-	// TODO Need to add iterator interface for storage manager
-    leveldb::Iterator* it = data_store_->NewIterator(leveldb::ReadOptions());
+    StorageManager::Iterator* it = data_store_->NewIterator((request->has_user()) ?
+                request->user() : StorageManager::anonymous_user);
     bool has_more = false;
     int32_t count = 0;
     for (it->Seek(start_key);
-         it->Valid() && (it->key().ToString() < end_key || end_key.empty());
+         it->Valid() && (it->key() < end_key || end_key.empty());
          it->Next()) {
         if (count > size_limit) {
             has_more = true;
             break;
         }
-        if (it->key().ToString() == tag_last_applied_index) {
+        if (it->key() == tag_last_applied_index) {
             continue;
         }
-        std::string value = it->value().ToString();
+        std::string value = it->value();
         std::string real_value;
         LogOperation op;
         ParseValue(value, op, real_value);
@@ -1192,18 +1192,18 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
             }
         }
         galaxy::ins::ScanItem* item = response->add_items();
-        item->set_key(it->key().ToString());
+        item->set_key(it->key());
         item->set_value(real_value);
         count ++;
     }
 
-    assert(it->status().ok());
+    assert(it->status() == kOk);
     delete it;
     response->set_has_more(has_more);
     response->set_success(true);
     done->Run();
 
-    mu_.Lock();    
+    mu_.Lock();
     return;
 }
 
@@ -1561,7 +1561,7 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
             LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
                 key.c_str(), real_value.c_str(), request->old_value().c_str());
             TriggerEventBySessionAndKey(request->session_id(),
-                                        key, real_value, s.IsNotFound());
+                                        key, real_value, (s == kNotFound));
         } else if (op == kLock && IsExpiredSession(real_value)) {
             LOG(INFO, "key(lock):%s, new_v: %s, old_v:%s", 
                 key.c_str(), real_value.c_str(), request->old_value().c_str());

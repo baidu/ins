@@ -8,7 +8,7 @@
 namespace galaxy {
 namespace ins {
 
-static const std::string UserManager::anonymous_user = "";
+const std::string StorageManager::anonymous_user = "";
 
 StorageManager::StorageManager(const std::string& data_dir) : data_dir_(data_dir) {
     bool ok = ins_common::Mkdirs(data_dir.c_str());
@@ -24,7 +24,7 @@ StorageManager::StorageManager(const std::string& data_dir) : data_dir_(data_dir
     leveldb::Status status = leveldb::DB::Open(options, full_name, &default_db);
     assert(status.ok());
     dbs_[""].db = default_db;
-	dbs_[""].mu = new Mutex();
+    dbs_[""].mu = new Mutex();
 }
 
 StorageManager::~StorageManager() {
@@ -100,6 +100,55 @@ Status StorageManager::Delete(const std::string& name,
     MutexLock lock(dbs_[name].mu);
     leveldb::Status status = dbs_[name].db->Delete(leveldb::WriteOptions(), key);
     return (status.ok()) ? kOk : kError;
+}
+
+std::string StorageManager::Iterator::key() const {
+    return (it_ != NULL) ? it_->key().ToString() : "";
+}
+
+std::string StorageManager::Iterator::value() const {
+    return (it_ != NULL) ? it_->value().ToString() : "";
+}
+
+StorageManager::Iterator *StorageManager::Iterator::Seek(std::string key) {
+    if (it_ != NULL) {
+        it_->Seek(key);
+    }
+    return this;
+}
+
+StorageManager::Iterator *StorageManager::Iterator::Next() {
+    if (it_ != NULL) {
+        it_->Next();
+    }
+    return this;
+}
+
+bool StorageManager::Iterator::Valid() const {
+    return (it_ != NULL) ? it_->Valid() : false;
+}
+
+Status StorageManager::Iterator::status() const {
+    return (it_ != NULL) ?
+               ((it_->status().ok()) ?
+                   kOk
+                   :
+                   ((it_->status().IsNotFound()) ?
+                       kError : kNotFound
+                   )
+               )
+               :
+               kError
+           ;
+}
+
+StorageManager::Iterator *StorageManager::NewIterator(const std::string& name) {
+    std::map<std::string, DBEntry>::iterator dbs_it = dbs_.find(name);
+    if (dbs_it == dbs_.end()) {
+        LOG(WARNING, "Inexist or unlogged user :%s", name.c_str());
+        return NULL;
+    }
+    return new StorageManager::Iterator(dbs_it->second.db, leveldb::ReadOptions());
 }
 
 }

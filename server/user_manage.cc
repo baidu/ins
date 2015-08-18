@@ -4,6 +4,7 @@
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
+#include <boost/lexical_cast.hpp>
 #include <string>
 #include <sstream>
 #include "common/logging.h"
@@ -14,8 +15,8 @@ namespace ins {
 
 std::string UserManager::CalcUuid(const std::string& name) {
     using namespace boost::archive::iterators;
-    int64_t now = ins::common::get_micros();
-    std::string text = name + std::to_string(now);
+    int64_t now = ins_common::timer::get_micros();
+    std::string text = name + boost::lexical_cast<std::string>(now);
     std::stringstream uuid;
     typedef base64_from_binary <
         transform_width <
@@ -34,8 +35,8 @@ std::string UserManager::CalcUuid(const std::string& name) {
 
 std::string UserManager::CalcName(const std::string& uuid) {
     using namespace boost::archive::iterators;
-    int64_t now = ins::common::get_micros();
-    std::string text = uuid + std::to_string(now);
+    int64_t now = ins_common::timer::get_micros();
+    std::string text = uuid + boost::lexical_cast<std::string>(now);
     std::stringstream name;
     typedef transform_width <
         binary_from_base64 <
@@ -52,9 +53,9 @@ std::string UserManager::CalcName(const std::string& uuid) {
 }
 
 UserManager::UserManager(const UserInfo& root) {
-    root.set_username("root");
-    root.clear_uuid();
     user_list_["root"] = root;
+    user_list_["root"].set_username("root");
+    user_list_["root"].clear_uuid();
 }
 
 Status UserManager::Login(const std::string& name,
@@ -112,7 +113,7 @@ Status UserManager::Register(const std::string& name, const std::string& passwor
     return kOk;
 }
 
-Status UserManager::ForceOffline(const std::string& myid, const std::string uuid) {
+Status UserManager::ForceOffline(const std::string& myid, const std::string& uuid) {
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
     if (online_it == logged_users_.end()) {
@@ -130,13 +131,11 @@ Status UserManager::DeleteUser(const std::string& myid, const std::string& name)
     if (online_it == logged_users_.end() || online_it->second != "root") {
         return kError;
     }
-    std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
-    if (user_it == user_list_.end()) {
+    if (user_list_.find(name) == user_list_.end()) {
         LOG(WARNING, "Try to delete an inexist user :%s", name.c_str());
         return kNotFound;
     }
-    std::map<std::string, std::string>::iterator online_it = logged_users_.find(name);
-    if (online_it != logged_users_.end()) {
+    if (logged_users_.find(name) != logged_users_.end()) {
         logged_users_.erase(name);
     }
     user_list_.erase(name);
@@ -153,16 +152,17 @@ bool UserManager::IsValidUser(const std::string& name) {
     return user_list_.find(name) != user_list_.end();
 }
 
-void UserManager::TruncateOnlineUsers(const std::string& myid) {
+Status UserManager::TruncateOnlineUsers(const std::string& myid) {
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
     if (online_it == logged_users_.end() || online_it->second != "root") {
         return kError;
     }
     logged_users_.clear();
+    return kOk;
 }
 
-void UserManager::TruncateAllUsers(const std::string& myid) {
+Status UserManager::TruncateAllUsers(const std::string& myid) {
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
     if (online_it == logged_users_.end() || online_it->second != "root") {
@@ -170,6 +170,7 @@ void UserManager::TruncateAllUsers(const std::string& myid) {
     }
     logged_users_.clear();
     user_list_.clear();
+    return kOk;
 }
 
 }
