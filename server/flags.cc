@@ -11,7 +11,7 @@ DEFINE_int32(elect_timeout_min, 150, "mininum timeout to make a new election");
 DEFINE_int32(elect_timeout_max, 300, "maximum timeout to make a new election");
 DEFINE_int64(session_expire_timeout, 6000000, "timeout for session expiration, 6 seconds in default");
 DEFINE_bool(ins_data_compress, true, "enable snappy compression on leveldb storage");
-
+DEFINE_int32(ins_gc_interval, 60, "binlog clean interval (seconds)");
 //ins_cli only
 DEFINE_string(ins_cmd, "", "the command of inc shell");
 DEFINE_string(ins_key, "key", "");

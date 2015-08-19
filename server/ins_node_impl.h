@@ -225,6 +225,7 @@ private:
                         const std::string& session_id);
     void ForwardKeepAlive(const ::galaxy::ins::KeepAliveRequest * request,
                           ::galaxy::ins::KeepAliveResponse * response);
+    void GarbageClean();
 public:
     std::vector<std::string> members_;
 private:
@@ -270,6 +271,7 @@ private:
     Mutex session_locks_mu_;
     ThreadPool binlog_cleaner_;
     bool single_node_mode_;
+    int64_t last_safe_clean_index_;
 };
 
 } //namespace ins
