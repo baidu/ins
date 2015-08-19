@@ -24,8 +24,8 @@ https://github.com/fxsjy/ins/wiki
 # 快速体验（只需要一台机器，通过多个进程模拟分布式）
 
 	cd sandbox
-	./start_all.sh
-	./ins_shell.sh
+	./start_all.sh  (启动本机5个进程监听不同端口，模拟一个集群）
+	./ins_shell.sh  （进入命令行管理界面）
 		
 	galaxy ins> help
 	  show [ show cluster ]
