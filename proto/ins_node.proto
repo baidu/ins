@@ -162,7 +162,7 @@ message LockResponse {
 
 message KeepAliveRequest {
     required string session_id = 1;
-    optional string host_name = 2;
+    optional string uuid = 2;
     repeated string locks = 3;
     optional bool forward_from_leader = 4 [default = false];
 }
@@ -197,7 +197,7 @@ message LoginRequest {
 }
 
 message LoginResponse {
-    optional Status status = 1;
+    required Status status = 1;
     optional string uuid = 2;
     optional string leader_id = 3;
 }
@@ -207,7 +207,7 @@ message LogoutRequest {
 }
 
 message LogoutResponse {
-    optional Status status = 1;
+    required Status status = 1;
     optional string leader_id = 2;
 }
 
@@ -217,7 +217,7 @@ message RegisterRequest {
 }
 
 message RegisterResponse {
-    optional Status status = 1;
+    required Status status = 1;
     optional string leader_id = 2;
 }
 

@@ -91,8 +91,7 @@ void InsSDK::MakeSessionID () {
     boost::uuids::uuid uuid = boost::uuids::random_generator()();
     std::stringstream sm_uuid;
     sm_uuid << uuid;
-    std::string str_uuid= sm_uuid.str();
-    session_id_ = hostname + "#" + str_uuid;
+    session_id_ = hostname + "#" + sm_uuid.str();
 }
 
 InsSDK::~InsSDK() {
@@ -468,6 +467,7 @@ void InsSDK::KeepAliveTask() {
         galaxy::ins::KeepAliveRequest request;
         galaxy::ins::KeepAliveResponse response;
         request.set_session_id(GetSessionID());
+        request.set_uuid(logged_uuid_);
         std::set<std::string>::iterator si;
         for (si = my_locks.begin(); si != my_locks.end(); si++) {
             std::string* lock_key = request.add_locks();
@@ -584,7 +584,7 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
     }
     if (!response_ptr->canceled()) { //retry, if not cancel
         if (request->session_id() != GetSessionID()) {
-            LOG(INFO, "callback, no retry on expried watch");
+            LOG(INFO, "callback, no retry on expired watch");
             return;        
         }
         {
@@ -640,13 +640,13 @@ void InsSDK::KeepWatchTask(const std::string& key,
             return;
         }
         if (pending_watches_.find(watch_id) == pending_watches_.end()) {
-            LOG(INFO, "expried watch id :%ld", watch_id);
+            LOG(INFO, "expired watch id :%ld", watch_id);
             return;
         }
     }
 
     if (session_id != GetSessionID()) {
-        LOG(INFO, "expried watch on %s", key.c_str());
+        LOG(INFO, "expired watch on %s", key.c_str());
         return;
     }
 
@@ -837,6 +837,15 @@ std::string InsSDK::HashPassword(const std::string& password) {
 bool InsSDK::Login(const std::string& username,
                    const std::string& password,
                    SDKError* error) {
+    {
+        MutexLock lock(mu_);
+        if (!is_keep_alive_bg_) {
+            keep_alive_pool_->AddTask(
+                boost::bind(&InsSDK::KeepAliveTask, this)
+            );
+            is_keep_alive_bg_ = true;
+        }
+    }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it;

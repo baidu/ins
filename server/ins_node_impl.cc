@@ -1272,7 +1272,7 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* /*controller*/,
     Session session;
     session.session_id = request->session_id();
     session.last_report_time = ins_common::timer::get_micros();
-    session.host_name = request->host_name();
+    session.uuid = request->uuid();
     {
         MutexLock lock(&sessions_mu_);
         SessionIDIndex& id_index = sessions_.get<0>();
@@ -1364,6 +1364,12 @@ void InsNodeImpl::RemoveExpiredSessions() {
                 for (SessionTimeIndex::iterator dd = time_index.begin();
                      dd != it; dd++) {
                     expired_sessions.push_back(dd->session_id);
+                    const std::string& uuid = dd->uuid;
+                    if (!dd->uuid.empty() && user_manager_->IsLoggedIn(uuid)) {
+                        data_store_->CloseDatabase(
+                                user_manager_->GetUsernameFromUuid(uuid));
+                        user_manager_->Logout(uuid);
+                    }
                     LOG(INFO, "remove session_id %s", dd->session_id.c_str());
                 }
                 time_index.erase(time_index.begin(), it);

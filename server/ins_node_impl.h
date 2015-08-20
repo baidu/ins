@@ -68,7 +68,7 @@ struct ClientReadAck
 
 struct Session {
     std::string session_id;
-    std::string host_name;
+    std::string uuid;
     int64_t last_report_time;
     Session() : last_report_time(0) {
 
