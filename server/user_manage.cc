@@ -9,9 +9,14 @@
 #include <sstream>
 #include "common/logging.h"
 #include "common/timer.h"
+#include "leveldb/write_batch.h"
+#include "storage/utils.h"
 
 namespace galaxy {
 namespace ins {
+
+const std::string user_dbname = "userdb";
+const std::string root_name = "root";
 
 std::string UserManager::CalcUuid(const std::string& name) {
     using namespace boost::archive::iterators;
@@ -52,10 +57,23 @@ std::string UserManager::CalcName(const std::string& uuid) {
     return name.str();
 }
 
-UserManager::UserManager(const UserInfo& root) {
-    user_list_["root"] = root;
-    user_list_["root"].set_username("root");
-    user_list_["root"].clear_uuid();
+UserManager::UserManager(const std::string& data_dir,
+                         const UserInfo& root) : data_dir_(data_dir) {
+    bool ok = ins_common::Mkdirs(data_dir.c_str());
+    if (!ok) {
+        LOG(FATAL, "failed to create dir :%s", data_dir.c_str());
+        abort();
+    }
+    std::string full_name = data_dir + "/" + user_dbname;
+    leveldb::Options options;
+    options.create_if_missing = true;
+    leveldb::Status status = leveldb::DB::Open(options, full_name, &user_db_);
+    assert(status.ok());
+    assert(WriteToDatabase(root));
+    RecoverFromDatabase();
+    user_list_[root_name] = root;
+    user_list_[root_name].set_username(root_name);
+    user_list_[root_name].clear_uuid();
 }
 
 Status UserManager::Login(const std::string& name,
@@ -104,6 +122,9 @@ Status UserManager::Register(const std::string& name, const std::string& passwor
         LOG(WARNING, "Try to register an exist user :%s", name.c_str());
         return kUserExists;
     }
+    if (!WriteToDatabase(name, password)) {
+        return kError;
+    }
     user_list_[name].set_username(name);
     user_list_[name].set_passwd(password);
     return kOk;
@@ -115,7 +136,7 @@ Status UserManager::ForceOffline(const std::string& myid, const std::string& uui
     if (online_it == logged_users_.end()) {
         return kUnknownUser;
     }
-    if (online_it->second == "root" || myid == uuid) {
+    if (online_it->second == root_name || myid == uuid) {
         return Logout(uuid);
     }
     return kPermissionDenied;
@@ -127,13 +148,16 @@ Status UserManager::DeleteUser(const std::string& myid, const std::string& name)
     if (online_it == logged_users_.end()) {
         return kUnknownUser;
     }
-    if (online_it->second != "root" && online_it->second != name) {
+    if (online_it->second != root_name && online_it->second != name) {
         return kPermissionDenied;
     }
     std::map<std::string, UserInfo>::iterator user_it = user_list_.find(online_it->second);
     if (user_it == user_list_.end()) {
         LOG(WARNING, "Try to delete an inexist user :%s", name.c_str());
         return kNotFound;
+    }
+    if (!DeleteUserFromDatabase(name)) {
+        return kError;
     }
     if (user_it->second.has_uuid()) {
         logged_users_.erase(user_it->second.uuid());
@@ -155,7 +179,7 @@ bool UserManager::IsValidUser(const std::string& name) {
 Status UserManager::TruncateOnlineUsers(const std::string& myid) {
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
-    if (online_it == logged_users_.end() || online_it->second != "root") {
+    if (online_it == logged_users_.end() || online_it->second != root_name) {
         return kPermissionDenied;
     }
     logged_users_.clear();
@@ -168,6 +192,9 @@ Status UserManager::TruncateAllUsers(const std::string& myid) {
     if (online_it == logged_users_.end() || online_it->second != "root") {
         return kPermissionDenied;
     }
+    if (!TruncateDatabase()) {
+        return kError;
+    }
     logged_users_.clear();
     user_list_.clear();
     return kOk;
@@ -175,9 +202,57 @@ Status UserManager::TruncateAllUsers(const std::string& myid) {
 
 std::string UserManager::GetUsernameFromUuid(const std::string& uuid) {
     if (IsLoggedIn(uuid)) {
-		return logged_users_[uuid];
-	}
-	return "";
+        return logged_users_[uuid];
+    }
+    return "";
+}
+
+bool UserManager::WriteToDatabase(const UserInfo& user) {
+    if (!user.has_username() || !user.has_passwd()) {
+        return false;
+    }
+    MutexLock lock(&db_mu_);
+    leveldb::Status status = user_db_->Put(leveldb::WriteOptions(),
+                                           user.username(),
+                                           user.passwd());
+    return status.ok();
+}
+
+bool UserManager::WriteToDatabase(const std::string& name, const std::string& password) {
+    MutexLock lock(&db_mu_);
+    leveldb::Status status = user_db_->Put(leveldb::WriteOptions(), name, password);
+    return status.ok();
+}
+
+bool UserManager::DeleteUserFromDatabase(const std::string& name) {
+    MutexLock lock(&db_mu_);
+    leveldb::Status status = user_db_->Delete(leveldb::WriteOptions(), name);
+    return status.ok();
+}
+
+bool UserManager::TruncateDatabase() {
+    MutexLock lock(&db_mu_);
+    leveldb::Iterator* it = user_db_->NewIterator(leveldb::ReadOptions());
+    leveldb::WriteBatch batch;
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        batch.Delete(it->key().ToString());
+    }
+    if (!it->status().ok()) {
+        return false;
+    }
+    leveldb::Status status = user_db_->Write(leveldb::WriteOptions(), &batch);
+    return status.ok();
+}
+
+bool UserManager::RecoverFromDatabase() {
+    MutexLock lock(&db_mu_);
+    leveldb::Iterator* it = user_db_->NewIterator(leveldb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        const std::string& name = it->key().ToString();
+        user_list_[name].set_username(name);
+        user_list_[name].set_passwd(it->value().ToString());
+    }
+    return it->status().ok();
 }
 
 }

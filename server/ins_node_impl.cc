@@ -75,14 +75,14 @@ InsNodeImpl::InsNodeImpl(std::string& server_id,
     
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
     binlogger_ = new BinLogger(FLAGS_ins_binlog_dir + "/" + sub_dir);
-    user_manager_ = new UserManager();
-    meta_->ReadUserList(user_manager_);
     current_term_ = meta_->ReadCurrentTerm();
     meta_->ReadVotedFor(voted_for_);
     
     std::string data_store_path = FLAGS_ins_data_dir + "/" 
                                   + sub_dir + "/store" ;
     data_store_ = new StorageManager(data_store_path);
+    UserInfo root = meta_->ReadRootInfo();
+    user_manager_ = new UserManager(data_store_path, root);
     std::string tag_value;
     Status status = data_store_->Get(StorageManager::anonymous_user,
                                      tag_last_applied_index,

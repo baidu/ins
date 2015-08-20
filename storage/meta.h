@@ -17,16 +17,15 @@ public:
     ~Meta();
     int64_t ReadCurrentTerm();
     void ReadVotedFor(std::map<int64_t, std::string>& voted_for);
-    void ReadUserList(UserManager* manager);
+    UserInfo ReadRootInfo();
     void WriteCurrentTerm(int64_t term); 
     void WriteVotedFor(int64_t term, const std::string& server_id);
-    void WriteUserInfo(const UserInfo& user);
-    void WriteUserList(const UserManager& manager);
+    void WriteRootInfo(const UserInfo& root);
 private:
     std::string data_dir_;
     FILE* term_file_;
     FILE* vote_file_;
-    FILE* user_file_;
+    FILE* root_file_;
 };
 
 } //namespace ins
