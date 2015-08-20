@@ -69,7 +69,7 @@ Status StorageManager::Get(const std::string& name,
     }
     if (dbs_.find(name) == dbs_.end()) {
         LOG(WARNING, "Inexist or unlogged user :%s", name.c_str());
-        return kNotFound;
+        return kUnknownUser;
     }
     MutexLock lock(dbs_[name].mu);
     leveldb::Status status = dbs_[name].db->Get(leveldb::ReadOptions(), key, value);
@@ -84,7 +84,7 @@ Status StorageManager::Put(const std::string& name,
                            const std::string& value) {
     if (dbs_.find(name) == dbs_.end()) {
         LOG(WARNING, "Inexist or unlogged user :%s", name.c_str());
-        return kNotFound;
+        return kUnknownUser;
     }
     MutexLock lock(dbs_[name].mu);
     leveldb::Status status = dbs_[name].db->Put(leveldb::WriteOptions(), key, value);
@@ -95,7 +95,7 @@ Status StorageManager::Delete(const std::string& name,
                               const std::string& key) {
     if (dbs_.find(name) == dbs_.end()) {
         LOG(WARNING, "Inexist or unlogged user :%s", name.c_str());
-        return kNotFound;
+        return kUnknownUser;
     }
     MutexLock lock(dbs_[name].mu);
     leveldb::Status status = dbs_[name].db->Delete(leveldb::WriteOptions(), key);
@@ -134,7 +134,7 @@ Status StorageManager::Iterator::status() const {
                    kOk
                    :
                    ((it_->status().IsNotFound()) ?
-                       kError : kNotFound
+                       kNotFound : kError
                    )
                )
                :

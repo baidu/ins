@@ -29,17 +29,14 @@ public:
     Status TruncateOnlineUsers(const std::string& myid);
     Status TruncateAllUsers(const std::string& myid);
 
-    // Use it after valid uuid assured
-    std::string GetUsernameFromUuid(const std::string& uuid) {
-        return logged_users_[uuid];
-    }
+    std::string GetUsernameFromUuid(const std::string& uuid);
 
     static std::string CalcUuid(const std::string& name);
     static std::string CalcName(const std::string& uuid);
 private:
     // Friend for accessing data more elegant
     friend void Meta::ReadUserList(UserManager* manager);
-    friend void Meta::WriteUserList(const UserInfo& user);
+    friend void Meta::WriteUserList(const UserManager& user);
 private:
     Mutex mu_;
     std::map<std::string, std::string> logged_users_;

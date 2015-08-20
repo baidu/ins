@@ -202,7 +202,8 @@ void InsNodeImpl::CommitIndexObserv() {
                         log_entry.key.c_str(), log_entry.value.c_str());
                     type_and_value.append(1, static_cast<char>(log_entry.op));
                     type_and_value.append(log_entry.value);
-                    s = data_store_->Put(log_entry.user, log_entry.key, type_and_value);
+                    s = data_store_->Put(user_manager_->GetUsernameFromUuid(log_entry.user),
+                                         log_entry.key, type_and_value);
                     event_trigger_.AddTask(
                         boost::bind(&InsNodeImpl::TriggerEventWithParent,
                                     this,
@@ -217,7 +218,8 @@ void InsNodeImpl::CommitIndexObserv() {
                 case kDel:
                     LOG(INFO, "delete from data_store_, key: %s",
                         log_entry.key.c_str());
-                    s = data_store_->Delete(log_entry.user, log_entry.key);
+                    s = data_store_->Delete(user_manager_->GetUsernameFromUuid(log_entry.user),
+                                            log_entry.key);
                     assert(s == kOk);
                     event_trigger_.AddTask(
                         boost::bind(&InsNodeImpl::TriggerEventWithParent,
@@ -235,13 +237,15 @@ void InsNodeImpl::CommitIndexObserv() {
                         const std::string& key = log_entry.key;
                         const std::string& old_session = log_entry.value;
                         std::string value;
-                        s = data_store_->Get(log_entry.user, key, &value);
+                        s = data_store_->Get(user_manager_->GetUsernameFromUuid(log_entry.user),
+                                             key, &value);
                         if (s == kOk) {
                             std::string cur_session;
                             LogOperation op;
                             ParseValue(value, op, cur_session);
                             if (op == kLock && cur_session == old_session) { //DeleteIf
-                                s = data_store_->Delete(log_entry.user, key);
+                                s = data_store_->Delete(user_manager_->GetUsernameFromUuid(
+                                                            log_entry.user), key);
                                 assert(s == kOk);
                                 LOG(INFO, "unlock on %s", key.c_str());
                                 event_trigger_.AddTask(
@@ -265,6 +269,9 @@ void InsNodeImpl::CommitIndexObserv() {
                                 user_manager_->GetUsernameFromUuid(log_entry.user));
                         log_status = user_manager_->Logout(log_entry.user);
                     }
+                    break;
+                case kRegister:
+                    log_status = user_manager_->Register(log_entry.key, log_entry.value);
                     break;
                 default:
                     LOG(WARNING, "Unfamiliar op :%d", static_cast<int>(log_entry.op));
@@ -310,6 +317,11 @@ void InsNodeImpl::CommitIndexObserv() {
                 if (ack.logout_response) {
                     ack.logout_response->set_status(log_status);
                     ack.logout_response->set_leader_id("");
+                    ack.done->Run();
+                }
+                if (ack.register_response) {
+                    ack.register_response->set_status(log_status);
+                    ack.register_response->set_leader_id("");
                     ack.done->Run();
                 }
                 client_ack_.erase(i);
@@ -1710,6 +1722,44 @@ void InsNodeImpl::Logout(::google::protobuf::RpcController* /*controller*/,
     ClientAck& ack = client_ack_[cur_index];
     ack.done = done;
     ack.logout_response = response;
+    replication_cond_->Broadcast();
+    if (single_node_mode_) {
+        UpdateCommitIndex(binlogger_->GetLength() - 1);
+    }
+    return;
+}
+
+void InsNodeImpl::Register(::google::protobuf::RpcController* /*controller*/,
+                           const ::galaxy::ins::RegisterRequest* request,
+                           ::galaxy::ins::RegisterResponse* response,
+                           ::google::protobuf::Closure* done) {
+    MutexLock lock(&mu_);
+    if (status_ == kFollower) {
+        response->set_status(kError);
+        response->set_leader_id(current_leader_);
+        done->Run();
+        return;
+    }
+
+    if (status_ == kCandidate) {
+        response->set_status(kError);
+        response->set_leader_id("");
+        done->Run();
+        return;
+    }
+
+    const std::string& username = request->username();
+    const std::string& password = request->passwd();
+    LOG(DEBUG, "client wants to register :%s", username.c_str());
+    LogEntry log_entry;
+    log_entry.op = kRegister;
+    log_entry.key = username;
+    log_entry.value = password;
+    binlogger_->AppendEntry(log_entry);
+    int64_t cur_index = binlogger_->GetLength() - 1;
+    ClientAck& ack = client_ack_[cur_index];
+    ack.done = done;
+    ack.register_response = response;
     replication_cond_->Broadcast();
     if (single_node_mode_) {
         UpdateCommitIndex(binlogger_->GetLength() - 1);

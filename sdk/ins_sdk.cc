@@ -12,6 +12,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/sha1.hpp>
 #include <gflags/gflags.h>
 #include <sys/utsname.h>
 #include "common/asm_atomic.h"
@@ -185,7 +186,7 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Put,
                                           &request, &response, 2, 1);
         if (!ok) {
-            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            LOG(FATAL, "faild to rpc %s", server_id.c_str());
             continue;
         }
 
@@ -237,7 +238,7 @@ bool InsSDK::Get(const std::string& key, std::string* value,
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Get,
                                           &request, &response, 2, 1);
         if (!ok) {
-            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            LOG(FATAL, "faild to rpc %s", server_id.c_str());
             continue;
         }
 
@@ -310,7 +311,7 @@ bool InsSDK::ScanOnce(const std::string& start_key,
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Scan,
                                            &request, &response, 5, 1);
         if (!ok) {
-            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            LOG(FATAL, "faild to rpc %s", server_id.c_str());
             continue;
         }
 
@@ -372,7 +373,7 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Delete,
                                           &request, &response, 2, 1);
         if (!ok) {
-            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            LOG(FATAL, "faild to rpc %s", server_id.c_str());
             continue;
         }
 
@@ -733,7 +734,7 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Lock,
                                            &request, &response, 2, 1);
         if (!ok) {
-            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            LOG(FATAL, "faild to rpc %s", server_id.c_str());
             continue;
         }
 
@@ -784,7 +785,7 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::UnLock,
                                           &request, &response, 2, 1);
         if (!ok) {
-            LOG(FATAL, "faild to rcp %s", server_id.c_str());
+            LOG(FATAL, "faild to rpc %s", server_id.c_str());
             continue;
         }
 
@@ -821,6 +822,201 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
     return false;
 }
 
+std::string InsSDK::HashPassword(const std::string& password) {
+    boost::uuids::detail::sha1 sha;
+    sha.process_bytes(password.c_str(), password.size());
+    unsigned int digest[5];
+    sha.get_digest(digest);
+    std::stringstream ss;
+    for (int i = 0; i < 5; ++i) {
+        ss << std::hex << digest[i];
+    }
+    return ss.str();
+}
+
+bool InsSDK::Login(const std::string& username,
+                   const std::string& password,
+                   SDKError* error) {
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
+    std::vector<std::string>::const_iterator it;
+    for (it = server_list.begin(); it != server_list.end(); ++it) {
+        std::string server_id = *it;
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
+        galaxy::ins::InsNode_Stub *stub, *stub2;
+        rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::LoginRequest request;
+        galaxy::ins::LoginResponse response;
+        request.set_username(username);
+        request.set_passwd(HashPassword(password));
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Login,
+                                           &request, &response, 2, 1);
+        if (!ok) {
+            LOG(FATAL, "failed to rpc %s", server_id.c_str());
+            continue;
+        }
+
+        if (response.status() != galaxy::ins::kError) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
+            switch(response.status()) {
+            case galaxy::ins::kOk: *error = kOK; logged_uuid_ = response.uuid(); return true;
+            case galaxy::ins::kUnknownUser: *error = kUnknownUser; return false;
+            case galaxy::ins::kUserExists: *error = kUserLogged; return false;
+            case galaxy::ins::kPasswordError: *error = kPasswordError; return false;
+            default: break; // pass
+            }
+        } else {
+            if (!response.leader_id().empty()) {
+                server_id = response.leader_id();
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Login,
+                                              &request, &response, 2, 1);
+                if (response.status() != galaxy::ins::kError) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
+                    switch(response.status()) {
+                    case galaxy::ins::kOk: *error = kOK;
+                                           logged_uuid_ = response.uuid();
+                                           return true;
+                    case galaxy::ins::kUnknownUser: *error = kUnknownUser; return false;
+                    case galaxy::ins::kUserExists: *error = kUserLogged; return false;
+                    case galaxy::ins::kPasswordError: *error = kPasswordError; return false;
+                    default: break; // pass
+                    }
+                }
+            }
+        }
+    }
+    *error = kClusterDown;
+    return false;
+}
+
+bool InsSDK::Logout(SDKError* error) {
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
+    std::vector<std::string>::const_iterator it;
+    for (it = server_list.begin(); it != server_list.end(); ++it) {
+        std::string server_id = *it;
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
+        galaxy::ins::InsNode_Stub *stub, *stub2;
+        rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::LogoutRequest request;
+        galaxy::ins::LogoutResponse response;
+        request.set_uuid(logged_uuid_);
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Logout,
+                                           &request, &response, 2, 1);
+        if (!ok) {
+            LOG(FATAL, "failed to rpc %s", server_id.c_str());
+            continue;
+        }
+
+        if (response.status() != galaxy::ins::kError) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
+            switch(response.status()) {
+            case galaxy::ins::kOk: *error = kOK; logged_uuid_ = ""; return true;
+            // Maybe have logged out due to time out
+            case galaxy::ins::kUnknownUser: *error = kUnknownUser; logged_uuid_ = ""; return true;
+            default: break; // pass
+            }
+        } else {
+            if (!response.leader_id().empty()) {
+                server_id = response.leader_id();
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Logout,
+                                              &request, &response, 2, 1);
+                if (response.status() != galaxy::ins::kError) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
+                    switch(response.status()) {
+                    case galaxy::ins::kOk: *error = kOK; logged_uuid_ = ""; return true;
+                    case galaxy::ins::kUnknownUser: *error = kUnknownUser;
+                                                    logged_uuid_ = "";
+                                                    return true;
+                    default: break; // pass
+                    }
+                }
+            }
+        }
+    }
+    *error = kClusterDown;
+    return false;
+}
+
+bool InsSDK::Register(const std::string& username,
+                      const std::string& password,
+                      SDKError* error) {
+    std::vector<std::string> server_list;
+    PrepareServerList(server_list);
+    std::vector<std::string>::const_iterator it;
+    for (it = server_list.begin(); it != server_list.end(); ++it) {
+        std::string server_id = *it;
+        LOG(DEBUG, "rpc to %s", server_id.c_str());
+        galaxy::ins::InsNode_Stub *stub, *stub2;
+        rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::RegisterRequest request;
+        galaxy::ins::RegisterResponse response;
+        request.set_username(username);
+        request.set_passwd(HashPassword(password));
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Register,
+                                           &request, &response, 2, 1);
+        if (!ok) {
+            LOG(FATAL, "failed to rpc %s", server_id.c_str());
+            continue;
+        }
+
+        if (response.status() != galaxy::ins::kError) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
+            switch(response.status()) {
+            case galaxy::ins::kOk: *error = kOK; return true;
+            case galaxy::ins::kUserExists: *error = kUserExists; return false;
+            default: break; // pass
+            }
+        } else {
+            if (!response.leader_id().empty()) {
+                server_id = response.leader_id();
+                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
+                rpc_client_->GetStub(server_id, &stub2);
+                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Register,
+                                              &request, &response, 2, 1);
+                if (response.status() != galaxy::ins::kError) {
+                    {
+                        MutexLock lock(mu_);
+                        leader_id_ = server_id;
+                    }
+                    switch(response.status()) {
+                    case galaxy::ins::kOk: *error = kOK; return true;
+                    case galaxy::ins::kUserExists: *error = kUserExists; return false;
+                    default: break; // pass
+                    }
+                }
+            }
+        }
+    }
+    *error = kClusterDown;
+    return false;
+}
+
 bool InsSDK::CleanBinlog(const std::string& server_id,
                          int64_t end_index, 
                          SDKError* error) {
@@ -847,6 +1043,16 @@ bool InsSDK::CleanBinlog(const std::string& server_id,
 std::string InsSDK::GetSessionID() {
     MutexLock lock(mu_);
     return session_id_;
+}
+
+std::string InsSDK::GetCurrentUserID() {
+    MutexLock lock(mu_);
+    return logged_uuid_;
+}
+
+bool InsSDK::IsLoggedIn() {
+    MutexLock lock(mu_);
+    return !logged_uuid_.empty();
 }
 
 void InsSDK::RegisterSessionTimeout(void (*handle_session_timeout)(void *), void* ctx) {

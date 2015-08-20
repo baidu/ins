@@ -16,13 +16,18 @@ enum LogOperation {
     kUnLock = 4;
     kLogin = 5;
     kLogout = 6;
+    kRegister = 7;
     kNop = 10;
 };
 
 enum Status {
     kOk = 0;
     kNotFound = 1;
-    kError = 2;
+    kUnknownUser = 2;
+    kUserExists = 3;
+    kPasswordError = 4;
+    kPermissionDenied = 5;
+    kError = 10;
 };
 
 message UserInfo {
@@ -206,6 +211,16 @@ message LogoutResponse {
     optional string leader_id = 2;
 }
 
+message RegisterRequest {
+    required string username = 1;
+    required string passwd = 2;
+}
+
+message RegisterResponse {
+    optional Status status = 1;
+    optional string leader_id = 2;
+}
+
 message CleanBinlogRequest {
     required int64 end_index = 1;
 }
@@ -226,6 +241,7 @@ service InsNode {
     rpc Watch(WatchRequest) returns (WatchResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc Logout(LogoutRequest) returns (LogoutResponse);
+    rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc KeepAlive(KeepAliveRequest) returns (KeepAliveResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
     rpc CleanBinlog(CleanBinlogRequest) returns (CleanBinlogResponse);

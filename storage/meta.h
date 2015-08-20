@@ -20,7 +20,8 @@ public:
     void ReadUserList(UserManager* manager);
     void WriteCurrentTerm(int64_t term); 
     void WriteVotedFor(int64_t term, const std::string& server_id);
-    void WriteUserList(const UserInfo& user);
+    void WriteUserInfo(const UserInfo& user);
+    void WriteUserList(const UserManager& manager);
 private:
     std::string data_dir_;
     FILE* term_file_;

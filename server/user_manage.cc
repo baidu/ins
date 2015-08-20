@@ -65,15 +65,15 @@ Status UserManager::Login(const std::string& name,
     std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
     if (user_it == user_list_.end()) {
         LOG(WARNING, "Inexist user tried to login :%s", name.c_str());
-        return kNotFound;
+        return kUnknownUser;
     }
     if (!user_it->second.has_uuid()) {
         LOG(WARNING, "Try to log in a logged account :%s", name.c_str());
-        return kError;
+        return kUserExists;
     }
     if (user_it->second.passwd() != password) {
         LOG(WARNING, "Password error for logging :%s", name.c_str());
-        return kError;
+        return kPasswordError;
     }
 
     user_it->second.set_uuid(CalcUuid(name));
@@ -86,18 +86,14 @@ Status UserManager::Login(const std::string& name,
 
 Status UserManager::Logout(const std::string& uuid) {
     MutexLock lock(&mu_);
-    std::map<std::string, UserInfo>::iterator user_it = user_list_.find(uuid);
-    if (user_it == user_list_.end()) {
+    std::map<std::string, std::string>::iterator online_it = logged_users_.find(uuid);
+    if (online_it == logged_users_.end()) {
         LOG(WARNING, "Logout for an inexist user :%s", uuid.c_str());
-        return kNotFound;
-    }
-    if (!user_it->second.has_uuid()) {
-        LOG(WARNING, "Try to log in a logged account :%s", uuid.c_str());
-        return kError;
+        return kUnknownUser;
     }
 
-    logged_users_.erase(uuid);
-    user_it->second.clear_uuid();
+    user_list_[online_it->second].clear_uuid();
+    logged_users_.erase(online_it);
     return kOk;
 }
 
@@ -106,7 +102,7 @@ Status UserManager::Register(const std::string& name, const std::string& passwor
     std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
     if (user_it != user_list_.end()) {
         LOG(WARNING, "Try to register an exist user :%s", name.c_str());
-        return kError;
+        return kUserExists;
     }
     user_list_[name].set_username(name);
     user_list_[name].set_passwd(password);
@@ -117,34 +113,38 @@ Status UserManager::ForceOffline(const std::string& myid, const std::string& uui
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
     if (online_it == logged_users_.end()) {
-        return kNotFound;
+        return kUnknownUser;
     }
     if (online_it->second == "root" || myid == uuid) {
         return Logout(uuid);
     }
-    return kError;
+    return kPermissionDenied;
 }
 
 Status UserManager::DeleteUser(const std::string& myid, const std::string& name) {
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
-    if (online_it == logged_users_.end() || online_it->second != "root") {
-        return kError;
+    if (online_it == logged_users_.end()) {
+        return kUnknownUser;
     }
-    if (user_list_.find(name) == user_list_.end()) {
+    if (online_it->second != "root" && online_it->second != name) {
+        return kPermissionDenied;
+    }
+    std::map<std::string, UserInfo>::iterator user_it = user_list_.find(online_it->second);
+    if (user_it == user_list_.end()) {
         LOG(WARNING, "Try to delete an inexist user :%s", name.c_str());
         return kNotFound;
     }
-    if (logged_users_.find(name) != logged_users_.end()) {
-        logged_users_.erase(name);
+    if (user_it->second.has_uuid()) {
+        logged_users_.erase(user_it->second.uuid());
     }
-    user_list_.erase(name);
+    user_list_.erase(user_it);
     return kOk;
 }
 
-bool UserManager::IsLoggedIn(const std::string& name) {
+bool UserManager::IsLoggedIn(const std::string& uuid) {
     MutexLock lock(&mu_);
-    return logged_users_.find(name) != logged_users_.end();
+    return logged_users_.find(uuid) != logged_users_.end();
 }
 
 bool UserManager::IsValidUser(const std::string& name) {
@@ -156,7 +156,7 @@ Status UserManager::TruncateOnlineUsers(const std::string& myid) {
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
     if (online_it == logged_users_.end() || online_it->second != "root") {
-        return kError;
+        return kPermissionDenied;
     }
     logged_users_.clear();
     return kOk;
@@ -166,11 +166,18 @@ Status UserManager::TruncateAllUsers(const std::string& myid) {
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
     if (online_it == logged_users_.end() || online_it->second != "root") {
-        return kError;
+        return kPermissionDenied;
     }
     logged_users_.clear();
     user_list_.clear();
     return kOk;
+}
+
+std::string UserManager::GetUsernameFromUuid(const std::string& uuid) {
+    if (IsLoggedIn(uuid)) {
+		return logged_users_[uuid];
+	}
+	return "";
 }
 
 }

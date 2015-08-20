@@ -34,6 +34,7 @@ struct ClientAck {
     galaxy::ins::UnLockResponse* unlock_response;
     galaxy::ins::LoginResponse* login_response;
     galaxy::ins::LogoutResponse* logout_response;
+    galaxy::ins::RegisterResponse* register_response;
     google::protobuf::Closure* done;
     ClientAck() : response(NULL),
                   del_response(NULL),
@@ -41,6 +42,7 @@ struct ClientAck {
                   unlock_response(NULL),
                   login_response(NULL),
                   logout_response(NULL),
+                  register_response(NULL),
                   done(NULL) {
     }
 };
@@ -183,6 +185,10 @@ public:
                 const ::galaxy::ins::LogoutRequest* request,
                 ::galaxy::ins::LogoutResponse* response,
                 ::google::protobuf::Closure* done);
+    void Register(::google::protobuf::RpcController* controller,
+                  const ::galaxy::ins::RegisterRequest* request,
+                  ::galaxy::ins::RegisterResponse* response,
+                  ::google::protobuf::Closure* done);
     void CleanBinlog(::google::protobuf::RpcController* controller,
                      const ::galaxy::ins::CleanBinlogRequest* request,
                      ::galaxy::ins::CleanBinlogResponse* response,
