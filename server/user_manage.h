@@ -20,10 +20,10 @@ public:
     Status Login(const std::string& name, const std::string& password, std::string* uuid);
     Status Logout(const std::string& uuid);
     Status Register(const std::string& name, const std::string& password);
-    Status ForceOffline(const std::string& myid, const std::string& uuid);
+    Status ForceOffline(const std::string& myid, const std::string& name);
     Status DeleteUser(const std::string& myid, const std::string& name);
 
-    bool IsLoggedIn(const std::string& name);
+    bool IsLoggedIn(const std::string& uuid);
     bool IsValidUser(const std::string& name);
 
     Status TruncateOnlineUsers(const std::string& myid);

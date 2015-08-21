@@ -11,13 +11,14 @@ PBRPC_PATH ?=./thirdparty/sofa-pbrpc/output/
 BOOST_PATH ?=./thirdparty/boost/
 GFLAGS_PATH=./thirdparty/gflags/
 LEVELDB_PATH=./thirdparty/leveldb/
+GTEST_PATH=./gtest-1.7.0/
 PREFIX=/usr/local/
 
 INCLUDE_PATH = -I./ -I$(PREFIX)/include -I$(PROTOBUF_PATH)/include \
                -I$(PBRPC_PATH)/include \
                -I$(SNAPPY_PATH)/include \
-	       -I$(GFLAGS_PATH)/include \
-	       -I$(LEVELDB_PATH)/include \
+               -I$(GFLAGS_PATH)/include \
+               -I$(LEVELDB_PATH)/include \
                -I$(BOOST_PATH)
 
 LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
@@ -25,7 +26,8 @@ LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(SNAPPY_PATH)/lib -lsnappy \
           -L$(GFLAGS_PATH)/lib -lgflags \
           -L$(LEVELDB_PATH)/lib -lleveldb \
-          -lz -lleveldb -lpthread
+          -L$(GTEST_PATH)/output -lgtest \
+          -lz -lpthread
 
 CXXFLAGS += $(OPT)
 
@@ -34,9 +36,13 @@ PROTO_SRC = $(patsubst %.proto,%.pb.cc,$(PROTO_FILE))
 PROTO_HEADER = $(patsubst %.proto,%.pb.h,$(PROTO_FILE))
 PROTO_OBJ = $(patsubst %.proto,%.pb.o,$(PROTO_FILE))
 
-INS_SRC = $(filter-out $(wildcard */*test.cc), $(wildcard server/ins_*.cc) $(wildcard storage/*.cc) server/user_manage.cc)
+UTIL_SRC = $(filter-out $(wildcard */*test.cc) $(wildcard */*main.cc), \
+             $(wildcard server/ins_*.cc) $(wildcard storage/*.cc) server/user_manage.cc)
+UTIL_OBJ = $(patsubst %.cc, %.o, $(UTIL_SRC))
+UTIL_HEADER = $(wildcard server/*.h) $(wildcard storage/*.h)
+
+INS_SRC = $(filter-out $(UTIL_SRC), $(wildcard server/ins_*.cc) $(wildcard storage/*.cc))
 INS_OBJ = $(patsubst %.cc, %.o, $(INS_SRC))
-INS_HEADER = $(wildcard server/*.h) $(wildcard storage/*.h)
 
 INS_CLI_SRC = $(wildcard sdk/ins_*.cc)
 INS_CLI_OBJ = $(patsubst %.cc, %.o, $(INS_CLI_SRC))
@@ -48,16 +54,19 @@ SAMPLE_HEADER = $(wildcard sdk/*.h)
 
 FLAGS_OBJ = $(patsubst %.cc, %.o, $(wildcard server/flags.cc))
 COMMON_OBJ = $(patsubst %.cc, %.o, $(wildcard common/*.cc))
-OBJS = $(FLAGS_OBJ) $(COMMON_OBJ) $(PROTO_OBJ)
+OBJS = $(FLAGS_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) $(UTIL_OBJ)
 SDK_OBJ = $(OBJS) $(patsubst %.cc, %.o, sdk/ins_sdk.cc)
+TEST_SRC = $(wildcard server/*_test.cc) $(wildcard storage/*_test.cc)
+TEST_OBJ = $(patsubst %.cc, %.o, $(TEST_SRC))
+TESTS = test_binlog test_storage_manager test_user_manager
 BIN = ins ins_cli sample
 LIB = libins_sdk.a
 
 all: $(BIN) cp $(LIB)
 
 # Depends
-$(INS_OBJ) $(INS_CLI_OBJ): $(PROTO_HEADER)
-$(INS_OBJ): $(INS_HEADER)
+$(INS_OBJ) $(INS_CLI_OBJ) $(TEST_OBJ) $(UTIL_OBJ): $(PROTO_HEADER)
+$(UTIL_OBJ): $(UTIL_HEADER)
 $(INS_CLI_OBJ): $(INS_CLI_HEADER)
 $(SAMPLE_OBJ): $(SAMPLE_HEADER)
 
@@ -81,8 +90,8 @@ $(LIB): $(SDK_OBJ)
 	$(PROTOC) --proto_path=./proto/ --proto_path=/usr/local/include --cpp_out=./proto/ $<
 
 clean:
-	rm -rf $(BIN) $(LIB)
-	rm -rf $(INS_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) $(SDK_OBJ)
+	rm -rf $(BIN) $(LIB) $(TESTS)
+	rm -rf $(INS_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) $(SDK_OBJ) $(TEST_OBJ) $(UTIL_OBJ)
 	rm -rf $(PROTO_SRC) $(PROTO_HEADER)
 	rm -rf output/
 
@@ -110,7 +119,19 @@ install_sdk: $(LIB)
 	cp sdk/ins_sdk.h $(PREFIX)/include
 	cp libins_sdk.a $(PREFIX)/lib
 
-.PHONY: test
-test:
+.PHONY: test test_binlog test_storage_manager test_user_manager
+test: $(TESTS)
+	./test_binlog
+	./test_storage_manager
+	./test_user_manager
 	echo "Test done"
+
+test_binlog: storage/binlog_test.o $(UTIL_OBJ) $(OBJS)
+	$(CXX) $^ -o $@ $(LDFLAGS)
+
+test_storage_manager: storage/storage_manage_test.o $(UTIL_OBJ) $(OBJS)
+	$(CXX) $^ -o $@ $(LDFLAGS)
+
+test_user_manager: server/user_manager_test.o $(UTIL_OBJ) $(OBJS)
+	$(CXX) $^ -o $@ $(LDFLAGS)
 

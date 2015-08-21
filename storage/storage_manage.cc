@@ -99,7 +99,7 @@ Status StorageManager::Delete(const std::string& name,
     }
     MutexLock lock(dbs_[name].mu);
     leveldb::Status status = dbs_[name].db->Delete(leveldb::WriteOptions(), key);
-    return (status.ok()) ? kOk : kError;
+    return (status.ok()) ? kOk : ((status.IsNotFound()) ? kNotFound : kError);
 }
 
 std::string StorageManager::Iterator::key() const {

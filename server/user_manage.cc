@@ -40,8 +40,6 @@ std::string UserManager::CalcUuid(const std::string& name) {
 
 std::string UserManager::CalcName(const std::string& uuid) {
     using namespace boost::archive::iterators;
-    int64_t now = ins_common::timer::get_micros();
-    std::string text = uuid + boost::lexical_cast<std::string>(now);
     std::stringstream name;
     typedef transform_width <
         binary_from_base64 <
@@ -51,8 +49,8 @@ std::string UserManager::CalcName(const std::string& uuid) {
         6
     > base64_code;
 
-    std::copy(base64_code(text.c_str()),
-              base64_code(text.c_str() + text.size()),
+    std::copy(base64_code(uuid.c_str()),
+              base64_code(uuid.c_str() + uuid.size()),
               std::ostream_iterator<char>(name));
     return name.str();
 }
@@ -117,6 +115,11 @@ Status UserManager::Logout(const std::string& uuid) {
 
 Status UserManager::Register(const std::string& name, const std::string& password) {
     MutexLock lock(&mu_);
+    if (name.empty()) {
+        LOG(WARNING, "Cannot register a user without username");
+        // Return `exist' status since empty user is consider as default in storage
+        return kUserExists;
+    }
     std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
     if (user_it != user_list_.end()) {
         LOG(WARNING, "Try to register an exist user :%s", name.c_str());
@@ -130,12 +133,17 @@ Status UserManager::Register(const std::string& name, const std::string& passwor
     return kOk;
 }
 
-Status UserManager::ForceOffline(const std::string& myid, const std::string& uuid) {
+Status UserManager::ForceOffline(const std::string& myid, const std::string& name) {
     MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator online_it = logged_users_.find(myid);
     if (online_it == logged_users_.end()) {
         return kUnknownUser;
     }
+    std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
+    if (user_it == user_list_.end()) {
+        return kUnknownUser;
+    }
+    const std::string& uuid = user_it->second.uuid();
     if (online_it->second == root_name || myid == uuid) {
         return Logout(uuid);
     }
