@@ -27,7 +27,11 @@ BinLogger::BinLogger(const std::string& data_dir, bool compress) : db_(NULL),
         LOG(INFO, "enable snappy compress for binlog");
     }
     leveldb::Status status = leveldb::DB::Open(options, full_name, &db_);
-    assert(status.ok());
+    if (!status.ok()) {
+        LOG(FATAL, "failed to open db %s err %s", 
+                   full_name.c_str(), status.ToString().c_str()); 
+        assert(status.ok());
+    }
     std::string value;
     status = db_->Get(leveldb::ReadOptions(), length_tag, &value);
     if (status.ok() && !value.empty()) {

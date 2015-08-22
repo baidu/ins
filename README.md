@@ -6,7 +6,7 @@ iNexus (简称ins) 是一个基于Raft协议实现的高可用的分布式Key-Va
 
 [![Build Status](https://travis-ci.org/fxsjy/ins.svg?branch=master)](https://travis-ci.org/fxsjy/ins)
 
-# 使用说明
+# API使用说明
 https://github.com/fxsjy/ins/wiki
 
 # build for Baiduer
@@ -24,8 +24,8 @@ https://github.com/fxsjy/ins/wiki
 # 快速体验（只需要一台机器，通过多个进程模拟分布式）
 
 	cd sandbox
-	./start_all.sh
-	./ins_shell.sh
+	./start_all.sh  (启动本机5个进程监听不同端口，模拟一个集群）
+	./ins_shell.sh  （进入命令行管理界面）
 		
 	galaxy ins> help
 	  show [ show cluster ]
