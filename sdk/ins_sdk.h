@@ -14,11 +14,8 @@ namespace ins_common {
 }
 
 namespace galaxy {
-    class RpcClient;
-}
-
-namespace galaxy {
 namespace ins {
+    class RpcClient;
     class WatchRequest;
     class WatchResponse;
 }
@@ -114,7 +111,7 @@ private:
     std::string leader_id_;
     std::string session_id_;
     std::vector<std::string> members_;
-    galaxy::RpcClient* rpc_client_;
+    galaxy::ins::RpcClient* rpc_client_;
     ins_common::Mutex* mu_;
     ins_common::ThreadPool* keep_alive_pool_;
     bool is_keep_alive_bg_;

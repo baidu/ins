@@ -15,7 +15,7 @@
 #include "common/logging.h"
 
 namespace galaxy {
-    
+namespace ins {
 class RpcClient {
 public:
     RpcClient() {
@@ -108,7 +108,8 @@ private:
     Mutex host_map_lock_;
 };
 
-} // namespace
+} // namespace ins
+} // namespace galaxy
 
 #endif  // RPC_CLIENT_H_
 

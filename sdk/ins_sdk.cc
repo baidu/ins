@@ -70,7 +70,7 @@ void InsSDK::Init(const std::vector<std::string>& members) {
         LOG(FATAL, "invalid cluster size");
         abort();
     }
-    rpc_client_ = new galaxy::RpcClient();
+    rpc_client_ = new galaxy::ins::RpcClient();
     mu_ = new Mutex();
     std::copy(members.begin(), members.end(), std::back_inserter(members_));
     keep_alive_pool_ = new ins_common::ThreadPool();

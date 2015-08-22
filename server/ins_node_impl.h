@@ -235,7 +235,7 @@ private:
     std::map<int64_t, std::string> voted_for_;
     std::map<int64_t, uint32_t> vote_grant_;
     std::vector<galaxy::ins::Entry> binlog_;
-    galaxy::RpcClient rpc_client_;
+    galaxy::ins::RpcClient rpc_client_;
     NodeStatus status_;
     Mutex mu_;
     ThreadPool leader_crash_checker_;
