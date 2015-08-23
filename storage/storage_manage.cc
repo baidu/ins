@@ -47,6 +47,7 @@ bool StorageManager::OpenDatabase(const std::string& name) {
     leveldb::DB* current_db = NULL;
     leveldb::Status status = leveldb::DB::Open(options, full_name, &current_db);
     dbs_[name].db = current_db;
+    dbs_[name].mu = new Mutex();
     return status.ok();
 }
 
@@ -55,10 +56,13 @@ void StorageManager::CloseDatabase(const std::string& name) {
     if (dbs_it == dbs_.end()) {
         return;
     }
+    {
     MutexLock lock(dbs_it->second.mu);
     delete dbs_it->second.db;
     dbs_it->second.db = NULL;
-    dbs_.erase(name);
+    }
+    delete dbs_it->second.mu;
+    dbs_.erase(dbs_it);
 }
 
 Status StorageManager::Get(const std::string& name,
