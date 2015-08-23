@@ -41,7 +41,8 @@ UTIL_SRC = $(filter-out $(wildcard */*test.cc) $(wildcard */*main.cc), \
 UTIL_OBJ = $(patsubst %.cc, %.o, $(UTIL_SRC))
 UTIL_HEADER = $(wildcard server/*.h) $(wildcard storage/*.h)
 
-INS_SRC = $(filter-out $(UTIL_SRC), $(wildcard server/ins_*.cc) $(wildcard storage/*.cc))
+INS_SRC = $(filter-out $(UTIL_SRC) $(wildcard */*test.cc), $(wildcard server/ins_*.cc) \
+            $(wildcard storage/*.cc))
 INS_OBJ = $(patsubst %.cc, %.o, $(INS_SRC))
 
 INS_CLI_SRC = $(wildcard sdk/ins_*.cc)
@@ -71,8 +72,8 @@ $(INS_CLI_OBJ): $(INS_CLI_HEADER)
 $(SAMPLE_OBJ): $(SAMPLE_HEADER)
 
 # Targets
-ins: $(INS_OBJ) $(OBJS)
-	$(CXX) $(INS_OBJ) $(OBJS) -o $@ $(LDFLAGS)
+ins: $(INS_OBJ) $(UTIL_OBJS) $(OBJS)
+	$(CXX) $(INS_OBJ) $(UTIL_OBJS) $(OBJS) -o $@ $(LDFLAGS)
 
 ins_cli: $(INS_CLI_OBJ) $(OBJS)
 	$(CXX) $(INS_CLI_OBJ) $(OBJS) -o $@ $(LDFLAGS)
@@ -132,6 +133,6 @@ test_binlog: storage/binlog_test.o $(UTIL_OBJ) $(OBJS)
 test_storage_manager: storage/storage_manage_test.o $(UTIL_OBJ) $(OBJS)
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
-test_user_manager: server/user_manager_test.o $(UTIL_OBJ) $(OBJS)
+test_user_manager: server/user_manage_test.o $(UTIL_OBJ) $(OBJS)
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
