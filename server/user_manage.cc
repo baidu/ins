@@ -67,11 +67,10 @@ UserManager::UserManager(const std::string& data_dir,
     options.create_if_missing = true;
     leveldb::Status status = leveldb::DB::Open(options, full_name, &user_db_);
     assert(status.ok());
-    assert(WriteToDatabase(root));
+    if (root.has_username() && root.has_passwd()) {
+        assert(WriteToDatabase(root));
+    }
     RecoverFromDatabase();
-    user_list_[root_name] = root;
-    user_list_[root_name].set_username(root_name);
-    user_list_[root_name].clear_uuid();
 }
 
 Status UserManager::Login(const std::string& name,
