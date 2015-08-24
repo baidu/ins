@@ -23,13 +23,13 @@ TEST(UserManageTest, CommonUserTest) {
     // Register a set of normal users
     ret = user_manager.Register("user1", "123456");
     EXPECT_EQ(ret, kOk);
-    EXPECT_TRUE(!user_manager.IsValidUser("user1"));
+    EXPECT_TRUE(user_manager.IsValidUser("user1"));
     ret = user_manager.Register("user2", "123456");
     EXPECT_EQ(ret, kOk);
-    EXPECT_TRUE(!user_manager.IsValidUser("user2"));
+    EXPECT_TRUE(user_manager.IsValidUser("user2"));
     ret = user_manager.Register("user3", "123456");
     EXPECT_EQ(ret, kOk);
-    EXPECT_TRUE(!user_manager.IsValidUser("user3"));
+    EXPECT_TRUE(user_manager.IsValidUser("user3"));
     // Try to register an existing username
     ret = user_manager.Register("user1", "abcdefg");
     EXPECT_EQ(ret, kUserExists);
@@ -116,11 +116,11 @@ TEST(UserManageTest, SuperUserTest) {
     // Kill a user
     ret = user_manager.DeleteUser(rootid, "user2");
     EXPECT_EQ(ret, kOk);
-    EXPECT_TRUE(!user_manager.IsLoggedIn("user2"));
+    EXPECT_TRUE(!user_manager.IsLoggedIn(uuid2));
     EXPECT_TRUE(!user_manager.IsValidUser("user2"));
     // Kill an inexisting users
     ret = user_manager.DeleteUser(rootid, "whoop");
-    EXPECT_EQ(ret, kUnknownUser);
+    EXPECT_EQ(ret, kNotFound);
     // Truncate online user
     ret = user_manager.TruncateOnlineUsers(rootid);
     EXPECT_EQ(ret, kOk);
@@ -159,10 +159,9 @@ TEST(UserManageTest, ToolFunctionTest) {
     uuid1 = UserManager::CalcUuid("user1");
     ret = user_manager.Login("user1", "123456", &uuid2);
     EXPECT_EQ(ret, kOk);
-    EXPECT_EQ(uuid1, uuid2);
+    EXPECT_EQ(UserManager::CalcName(uuid1), UserManager::CalcName(uuid2));
     // Test user_manager.IsLoggedIn
-    EXPECT_TRUE(user_manager.IsLoggedIn("user1"));
-    EXPECT_TRUE(!user_manager.IsLoggedIn("user2"));
+    EXPECT_TRUE(user_manager.IsLoggedIn(uuid2));
     EXPECT_TRUE(!user_manager.IsLoggedIn("user3"));
     // Test user_manager.IsValidUser
     EXPECT_TRUE(user_manager.IsValidUser("user1"));

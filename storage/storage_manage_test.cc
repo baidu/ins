@@ -52,9 +52,9 @@ TEST(StorageManageTest, GetPutDeleteTest) {
     // Get key from unlogged user
     ret = storage_manager.Get("User3", "Hello", &value);
     EXPECT_EQ(ret, kUnknownUser);
-    // Delete inexist key
+    // Delete inexist key (leveldb consider this is ok)
     ret = storage_manager.Delete("", "This");
-    EXPECT_EQ(ret, kNotFound);
+    EXPECT_EQ(ret, kOk);
     ret = storage_manager.Delete("", "Hello");
     EXPECT_EQ(ret, kOk);
     // Check if deleted
@@ -64,7 +64,7 @@ TEST(StorageManageTest, GetPutDeleteTest) {
     ret = storage_manager.Delete("", "Name");
     EXPECT_EQ(ret, kOk);
     ret = storage_manager.Delete("user1", "Aha");
-    EXPECT_EQ(ret, kNotFound);
+    EXPECT_EQ(ret, kOk);
     // Delete key from unlogged user
     ret = storage_manager.Delete("user2", "Aha");
     EXPECT_EQ(ret, kUnknownUser);
@@ -89,7 +89,7 @@ TEST(StorageManageTest, IteratorTest) {
         ret = storage_manager.Put("", boost::lexical_cast<std::string>(i), value);
         EXPECT_EQ(ret, kOk);
     }
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 100; i < 110; ++i) {
         std::string value = value_str + boost::lexical_cast<std::string>(i);
         user1_value.insert(value);
         ret = storage_manager.Put("user1", boost::lexical_cast<std::string>(i), value);

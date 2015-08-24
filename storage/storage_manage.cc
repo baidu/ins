@@ -77,10 +77,7 @@ Status StorageManager::Get(const std::string& name,
     }
     MutexLock lock(dbs_[name].mu);
     leveldb::Status status = dbs_[name].db->Get(leveldb::ReadOptions(), key, value);
-    if (status.ok()) {
-        return (value->empty()) ? kNotFound : kOk;
-    }
-    return kError;
+    return (status.ok()) ? kOk : ((status.IsNotFound()) ? kNotFound : kError);
 }
 
 Status StorageManager::Put(const std::string& name,
@@ -103,7 +100,8 @@ Status StorageManager::Delete(const std::string& name,
     }
     MutexLock lock(dbs_[name].mu);
     leveldb::Status status = dbs_[name].db->Delete(leveldb::WriteOptions(), key);
-    return (status.ok()) ? kOk : ((status.IsNotFound()) ? kNotFound : kError);
+	// Note: leveldb returns kOk even if the key is inexist
+    return (status.ok()) ? kOk : kError;
 }
 
 std::string StorageManager::Iterator::key() const {
