@@ -181,7 +181,7 @@ void BinLogger::LoadLogEntry(const std::string& buf, LogEntry* log_entry) {
     log_entry->op = static_cast<LogOperation>(opcode);
     p += sizeof(uint8_t);
     memcpy(static_cast<void*>(&user_size), p, sizeof(int32_t));
-    log_entry->key.resize(user_size);
+    log_entry->user.resize(user_size);
     p += sizeof(int32_t);
     memcpy(static_cast<void*>(&log_entry->user[0]), p, user_size);
     p += user_size;

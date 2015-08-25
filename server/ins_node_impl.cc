@@ -406,10 +406,11 @@ void InsNodeImpl::HeartBeatForReadCallback(
     }
     if (context->succ_count > members_.size() / 2) {
         std::string key = context->request->key();
+        std::string user = context->request->user();
         LOG(DEBUG, "client get key: %s", key.c_str());
         Status s;
         std::string value;
-        s = data_store_->Get(StorageManager::anonymous_user, key, &value);
+        s = data_store_->Get(user_manager_->GetUsernameFromUuid(user), key, &value);
         std::string real_value;
         LogOperation op;
         ParseValue(value, op, real_value);
@@ -937,9 +938,7 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         std::string key = request->key();
         Status s;
         std::string value;
-        s = data_store_->Get((request->has_user()) ? request->user() :
-                                                     StorageManager::anonymous_user,
-                             key, &value);
+        s = data_store_->Get(user_manager_->GetUsernameFromUuid(request->user()), key, &value);
         std::string real_value;
         LogOperation op;
         ParseValue(value, op, real_value);
@@ -995,9 +994,7 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
     const std::string& key = request->key();
     LOG(DEBUG, "client want delete key :%s", key.c_str());
     LogEntry log_entry;
-    if (request->has_user()) {
-        log_entry.user = request->user();
-    }
+    log_entry.user = request->user();
     log_entry.key = key;
     log_entry.value = "";
     log_entry.term = current_term_;
@@ -1037,9 +1034,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     const std::string& value = request->value();
     LOG(DEBUG, "client want put key :%s", key.c_str());
     LogEntry log_entry;
-    if (request->has_user()) {
-        log_entry.user = request->user();
-    }
+    log_entry.user = request->user();
     log_entry.key = key;
     log_entry.value = value;
     log_entry.term = current_term_;
@@ -1056,13 +1051,14 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
     return;
 }
 
-bool InsNodeImpl::LockIsAvailable(const std::string& key,
-                                 const std::string& session_id) {
+bool InsNodeImpl::LockIsAvailable(const std::string& user,
+                                  const std::string& key,
+                                  const std::string& session_id) {
     Status s;
     std::string old_locker_session;
     std::string value;
     LogOperation op;
-    s = data_store_->Get(StorageManager::anonymous_user, key, &value);
+    s = data_store_->Get(user_manager_->GetUsernameFromUuid(user), key, &value);
     ParseValue(value, op, old_locker_session);
     bool lock_is_available = false;
     if (s != kOk) {
@@ -1128,16 +1124,15 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* /*controller*/,
 
     const std::string& key = request->key();
     const std::string& session_id = request->session_id();
+    const std::string& user = request->user();
     LogEntry log_entry;
-    if (request->has_user()) {
-        log_entry.user = request->user();
-    }
+    log_entry.user = user;
     log_entry.key = key;
     log_entry.value = session_id;
     log_entry.term = current_term_;
     log_entry.op = kLock;
     bool lock_is_available = false;
-    lock_is_available = LockIsAvailable(key, session_id);
+    lock_is_available = LockIsAvailable(user, key, session_id);
     if (lock_is_available) {
         LOG(INFO, "lock key :%s, session:%s",
                    key.c_str(),
@@ -1145,8 +1140,8 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* /*controller*/,
         std::string type_and_value;
         type_and_value.append(1, static_cast<char>(kLock));
         type_and_value.append(session_id);
-        Status st = data_store_->Put((request->has_user()) ? request->user() :
-                                                             StorageManager::anonymous_user,
+        Status st = data_store_->Put(user_manager_->GetUsernameFromUuid(
+                                                    request->user()),
                                      key, type_and_value);
         assert(st == kOk);
         binlogger_->AppendEntry(log_entry);
@@ -1209,8 +1204,8 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
     std::string start_key = request->start_key();
     std::string end_key = request->end_key();
     int32_t size_limit = request->size_limit();
-    StorageManager::Iterator* it = data_store_->NewIterator((request->has_user()) ?
-                request->user() : StorageManager::anonymous_user);
+    StorageManager::Iterator* it = data_store_->NewIterator(
+            user_manager_->GetUsernameFromUuid(request->user()));
     bool has_more = false;
     int32_t count = 0;
     for (it->Seek(start_key);
@@ -1597,9 +1592,7 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
     if (tm_now - server_start_timestamp_ > FLAGS_session_expire_timeout) {
         Status s;
         std::string raw_value;
-        s = data_store_->Get((request->has_user()) ? request->user() :
-                                                     StorageManager::anonymous_user,
-                             key, &raw_value);
+        s = data_store_->Get(user_manager_->GetUsernameFromUuid(request->user()), key, &raw_value);
         bool key_exist = (s == kOk);
         std::string real_value;
         LogOperation op;
@@ -1642,9 +1635,7 @@ void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
     const std::string& session_id = request->session_id();
     LOG(DEBUG, "client want unlock key :%s", key.c_str());
     LogEntry log_entry;
-    if (request->has_user()) {
-        log_entry.user = request->user();
-    }
+    log_entry.user = request->user();
     log_entry.key = key;
     log_entry.value = session_id;
     log_entry.term = current_term_;
@@ -1686,6 +1677,7 @@ void InsNodeImpl::Login(::google::protobuf::RpcController* /*controller*/,
     LogEntry log_entry;
     log_entry.user = username;
     log_entry.key = passwd;
+    log_entry.term = current_term_;
     log_entry.op = kLogin;
     binlogger_->AppendEntry(log_entry);
     int64_t cur_index = binlogger_->GetLength() - 1;
@@ -1722,6 +1714,7 @@ void InsNodeImpl::Logout(::google::protobuf::RpcController* /*controller*/,
     LOG(DEBUG, "client wants to logout :%s", uuid.c_str());
     LogEntry log_entry;
     log_entry.user = uuid;
+    log_entry.term = current_term_;
     log_entry.op = kLogout;
     binlogger_->AppendEntry(log_entry);
     int64_t cur_index = binlogger_->GetLength() - 1;
@@ -1758,9 +1751,10 @@ void InsNodeImpl::Register(::google::protobuf::RpcController* /*controller*/,
     const std::string& password = request->passwd();
     LOG(DEBUG, "client wants to register :%s", username.c_str());
     LogEntry log_entry;
-    log_entry.op = kRegister;
     log_entry.key = username;
     log_entry.value = password;
+    log_entry.term = current_term_;
+    log_entry.op = kRegister;
     binlogger_->AppendEntry(log_entry);
     int64_t cur_index = binlogger_->GetLength() - 1;
     ClientAck& ack = client_ack_[cur_index];

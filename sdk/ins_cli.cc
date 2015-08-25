@@ -45,6 +45,9 @@ void reset_flags() {
     fgets(buf, 1024, stdin);
     std::vector<std::string> commands;
     boost::split(commands, buf, boost::is_any_of(" \t\n"), boost::token_compress_on);
+    for (int i = commands.size(); i < 3; ++i) {
+        commands[i] = "";
+    }
     FLAGS_ins_cmd = commands[0];
     if (FLAGS_ins_cmd == "delete" || FLAGS_ins_cmd == "get"
         || FLAGS_ins_cmd == "watch") {
@@ -199,7 +202,7 @@ int main(int argc, char* argv[]) {
                 switch(ins_err) {
                 case kOK: printf("login success\nperform actions for user %s now\n",
                                   username.c_str());
-                          is_logged = true; reset_flags(); break;
+                          is_logged = true; break;
                 case kUnknownUser: printf("user doesn't exist\n"); break;
                 case kUserLogged: printf("user has logged in\n"); break;
                 case kPasswordError: printf("wrong password"); break;
@@ -240,6 +243,9 @@ int main(int argc, char* argv[]) {
                     "you may want to logout by `logout' command");
         } else {
             // Just exit
+        }
+        if (is_logged) {
+            reset_flags();
         }
     } while(is_logged);
 

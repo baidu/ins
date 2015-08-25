@@ -56,7 +56,6 @@ InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
                                                           session_timeout_ctx_(NULL) {
     Init(members);
 }
-
 void InsSDK::Init(const std::vector<std::string>& members) {
     rpc_client_ = NULL;
     mu_ = NULL;
@@ -73,6 +72,7 @@ void InsSDK::Init(const std::vector<std::string>& members) {
     }
     rpc_client_ = new galaxy::RpcClient();
     mu_ = new Mutex();
+    logged_uuid_ = "";
     std::copy(members.begin(), members.end(), std::back_inserter(members_));
     keep_alive_pool_ = new ins_common::ThreadPool();
     keep_watch_pool_ = new ins_common::ThreadPool();
@@ -180,6 +180,10 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::PutRequest request;
         galaxy::ins::PutResponse response;
+        {
+            MutexLock lock(mu_);
+            request.set_user(logged_uuid_);
+        }
         request.set_key(key);
         request.set_value(value);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Put,
@@ -233,6 +237,10 @@ bool InsSDK::Get(const std::string& key, std::string* value,
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::GetRequest request;
         galaxy::ins::GetResponse response;
+        {
+            MutexLock lock(mu_);
+            request.set_user(logged_uuid_);
+        }
         request.set_key(key);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Get,
                                           &request, &response, 2, 1);
@@ -304,6 +312,10 @@ bool InsSDK::ScanOnce(const std::string& start_key,
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::ScanRequest request;
         galaxy::ins::ScanResponse response;
+        {
+            MutexLock lock(mu_);
+            request.set_user(logged_uuid_);
+        }
         request.set_start_key(start_key);
         request.set_end_key(end_key);
         request.set_size_limit(500);
@@ -368,6 +380,10 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
         rpc_client_->GetStub(server_id, &stub);
         galaxy::ins::DelRequest request;
         galaxy::ins::DelResponse response;
+        {
+            MutexLock lock(mu_);
+            request.set_user(logged_uuid_);
+        }
         request.set_key(key);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Delete,
                                           &request, &response, 2, 1);
@@ -663,6 +679,10 @@ void InsSDK::KeepWatchTask(const std::string& key,
     boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
     galaxy::ins::WatchRequest* request = new galaxy::ins::WatchRequest();
     galaxy::ins::WatchResponse* response = new galaxy::ins::WatchResponse();
+    {
+        MutexLock lock(mu_);
+        request->set_user(logged_uuid_);
+    }
     request->set_session_id(GetSessionID());
     request->set_key(key);
     request->set_old_value(old_value);
@@ -729,6 +749,10 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::LockRequest request;
         galaxy::ins::LockResponse response;
+        {
+            MutexLock lock(mu_);
+            request.set_user(logged_uuid_);
+        }
         request.set_key(key);
         request.set_session_id(GetSessionID());
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Lock,
@@ -780,6 +804,10 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::UnLockRequest request;
         galaxy::ins::UnLockResponse response;
+        {
+            MutexLock lock(mu_);
+            request.set_user(logged_uuid_);
+        }
         request.set_key(key);
         request.set_session_id(GetSessionID());
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::UnLock,
@@ -839,6 +867,10 @@ bool InsSDK::Login(const std::string& username,
                    SDKError* error) {
     {
         MutexLock lock(mu_);
+        if (!logged_uuid_.empty()) {
+            *error = kUserLogged;
+            return true;
+        }
         if (!is_keep_alive_bg_) {
             keep_alive_pool_->AddTask(
                 boost::bind(&InsSDK::KeepAliveTask, this)
@@ -909,6 +941,13 @@ bool InsSDK::Login(const std::string& username,
 }
 
 bool InsSDK::Logout(SDKError* error) {
+    {
+        MutexLock lock(mu_);
+        if (logged_uuid_.empty()) {
+            *error = kUnknownUser;
+            return true;
+        }
+    }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it;

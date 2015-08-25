@@ -30,6 +30,7 @@ public:
     Status Put(const std::string& name, const std::string& key, const std::string& value);
     Status Delete(const std::string& name, const std::string& key);
 
+    // All user field in proto set default value to anonymous_user, which is ""
     static const std::string anonymous_user;
 public:
     class Iterator {
