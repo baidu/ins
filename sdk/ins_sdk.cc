@@ -873,9 +873,9 @@ bool InsSDK::Login(const std::string& username,
             }
             switch(response.status()) {
             case galaxy::ins::kOk: *error = kOK; logged_uuid_ = response.uuid(); return true;
-            case galaxy::ins::kUnknownUser: *error = kUnknownUser; return false;
-            case galaxy::ins::kUserExists: *error = kUserLogged; return false;
-            case galaxy::ins::kPasswordError: *error = kPasswordError; return false;
+            case galaxy::ins::kUnknownUser: *error = kUnknownUser; return true;
+            case galaxy::ins::kUserExists: *error = kUserLogged; return true;
+            case galaxy::ins::kPasswordError: *error = kPasswordError; return true;
             default: break; // pass
             }
         } else {
@@ -895,9 +895,9 @@ bool InsSDK::Login(const std::string& username,
                     case galaxy::ins::kOk: *error = kOK;
                                            logged_uuid_ = response.uuid();
                                            return true;
-                    case galaxy::ins::kUnknownUser: *error = kUnknownUser; return false;
-                    case galaxy::ins::kUserExists: *error = kUserLogged; return false;
-                    case galaxy::ins::kPasswordError: *error = kPasswordError; return false;
+                    case galaxy::ins::kUnknownUser: *error = kUnknownUser; return true;
+                    case galaxy::ins::kUserExists: *error = kUserLogged; return true;
+                    case galaxy::ins::kPasswordError: *error = kPasswordError; return true;
                     default: break; // pass
                     }
                 }
@@ -997,7 +997,7 @@ bool InsSDK::Register(const std::string& username,
             }
             switch(response.status()) {
             case galaxy::ins::kOk: *error = kOK; return true;
-            case galaxy::ins::kUserExists: *error = kUserExists; return false;
+            case galaxy::ins::kUserExists: *error = kUserExists; return true;
             default: break; // pass
             }
         } else {
@@ -1015,7 +1015,7 @@ bool InsSDK::Register(const std::string& username,
                     }
                     switch(response.status()) {
                     case galaxy::ins::kOk: *error = kOK; return true;
-                    case galaxy::ins::kUserExists: *error = kUserExists; return false;
+                    case galaxy::ins::kUserExists: *error = kUserExists; return true;
                     default: break; // pass
                     }
                 }
