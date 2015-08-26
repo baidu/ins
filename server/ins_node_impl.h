@@ -13,6 +13,7 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/identity.hpp>
 #include <boost/multi_index/member.hpp>
+#include <boost/unordered_map.hpp>
 #include "common/mutex.h"
 #include "common/thread_pool.h"
 #include "rpc/rpc_client.h"
@@ -226,6 +227,9 @@ private:
     void ForwardKeepAlive(const ::galaxy::ins::KeepAliveRequest * request,
                           ::galaxy::ins::KeepAliveResponse * response);
     void GarbageClean();
+    void DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* request,
+                         ::galaxy::ins::AppendEntriesResponse* response,
+                         ::google::protobuf::Closure* done);
 public:
     std::vector<std::string> members_;
 private:
@@ -252,7 +256,7 @@ private:
     std::map<std::string, int64_t> next_index_;
     std::map<std::string, int64_t> match_index_;
     CondVar* replication_cond_;
-    std::map<int64_t, ClientAck> client_ack_;
+    boost::unordered_map<int64_t, ClientAck> client_ack_;
     std::set<std::string> replicating_;
     int64_t heartbeat_read_timestamp_;
     bool in_safe_mode_;
@@ -267,9 +271,10 @@ private:
     CondVar* commit_cond_;
     WatchEventContainer watch_events_;
     Mutex watch_mu_;
-    std::map<std::string, std::set<std::string> > session_locks_;
+    boost::unordered_map<std::string, std::set<std::string> > session_locks_;
     Mutex session_locks_mu_;
     ThreadPool binlog_cleaner_;
+    ThreadPool follower_worker_;
     bool single_node_mode_;
     int64_t last_safe_clean_index_;
 };

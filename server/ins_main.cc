@@ -14,6 +14,8 @@
 DECLARE_string(cluster_members);
 DECLARE_int32(ins_port);
 DECLARE_int32(server_id);
+DECLARE_int32(ins_max_throughput_in);
+DECLARE_int32(ins_max_throughput_out);
 
 static volatile bool s_quit = false;
 static void SignalIntHandler(int /*sig*/){
@@ -39,6 +41,8 @@ int main(int argc, char* argv[]) {
     galaxy::ins::InsNodeImpl * ins_node = new galaxy::ins::InsNodeImpl(server_id, 
                                                                        members);
     sofa::pbrpc::RpcServerOptions options;
+    options.max_throughput_in = FLAGS_ins_max_throughput_in;
+    options.max_throughput_out = FLAGS_ins_max_throughput_out;
     sofa::pbrpc::RpcServer rpc_server(options);
     if (!rpc_server.RegisterService(static_cast<galaxy::ins::InsNode*>(ins_node))) {
         LOG(FATAL, "failed to register ins_node service");

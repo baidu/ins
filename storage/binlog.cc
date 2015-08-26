@@ -13,7 +13,8 @@ const std::string log_dbname = "binlog";
 const std::string length_tag = "#BINLOG_LEN#";
 
 BinLogger::BinLogger(const std::string& data_dir, bool compress) : db_(NULL),
-                                                                   length_(0) {
+                                                                   length_(0),
+                                                                   last_log_term_(-1) {
     bool ok = ins_common::Mkdirs(data_dir.c_str());
     if (!ok) {
         LOG(FATAL, "failed to create dir :%s", data_dir.c_str());
@@ -36,6 +37,12 @@ BinLogger::BinLogger(const std::string& data_dir, bool compress) : db_(NULL),
     status = db_->Get(leveldb::ReadOptions(), length_tag, &value);
     if (status.ok() && !value.empty()) {
         length_ = StringToInt(value);
+        if (length_ > 0) {
+            LogEntry log_entry;
+            bool slot_ok = ReadSlot(length_ - 1, &log_entry);
+            assert(slot_ok);
+            last_log_term_ = log_entry.term;
+        }
     }
 }
 
@@ -46,6 +53,12 @@ BinLogger::~BinLogger() {
 int64_t BinLogger::GetLength() {
     MutexLock lock(&mu_);
     return length_;
+}
+
+void BinLogger::GetLastLogIndexAndTerm(int64_t* last_log_index, int64_t* last_log_term) {
+    MutexLock lock(&mu_);
+    *last_log_index = length_ - 1;
+    *last_log_term = last_log_term_;
 }
 
 std::string BinLogger::IntToString(int64_t num) {
@@ -106,6 +119,7 @@ void BinLogger::AppendEntryList(
             log_entry.key = entries.Get(i).key();
             log_entry.value = entries.Get(i).value();
             log_entry.term = entries.Get(i).term();
+            last_log_term_ =  log_entry.term;
             DumpLogEntry(log_entry, &buf);
             batch.Put(IntToString(cur_index + i), buf);
         }
@@ -131,6 +145,7 @@ void BinLogger::AppendEntry(const LogEntry& log_entry) {
         leveldb::Status status = db_->Write(leveldb::WriteOptions(), &batch);
         assert(status.ok());
         length_++;
+        last_log_term_ = log_entry.term;
     }
 }
 
@@ -145,6 +160,12 @@ void BinLogger::Truncate(int64_t trunk_slot_index) {
         leveldb::Status status = db_->Put(leveldb::WriteOptions(), 
                                           length_tag, IntToString(length_));
         assert(status.ok());
+        if (length_ > 0) {
+            LogEntry log_entry;
+            bool slot_ok = ReadSlot(length_ - 1, &log_entry);
+            assert(slot_ok);
+            last_log_term_ = log_entry.term;
+        }
     }
 }
 

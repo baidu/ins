@@ -128,7 +128,7 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
         ::galaxy::ins::ShowStatusRequest request;
         ::galaxy::ins::ShowStatusResponse response;
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::ShowStatus, 
-                                          &request, &response, 2, 1);
+                                          &request, &response, 5, 1);
         if (!ok) {
             node_info.status = kOffline;
             node_info.term = -1;

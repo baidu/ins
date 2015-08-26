@@ -23,6 +23,7 @@ DECLARE_int32(elect_timeout_max);
 DECLARE_int64(session_expire_timeout);
 DECLARE_bool(ins_data_compress);
 DECLARE_int32(ins_gc_interval);
+DECLARE_int32(max_write_pending);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -158,17 +159,23 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* /*controller*/,
                              const ::galaxy::ins::ShowStatusRequest* /*request*/,
                              ::galaxy::ins::ShowStatusResponse* response,
                              ::google::protobuf::Closure* done) {
-    MutexLock lock(&mu_);
+    LOG(INFO, "ShowStatus start");
     int64_t last_log_index;
     int64_t last_log_term;
     GetLastLogIndexAndTerm(&last_log_index, &last_log_term);
-    response->set_status(status_);
-    response->set_term(current_term_);    
-    response->set_last_log_index(last_log_index);
-    response->set_last_log_term(last_log_term);
-    response->set_commit_index(commit_index_);
-    response->set_last_applied(last_applied_index_);
+    LOG(INFO, "last_log_index: %ld, last_log_term: %d", 
+        last_log_index, last_log_term);
+    {
+        MutexLock lock(&mu_);
+        response->set_status(status_);
+        response->set_term(current_term_);    
+        response->set_last_log_index(last_log_index);
+        response->set_last_log_term(last_log_term);
+        response->set_commit_index(commit_index_);
+        response->set_last_applied(last_applied_index_);
+    }
     done->Run();
+    LOG(INFO, "ShowStatus done.");
 }
 
 void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
@@ -526,15 +533,7 @@ void InsNodeImpl::VoteCallback(const ::galaxy::ins::VoteRequest* request,
 
 void InsNodeImpl::GetLastLogIndexAndTerm(int64_t* last_log_index,
                                          int64_t* last_log_term) {
-    mu_.AssertHeld();
-    *last_log_index = binlogger_->GetLength() - 1;
-    *last_log_term = -1;
-    if (*last_log_index >= 0) {
-        LogEntry log_entry;
-        bool slot_ok = binlogger_->ReadSlot(*last_log_index, &log_entry);
-        assert(slot_ok);
-        *last_log_term = log_entry.term;
-    }
+    binlogger_->GetLastLogIndexAndTerm(last_log_index, last_log_term);
 }
 
 void InsNodeImpl::TryToBeLeader() {
@@ -591,10 +590,9 @@ void InsNodeImpl::TryToBeLeader() {
     CheckLeaderCrash();
 }
 
-void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*/,
-                                const ::galaxy::ins::AppendEntriesRequest* request,
-                                ::galaxy::ins::AppendEntriesResponse* response,
-                                ::google::protobuf::Closure* done) {
+void InsNodeImpl::DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* request,
+                                  ::galaxy::ins::AppendEntriesResponse* response,
+                                  ::google::protobuf::Closure* done) {
     MutexLock lock(&mu_);
     if (request->term() >= current_term_) {
         status_ = kFollower;
@@ -649,7 +647,9 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
                     "length: %ld,%ld", 
                     old_length, request->prev_log_index());
             }
+            mu_.Unlock();
             binlogger_->AppendEntryList(request->entries());
+            mu_.Lock();
         }
         int64_t old_commit_index = commit_index_;
         commit_index_ = std::min(binlogger_->GetLength() - 1,
@@ -667,6 +667,17 @@ void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*
         LOG(FATAL, "invalid status: %d", status_);
         abort();
     }
+    return;
+}
+
+void InsNodeImpl::AppendEntries(::google::protobuf::RpcController* /*controller*/,
+                                const ::galaxy::ins::AppendEntriesRequest* request,
+                                ::galaxy::ins::AppendEntriesResponse* response,
+                                ::google::protobuf::Closure* done) {
+    follower_worker_.AddTask(
+        boost::bind(&InsNodeImpl::DoAppendEntries, this,
+                    request, response, done)
+    );
     return;
 }
 
@@ -1005,7 +1016,14 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
-
+    if (client_ack_.size() > static_cast<size_t>(FLAGS_max_write_pending)) {
+        LOG(WARNING, "write pending size: %d", client_ack_.size());
+        response->set_success(false);
+        response->set_leader_id("");
+        done->Run();
+        return;
+    }
+    
     const std::string& key = request->key();
     const std::string& value = request->value();
     LOG(DEBUG, "client want put key :%s", key.c_str());
@@ -1566,6 +1584,8 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* controller,
         LogOperation op;
         ParseValue(raw_value, op, real_value);
         if (real_value != request->old_value() || 
+
+
             key_exist != request->key_exist()) {
             LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
                 key.c_str(), real_value.c_str(), request->old_value().c_str());

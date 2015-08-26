@@ -10,8 +10,12 @@ DEFINE_int32(replication_retry_timespan, 2000, "when replication fail, sleep a w
 DEFINE_int32(elect_timeout_min, 150, "mininum timeout to make a new election");
 DEFINE_int32(elect_timeout_max, 300, "maximum timeout to make a new election");
 DEFINE_int64(session_expire_timeout, 6000000, "timeout for session expiration, 6 seconds in default");
+DEFINE_int32(max_write_pending, 10000, "max pending size of Put");
 DEFINE_bool(ins_data_compress, true, "enable snappy compression on leveldb storage");
 DEFINE_int32(ins_gc_interval, 60, "binlog clean interval (seconds)");
+DEFINE_int32(ins_max_throughput_in, -1, "max input throughput, MB");
+DEFINE_int32(ins_max_throughput_out, -1, "max output throughput, MB");
+
 //ins_cli only
 DEFINE_string(ins_cmd, "", "the command of inc shell");
 DEFINE_string(ins_key, "key", "");

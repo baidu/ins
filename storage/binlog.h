@@ -35,9 +35,11 @@ public:
     bool RemoveSlot(int64_t slot_index);
     static std::string IntToString(int64_t num);
     static int64_t StringToInt(const std::string& s);
+    void GetLastLogIndexAndTerm(int64_t* last_log_index, int64_t* last_log_term);
 private:
     leveldb::DB* db_;
     int64_t length_;
+    int64_t last_log_term_;
     Mutex mu_;
 };
 
