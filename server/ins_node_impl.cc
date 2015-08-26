@@ -265,8 +265,6 @@ void InsNodeImpl::CommitIndexObserv() {
                     break;
                 case kLogout:
                     if (user_manager_->IsLoggedIn(log_entry.user)) {
-                        data_store_->CloseDatabase(
-                                user_manager_->GetUsernameFromUuid(log_entry.user));
                         log_status = user_manager_->Logout(log_entry.user);
                     }
                     break;
@@ -1368,8 +1366,6 @@ void InsNodeImpl::RemoveExpiredSessions() {
                     expired_sessions.push_back(dd->session_id);
                     const std::string& uuid = dd->uuid;
                     if (!uuid.empty() && user_manager_->IsLoggedIn(uuid)) {
-                        data_store_->CloseDatabase(
-                                user_manager_->GetUsernameFromUuid(uuid));
                         user_manager_->Logout(uuid);
                     }
                     LOG(INFO, "remove session_id %s", dd->session_id.c_str());
