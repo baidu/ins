@@ -82,19 +82,15 @@ Status UserManager::Login(const std::string& name,
         LOG(WARNING, "Inexist user tried to login :%s", name.c_str());
         return kUnknownUser;
     }
-    if (user_it->second.has_uuid()) {
-        LOG(WARNING, "Try to log in a logged account :%s", name.c_str());
-        return kUserExists;
-    }
     if (user_it->second.passwd() != password) {
         LOG(WARNING, "Password error for logging :%s", name.c_str());
         return kPasswordError;
     }
 
-    user_it->second.set_uuid(CalcUuid(name));
-    logged_users_[user_it->second.uuid()] = name;
+    const std::string& newuuid = CalcUuid(name);
+    logged_users_[newuuid] = name;
     if (uuid != NULL) {
-        *uuid = user_it->second.uuid();
+        *uuid = newuuid;
     }
     return kOk;
 }
@@ -107,7 +103,6 @@ Status UserManager::Logout(const std::string& uuid) {
         return kUnknownUser;
     }
 
-    user_list_[online_it->second].clear_uuid();
     logged_users_.erase(online_it);
     return kOk;
 }
@@ -133,24 +128,28 @@ Status UserManager::Register(const std::string& name, const std::string& passwor
 }
 
 Status UserManager::ForceOffline(const std::string& myid, const std::string& name) {
-    mu_.Lock();
+    MutexLock lock(&mu_);
     std::map<std::string, std::string>::const_iterator online_it = logged_users_.find(myid);
     if (online_it == logged_users_.end()) {
-        mu_.Unlock();
         return kUnknownUser;
     }
     std::map<std::string, UserInfo>::const_iterator user_it = user_list_.find(name);
     if (user_it == user_list_.end()) {
-        mu_.Unlock();
         return kUnknownUser;
     }
-    const std::string& uuid = user_it->second.uuid();
-    if (online_it->second == root_name || myid == uuid) {
-        mu_.Unlock();
-        return Logout(uuid);
+    if (online_it->second != root_name && online_it->second != name) {
+        return kPermissionDenied;
     }
-    mu_.Unlock();
-    return kPermissionDenied;
+
+    std::map<std::string, std::string>::iterator it = logged_users_.begin();
+    while (it != logged_users_.end()) {
+        if (it->second == name) {
+            logged_users_.erase(it++);
+        } else {
+            ++it;
+        }
+    }
+    return kOk;
 }
 
 Status UserManager::DeleteUser(const std::string& myid, const std::string& name) {
@@ -170,8 +169,14 @@ Status UserManager::DeleteUser(const std::string& myid, const std::string& name)
     if (!DeleteUserFromDatabase(name)) {
         return kError;
     }
-    if (user_it->second.has_uuid()) {
-        logged_users_.erase(user_it->second.uuid());
+
+    std::map<std::string, std::string>::iterator it = logged_users_.begin();
+    while (it != logged_users_.end()) {
+        if (it->second == name) {
+            logged_users_.erase(it++);
+        } else {
+            ++it;
+        }
     }
     user_list_.erase(user_it);
     return kOk;
@@ -196,14 +201,14 @@ Status UserManager::TruncateOnlineUsers(const std::string& myid) {
     if (online_it->second != root_name) {
         return kPermissionDenied;
     }
-    std::string rootid = online_it->first;
-    logged_users_.clear();
-    for (std::map<std::string, UserInfo>::iterator it = user_list_.begin();
-         it != user_list_.end(); ++it) {
-        it->second.clear_uuid();
+    std::map<std::string, std::string>::iterator it = logged_users_.begin();
+    while (it != logged_users_.end()) {
+        if (it->second != root_name) {
+            logged_users_.erase(it++);
+        } else {
+            ++it;
+        }
     }
-    logged_users_[rootid] = root_name;
-    user_list_[root_name].set_uuid(rootid);
     return kOk;
 }
 
@@ -219,17 +224,23 @@ Status UserManager::TruncateAllUsers(const std::string& myid) {
     if (!TruncateDatabase()) {
         return kError;
     }
-    std::string rootid = online_it->first;
     UserInfo root;
     root.set_username(root_name);
     root.set_passwd(user_list_[root_name].passwd());
-    logged_users_.clear();
+    if (!WriteToDatabase(root)) {
+        return kError;
+    }
+    std::map<std::string, std::string>::iterator it = logged_users_.begin();
+    while (it != logged_users_.end()) {
+        if (it->second != root_name) {
+            logged_users_.erase(it++);
+        } else {
+            ++it;
+        }
+    }
     user_list_.clear();
     user_list_[root_name].set_username(root_name);
     user_list_[root_name].set_passwd(root.passwd());
-    user_list_[root_name].set_uuid(rootid);
-    logged_users_[rootid] = root_name;
-    WriteToDatabase(root);
     return kOk;
 }
 

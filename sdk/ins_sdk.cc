@@ -327,6 +327,10 @@ bool InsSDK::ScanOnce(const std::string& start_key,
         }
 
         if (response.success()) {
+            if (response.user_invalid()) {
+                *error = kUnknownUser;
+                return true;
+            }
             *error = kOK;
             for(int i = 0; i < response.items_size(); i++) {
                 KVPair kv_pair;
@@ -868,7 +872,7 @@ bool InsSDK::Login(const std::string& username,
     {
         MutexLock lock(mu_);
         if (!logged_uuid_.empty()) {
-            *error = kUserLogged;
+            *error = kUserExists;
             return true;
         }
         if (!is_keep_alive_bg_) {
@@ -906,7 +910,6 @@ bool InsSDK::Login(const std::string& username,
             switch(response.status()) {
             case galaxy::ins::kOk: *error = kOK; logged_uuid_ = response.uuid(); return true;
             case galaxy::ins::kUnknownUser: *error = kUnknownUser; return true;
-            case galaxy::ins::kUserExists: *error = kUserLogged; return true;
             case galaxy::ins::kPasswordError: *error = kPasswordError; return true;
             default: break; // pass
             }
@@ -928,7 +931,6 @@ bool InsSDK::Login(const std::string& username,
                                            logged_uuid_ = response.uuid();
                                            return true;
                     case galaxy::ins::kUnknownUser: *error = kUnknownUser; return true;
-                    case galaxy::ins::kUserExists: *error = kUserLogged; return true;
                     case galaxy::ins::kPasswordError: *error = kPasswordError; return true;
                     default: break; // pass
                     }

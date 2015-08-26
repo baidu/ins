@@ -36,10 +36,9 @@ enum SDKError {
     kLockFail = 4,
     kCleanBinlogFail = 5,
     kUserExists = 6,
-    kUserLogged = 7,
-    kPermissionDenied = 8,
-    kPasswordError = 9,
-    kUnknownUser = 10
+    kPermissionDenied = 7,
+    kPasswordError = 8,
+    kUnknownUser = 9
 };
 
 struct ClusterNodeInfo {

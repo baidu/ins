@@ -1206,6 +1206,13 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
     int32_t size_limit = request->size_limit();
     StorageManager::Iterator* it = data_store_->NewIterator(
             user_manager_->GetUsernameFromUuid(request->user()));
+    if (it == NULL) {
+        response->set_user_invalid(true);
+        response->set_success(true);
+        done->Run();
+        mu_.Lock();
+        return;
+    }
     bool has_more = false;
     int32_t count = 0;
     for (it->Seek(start_key);
@@ -1360,7 +1367,7 @@ void InsNodeImpl::RemoveExpiredSessions() {
                      dd != it; dd++) {
                     expired_sessions.push_back(dd->session_id);
                     const std::string& uuid = dd->uuid;
-                    if (!dd->uuid.empty() && user_manager_->IsLoggedIn(uuid)) {
+                    if (!uuid.empty() && user_manager_->IsLoggedIn(uuid)) {
                         data_store_->CloseDatabase(
                                 user_manager_->GetUsernameFromUuid(uuid));
                         user_manager_->Logout(uuid);

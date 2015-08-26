@@ -46,7 +46,7 @@ void reset_flags() {
     std::vector<std::string> commands;
     boost::split(commands, buf, boost::is_any_of(" \t\n"), boost::token_compress_on);
     for (int i = commands.size(); i < 3; ++i) {
-        commands[i] = "";
+        commands.push_back("");
     }
     FLAGS_ins_cmd = commands[0];
     if (FLAGS_ins_cmd == "delete" || FLAGS_ins_cmd == "get"
@@ -116,6 +116,9 @@ int main(int argc, char* argv[]) {
             LOG(DEBUG, "key: %s, value: %s", key.c_str(), value.c_str());
             if (sdk.Put(key, value, &ins_err)) {
                 LOG(DEBUG, "put success");
+                if (ins_err == kUnknownUser) {
+                    fprintf(stderr, "previous login may expired, please logout\n");
+                }
             } else {
                 LOG(FATAL, "put failed");
             }
@@ -124,6 +127,9 @@ int main(int argc, char* argv[]) {
             LOG(DEBUG, "key: %s", key.c_str());
             if (sdk.Delete(key, &ins_err)) {
                 LOG(DEBUG, "delete success");
+                if (ins_err == kUnknownUser) {
+                    fprintf(stderr, "previous login may expired, please logout\n");
+                }
             } else {
                 LOG(FATAL, "delete failed");
             }
@@ -135,6 +141,8 @@ int main(int argc, char* argv[]) {
                 LOG(DEBUG, "get success");
                 if (ins_err == kOK) {
                     printf("value: %s\n", value.c_str());
+                } else if (ins_err == kUnknownUser) {
+                    fprintf(stderr, "previous login may expired, please logout\n");
                 } else {
                     printf("NOT FOUND\n");
                 }
@@ -146,20 +154,23 @@ int main(int argc, char* argv[]) {
             std::string end_key = FLAGS_ins_end_key;
             LOG(INFO, "scan: [%s, %s)", start_key.c_str(), end_key.c_str());
             ScanResult* result = sdk.Scan(start_key, end_key);
-            int i = 0;
-            while (!result->Done()) {
-                printf("[%d]\t%s -> %s\n", ++i,
-                       result->Key().c_str(), result->Value().c_str());
-                result->Next();
+            if (result->Error() == kUnknownUser) {
+                fprintf(stderr, "previous login may expired, please logout\n");
+            } else {
+                int i = 0;
+                while (!result->Done()) {
+                    printf("[%d]\t%s -> %s\n", ++i,
+                           result->Key().c_str(), result->Value().c_str());
+                    result->Next();
+                }
             }
             delete result;
         } else if (FLAGS_ins_cmd == "watch") {
             std::string key = FLAGS_ins_key;
-            SDKError error;
             bool done = false;
-            bool ret = sdk.Watch(key, my_watch_callback, &done, &error);
+            bool ret = sdk.Watch(key, my_watch_callback, &done, &ins_err);
             if (!ret) {
-                fprintf(stderr, "rpc error: %d", static_cast<int>(error));
+                fprintf(stderr, "rpc error: %d\n", static_cast<int>(ins_err));
                 return 1;
             }
             sdk.RegisterSessionTimeout(session_timeout_callback, NULL);
@@ -169,27 +180,25 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "done\n");
         } else if (FLAGS_ins_cmd == "lock") {
             std::string key = FLAGS_ins_key;
-            SDKError error;
-            bool ret = sdk.Lock(key, &error);
+            bool ret = sdk.Lock(key, &ins_err);
             if (!ret) {
-                fprintf(stderr, "lock error: %d", static_cast<int>(error));
+                fprintf(stderr, "lock error: %d\n", static_cast<int>(ins_err));
                 return 1;
             }
             sdk.RegisterSessionTimeout(session_timeout_callback, NULL);
             fprintf(stderr, "lock successful on %s\n", key.c_str());
             fprintf(stderr, "Press any key to release the lock.\n");
             getchar();
-            ret = sdk.UnLock(key, &error);
+            ret = sdk.UnLock(key, &ins_err);
             if (ret) {
                 fprintf(stderr, "unlock successful on %s\n", key.c_str());
             }
         } else if (FLAGS_ins_cmd == "clean") {
             std::string server_id = FLAGS_ins_rm_binlog_server_id;
             int64_t end_index = FLAGS_ins_rm_binlog_index;
-            SDKError error;
-            bool ret = sdk.CleanBinlog(server_id, end_index, &error);
+            bool ret = sdk.CleanBinlog(server_id, end_index, &ins_err);
             if (!ret) {
-                fprintf(stderr, "clean fail: %d\n", static_cast<int>(error));
+                fprintf(stderr, "clean fail: %d\n", static_cast<int>(ins_err));
                 return 1;
             }
             fprintf(stderr, "clean ok\n");
@@ -204,8 +213,8 @@ int main(int argc, char* argv[]) {
                                   username.c_str());
                           is_logged = true; break;
                 case kUnknownUser: printf("user doesn't exist\n"); break;
-                case kUserLogged: printf("user has logged in\n"); break;
-                case kPasswordError: printf("wrong password"); break;
+                case kUserExists: printf("you have logged in\n"); break;
+                case kPasswordError: printf("wrong password\n"); break;
                 default: break;
                 }
             } else {
@@ -238,9 +247,11 @@ int main(int argc, char* argv[]) {
             } else {
                 LOG(FATAL, "register failed");
             }
+        } else if (FLAGS_ins_cmd == "whoami") {
+            // TODO access user id or user name here
         } else if (is_logged) {
             printf("not a valid command for logged user, "
-                    "you may want to logout by `logout' command");
+                    "you may want to logout by `logout' command\n");
         } else {
             // Just exit
         }

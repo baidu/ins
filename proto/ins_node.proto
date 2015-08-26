@@ -33,7 +33,6 @@ enum Status {
 message UserInfo {
     required string username = 1;
     required string passwd = 2;
-    optional string uuid = 3;
 }
 
 message Entry {
@@ -146,6 +145,7 @@ message ScanResponse {
     repeated ScanItem items = 2;
     optional string leader_id = 3;
     required bool success = 4;
+    optional bool user_invalid = 5;
 }
 
 message LockRequest {
