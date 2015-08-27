@@ -80,7 +80,7 @@ InsNodeImpl::InsNodeImpl(std::string& server_id,
     }
     std::string sub_dir = self_id_;
     boost::replace_all(sub_dir, ":", "_");
-    
+
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
     binlogger_ = new BinLogger(FLAGS_ins_binlog_dir + "/" + sub_dir, 
                                FLAGS_ins_binlog_compress,
@@ -88,7 +88,7 @@ InsNodeImpl::InsNodeImpl(std::string& server_id,
                                FLAGS_ins_binlog_write_buffer_size * 1024 * 1024);
     current_term_ = meta_->ReadCurrentTerm();
     meta_->ReadVotedFor(voted_for_);
-    
+
     std::string data_store_path = FLAGS_ins_data_dir + "/" 
                                   + sub_dir + "/store" ;
     data_store_ = new StorageManager(data_store_path);
@@ -191,8 +191,8 @@ void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
     meta_->WriteCurrentTerm(current_term_);
 }
 
-inline std::string InsNodeImpl::BindKeyAndUser(const std::string& uuid, const std::string& key) {
-    return user_manager_->GetUsernameFromUuid(uuid) + "::" + key;
+inline std::string InsNodeImpl::BindKeyAndUser(const std::string& user, const std::string& key) {
+    return user + "::" + key;
 }
 
 inline std::string InsNodeImpl::GetKeyFromEvent(const std::string& event_key) {
@@ -230,8 +230,7 @@ void InsNodeImpl::CommitIndexObserv() {
                         log_entry.key.c_str(), log_entry.value.c_str());
                     type_and_value.append(1, static_cast<char>(log_entry.op));
                     type_and_value.append(log_entry.value);
-                    s = data_store_->Put(user_manager_->GetUsernameFromUuid(log_entry.user),
-                                         log_entry.key, type_and_value);
+                    s = data_store_->Put(log_entry.user, log_entry.key, type_and_value);
                     event_trigger_.AddTask(
                         boost::bind(&InsNodeImpl::TriggerEventWithParent,
                                     this,
@@ -247,8 +246,7 @@ void InsNodeImpl::CommitIndexObserv() {
                 case kDel:
                     LOG(INFO, "delete from data_store_, key: %s",
                         log_entry.key.c_str());
-                    s = data_store_->Delete(user_manager_->GetUsernameFromUuid(log_entry.user),
-                                            log_entry.key);
+                    s = data_store_->Delete(log_entry.user, log_entry.key);
                     assert(s == kOk);
                     event_trigger_.AddTask(
                         boost::bind(&InsNodeImpl::TriggerEventWithParent,
@@ -267,15 +265,13 @@ void InsNodeImpl::CommitIndexObserv() {
                         const std::string& key = log_entry.key;
                         const std::string& old_session = log_entry.value;
                         std::string value;
-                        s = data_store_->Get(user_manager_->GetUsernameFromUuid(log_entry.user),
-                                             key, &value);
+                        s = data_store_->Get(log_entry.user, key, &value);
                         if (s == kOk) {
                             std::string cur_session;
                             LogOperation op;
                             ParseValue(value, op, cur_session);
                             if (op == kLock && cur_session == old_session) { //DeleteIf
-                                s = data_store_->Delete(user_manager_->GetUsernameFromUuid(
-                                                            log_entry.user), key);
+                                s = data_store_->Delete(log_entry.user, key);
                                 assert(s == kOk);
                                 LOG(INFO, "unlock on %s", key.c_str());
                                 event_trigger_.AddTask(
@@ -295,9 +291,7 @@ void InsNodeImpl::CommitIndexObserv() {
                     }
                     break;
                 case kLogout:
-                    if (user_manager_->IsLoggedIn(log_entry.user)) {
-                        log_status = user_manager_->Logout(log_entry.user);
-                    }
+                    log_status = user_manager_->Logout(log_entry.user);
                     break;
                 case kRegister:
                     log_status = user_manager_->Register(log_entry.key, log_entry.value);
@@ -434,12 +428,12 @@ void InsNodeImpl::HeartBeatForReadCallback(
         context->err_count += 1;
     }
     if (context->succ_count > members_.size() / 2) {
-        std::string key = context->request->key();
-        std::string user = context->request->user();
+        const std::string& key = context->request->key();
+        const std::string& uuid = context->request->uuid();
         LOG(DEBUG, "client get key: %s", key.c_str());
         Status s;
         std::string value;
-        s = data_store_->Get(user_manager_->GetUsernameFromUuid(user), key, &value);
+        s = data_store_->Get(user_manager_->GetUsernameFromUuid(uuid), key, &value);
         std::string real_value;
         LogOperation op;
         ParseValue(value, op, real_value);
@@ -981,7 +975,7 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         std::string key = request->key();
         Status s;
         std::string value;
-        s = data_store_->Get(user_manager_->GetUsernameFromUuid(request->user()), key, &value);
+        s = data_store_->Get(user_manager_->GetUsernameFromUuid(request->uuid()), key, &value);
         std::string real_value;
         LogOperation op;
         ParseValue(value, op, real_value);
@@ -1033,11 +1027,17 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+    const std::string& uuid = request->uuid();
+    if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
+        response->set_success(false);
+        response->set_leader_id("");
+        return;
+    }
 
     const std::string& key = request->key();
     LOG(DEBUG, "client want delete key :%s", key.c_str());
     LogEntry log_entry;
-    log_entry.user = request->user();
+    log_entry.user = user_manager_->GetUsernameFromUuid(uuid);
     log_entry.key = key;
     log_entry.value = "";
     log_entry.term = current_term_;
@@ -1079,12 +1079,18 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+    const std::string& uuid = request->uuid();
+    if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
+        response->set_success(false);
+        response->set_leader_id("");
+        return;
+    }
     
     const std::string& key = request->key();
     const std::string& value = request->value();
     LOG(DEBUG, "client want put key :%s", key.c_str());
     LogEntry log_entry;
-    log_entry.user = request->user();
+    log_entry.user = user_manager_->GetUsernameFromUuid(uuid);
     log_entry.key = key;
     log_entry.value = value;
     log_entry.term = current_term_;
@@ -1154,6 +1160,13 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* /*controller*/,
         return;
     }
 
+    const std::string& uuid = request->uuid();
+    if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
+        response->set_success(false);
+        response->set_leader_id("");
+        return;
+    }
+
     if (status_ == kLeader && in_safe_mode_) {
         LOG(INFO, "leader is still in safe mode");
         response->set_leader_id("");
@@ -1174,7 +1187,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* /*controller*/,
 
     const std::string& key = request->key();
     const std::string& session_id = request->session_id();
-    const std::string& user = request->user();
+    const std::string& user = user_manager_->GetUsernameFromUuid(uuid);
     LogEntry log_entry;
     log_entry.user = user;
     log_entry.key = key;
@@ -1190,9 +1203,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* /*controller*/,
         std::string type_and_value;
         type_and_value.append(1, static_cast<char>(kLock));
         type_and_value.append(session_id);
-        Status st = data_store_->Put(user_manager_->GetUsernameFromUuid(
-                                                    request->user()),
-                                     key, type_and_value);
+        Status st = data_store_->Put(user, key, type_and_value);
         assert(st == kOk);
         binlogger_->AppendEntry(log_entry);
         int64_t cur_index = binlogger_->GetLength() - 1;
@@ -1232,6 +1243,13 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
         return;
     }
 
+    const std::string& uuid = request->uuid();
+    if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
+        response->set_success(false);
+        response->set_leader_id("");
+        return;
+    }
+
     if (status_ == kLeader && in_safe_mode_) {
         LOG(INFO, "leader is still in safe mode");
         response->set_leader_id("");
@@ -1251,11 +1269,11 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
     }
 
     mu_.Unlock();
-    std::string start_key = request->start_key();
-    std::string end_key = request->end_key();
+    const std::string& start_key = request->start_key();
+    const std::string& end_key = request->end_key();
     int32_t size_limit = request->size_limit();
     StorageManager::Iterator* it = data_store_->NewIterator(
-            user_manager_->GetUsernameFromUuid(request->user()));
+            user_manager_->GetUsernameFromUuid(uuid));
     if (it == NULL) {
         response->set_user_invalid(true);
         response->set_success(true);
@@ -1275,7 +1293,7 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
         if (it->key() == tag_last_applied_index) {
             continue;
         }
-        std::string value = it->value();
+        const std::string& value = it->value();
         std::string real_value;
         LogOperation op;
         ParseValue(value, op, real_value);
@@ -1402,7 +1420,7 @@ void InsNodeImpl::RemoveExpiredSessions() {
         cur_status = status_;
     }
 
-    std::vector<std::string> expired_sessions;
+    std::vector<Session> expired_sessions;
  
     {
         MutexLock lock_session(&sessions_mu_);
@@ -1415,11 +1433,7 @@ void InsNodeImpl::RemoveExpiredSessions() {
                 LOG(INFO, "remove expired session");
                 for (SessionTimeIndex::iterator dd = time_index.begin();
                      dd != it; dd++) {
-                    expired_sessions.push_back(dd->session_id);
-                    const std::string& uuid = dd->uuid;
-                    if (!uuid.empty() && user_manager_->IsLoggedIn(uuid)) {
-                        user_manager_->Logout(uuid);
-                    }
+                    expired_sessions.push_back(*dd);
                     LOG(INFO, "remove session_id %s", dd->session_id.c_str());
                 }
                 time_index.erase(time_index.begin(), it);
@@ -1429,47 +1443,61 @@ void InsNodeImpl::RemoveExpiredSessions() {
 
     {
         MutexLock lock_watch(&watch_mu_);
-        std::vector<std::string>::iterator it = expired_sessions.begin();
+        std::vector<Session>::iterator it = expired_sessions.begin();
         for ( ; it != expired_sessions.end(); it++){
-            RemoveEventBySession(*it);
+            RemoveEventBySession(it->session_id);
         }
     }
 
-    std::vector<std::pair<std::string, std::string> > unlock_keys;
+    std::vector<std::pair<std::string, Session> > unlock_keys;
 
     {
         MutexLock lock_sk(&session_locks_mu_);
-        std::vector<std::string>::iterator it = expired_sessions.begin();
+        std::vector<Session>::iterator it = expired_sessions.begin();
         for ( ; it != expired_sessions.end(); it++){
-            std::string session_id = *it;
+            const std::string& session_id = it->session_id;
+            const std::string& uuid = it->uuid;
             if (session_locks_.find(session_id) != session_locks_.end()) {
                 std::set<std::string>& keys = session_locks_[session_id];
                 std::set<std::string>::iterator jt = keys.begin();
                 for(; jt != keys.end(); jt++) {
-                    unlock_keys.push_back(std::make_pair(*jt, session_id));
+                    unlock_keys.push_back(std::make_pair(*jt, Session(session_id, uuid)));
                 }
                 session_locks_.erase(session_id);
             }
-        }      
+        }
     }
 
     if (cur_status == kLeader) {
         for (size_t i = 0; i < unlock_keys.size(); i++){
-            std::string key = unlock_keys[i].first;
-            std::string session_id = unlock_keys[i].second;
+            const std::string& key = unlock_keys[i].first;
+            const std::string& session_id = unlock_keys[i].second.session_id;
+            const std::string& uuid = unlock_keys[i].second.uuid;
             LogEntry log_entry;
+            log_entry.user = user_manager_->GetUsernameFromUuid(uuid);
             log_entry.key = key;
             log_entry.value = session_id;
             log_entry.term = cur_term;
             log_entry.op = kUnLock;
-            binlogger_->AppendEntry(log_entry);   
+            binlogger_->AppendEntry(log_entry);
+        }
+        for (std::vector<Session>::iterator it = expired_sessions.begin();
+             it != expired_sessions.end(); ++it) {
+            const std::string& uuid = it->uuid;
+            if (!uuid.empty()) {
+                LogEntry log_entry;
+                log_entry.user = uuid;
+                log_entry.term = cur_term;
+                log_entry.op = kLogout;
+                binlogger_->AppendEntry(log_entry);
+            }
         }
         if (single_node_mode_) { //single node cluster
             MutexLock lock(&mu_);
             UpdateCommitIndex(binlogger_->GetLength() - 1);
         }
     }
-    session_checker_.DelayTask(2000, 
+    session_checker_.DelayTask(2000,
         boost::bind(&InsNodeImpl::RemoveExpiredSessions, this)
     );
 }
@@ -1629,12 +1657,18 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
             return;
         } 
     }
+    const std::string& uuid = request->uuid();
+    if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
+        response->set_success(false);
+        response->set_leader_id("");
+        return;
+    }
     
     WatchAck::Ptr ack_obj(new WatchAck(response, done));
     
     const std::string& key = request->key();
-    const std::string& uuid = request->uuid();
-    const std::string& bindedkey = BindKeyAndUser(uuid, key);
+    const std::string& bindedkey = BindKeyAndUser(
+            user_manager_->GetUsernameFromUuid(uuid), key);
     {
         MutexLock lock(&watch_mu_);
         WatchEvent watch_event;
@@ -1648,14 +1682,12 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
     if (tm_now - server_start_timestamp_ > FLAGS_session_expire_timeout) {
         Status s;
         std::string raw_value;
-        s = data_store_->Get(user_manager_->GetUsernameFromUuid(request->uuid()), key, &raw_value);
+        s = data_store_->Get(user_manager_->GetUsernameFromUuid(uuid), key, &raw_value);
         bool key_exist = (s == kOk);
         std::string real_value;
         LogOperation op;
         ParseValue(raw_value, op, real_value);
         if (real_value != request->old_value() || 
-
-
             key_exist != request->key_exist()) {
             LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
                 key.c_str(), real_value.c_str(), request->old_value().c_str());
@@ -1688,12 +1720,18 @@ void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+    const std::string& uuid = request->uuid();
+    if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
+        response->set_success(false);
+        response->set_leader_id("");
+        return;
+    }
 
     const std::string& key = request->key();
     const std::string& session_id = request->session_id();
     LOG(DEBUG, "client want unlock key :%s", key.c_str());
     LogEntry log_entry;
-    log_entry.user = request->user();
+    log_entry.user = user_manager_->GetUsernameFromUuid(uuid);
     log_entry.key = key;
     log_entry.value = session_id;
     log_entry.term = current_term_;
@@ -1767,8 +1805,13 @@ void InsNodeImpl::Logout(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
-
     const std::string& uuid = request->uuid();
+    if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
+        response->set_status(kUnknownUser);
+        response->set_leader_id("");
+        return;
+    }
+
     LOG(DEBUG, "client wants to logout :%s", uuid.c_str());
     LogEntry log_entry;
     log_entry.user = uuid;

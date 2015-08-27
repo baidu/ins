@@ -73,7 +73,7 @@ message VoteResponse {
 message PutRequest {
     required string key = 1;
     required bytes value = 2;
-    optional string user = 3;
+    optional string uuid = 3;
 }
 
 message PutResponse {
@@ -83,7 +83,7 @@ message PutResponse {
 
 message GetRequest {
     required string key = 1; 
-    optional string user = 2;
+    optional string uuid = 2;
 }
 
 message GetResponse {
@@ -95,7 +95,7 @@ message GetResponse {
 
 message DelRequest {
     required string key = 1;    
-    optional string user = 2;
+    optional string uuid = 2;
 }
 
 message DelResponse {
@@ -107,7 +107,7 @@ message DelResponse {
 message UnLockRequest {
     required string key = 1;
     required string session_id = 2;  
-    optional string user = 3;
+    optional string uuid = 3;
 }
 
 message UnLockResponse {
@@ -132,7 +132,7 @@ message ScanRequest {
     required string start_key = 1;
     required bytes end_key = 2;
     required int32 size_limit = 3;    
-    optional string user = 4;
+    optional string uuid = 4;
 }
 
 message ScanItem {
@@ -152,7 +152,7 @@ message LockRequest {
     required string key = 1;
     required string session_id = 2;
     optional string hostname = 3;
-    optional string user = 4;
+    optional string uuid = 4;
 }
 
 message LockResponse {

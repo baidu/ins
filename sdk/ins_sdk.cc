@@ -182,7 +182,7 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
         galaxy::ins::PutResponse response;
         {
             MutexLock lock(mu_);
-            request.set_user(logged_uuid_);
+            request.set_uuid(logged_uuid_);
         }
         request.set_key(key);
         request.set_value(value);
@@ -239,7 +239,7 @@ bool InsSDK::Get(const std::string& key, std::string* value,
         galaxy::ins::GetResponse response;
         {
             MutexLock lock(mu_);
-            request.set_user(logged_uuid_);
+            request.set_uuid(logged_uuid_);
         }
         request.set_key(key);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Get,
@@ -314,7 +314,7 @@ bool InsSDK::ScanOnce(const std::string& start_key,
         galaxy::ins::ScanResponse response;
         {
             MutexLock lock(mu_);
-            request.set_user(logged_uuid_);
+            request.set_uuid(logged_uuid_);
         }
         request.set_start_key(start_key);
         request.set_end_key(end_key);
@@ -386,7 +386,7 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
         galaxy::ins::DelResponse response;
         {
             MutexLock lock(mu_);
-            request.set_user(logged_uuid_);
+            request.set_uuid(logged_uuid_);
         }
         request.set_key(key);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::Delete,
@@ -755,7 +755,7 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
         galaxy::ins::LockResponse response;
         {
             MutexLock lock(mu_);
-            request.set_user(logged_uuid_);
+            request.set_uuid(logged_uuid_);
         }
         request.set_key(key);
         request.set_session_id(GetSessionID());
@@ -810,7 +810,7 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
         galaxy::ins::UnLockResponse response;
         {
             MutexLock lock(mu_);
-            request.set_user(logged_uuid_);
+            request.set_uuid(logged_uuid_);
         }
         request.set_key(key);
         request.set_session_id(GetSessionID());

@@ -74,6 +74,11 @@ struct Session {
     Session() : last_report_time(0) {
 
     }
+    Session(const std::string& sid,
+            const std::string& uid) : session_id(sid),
+                                      uuid(uid),
+                                      last_report_time(0) {
+    }
 };
 
 typedef multi_index_container<
