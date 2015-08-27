@@ -26,7 +26,6 @@ LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(SNAPPY_PATH)/lib -lsnappy \
           -L$(GFLAGS_PATH)/lib -lgflags \
           -L$(LEVELDB_PATH)/lib -lleveldb \
-          -L$(GTEST_PATH) -lgtest \
           -lz -lpthread
 
 CXXFLAGS += $(OPT)
@@ -128,11 +127,11 @@ test: $(TESTS)
 	echo "Test done"
 
 test_binlog: storage/binlog_test.o $(UTIL_OBJ) $(OBJS)
-	$(CXX) $^ -o $@ $(LDFLAGS)
+	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
 
 test_storage_manager: storage/storage_manage_test.o $(UTIL_OBJ) $(OBJS)
-	$(CXX) $^ -o $@ $(LDFLAGS)
+	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
 
 test_user_manager: server/user_manage_test.o $(UTIL_OBJ) $(OBJS)
-	$(CXX) $^ -o $@ $(LDFLAGS)
+	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
 

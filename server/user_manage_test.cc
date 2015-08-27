@@ -40,7 +40,11 @@ TEST(UserManageTest, CommonUserTest) {
     EXPECT_TRUE(user_manager.IsLoggedIn(uuid1));
     // Login again
     ret = user_manager.Login("user1", "123456", &uuid2);
-    EXPECT_EQ(ret, kUserExists);
+    EXPECT_EQ(ret, kOk);
+    // And logout
+    ret = user_manager.Logout(uuid2);
+    EXPECT_EQ(ret, kOk);
+    uuid2 = "";
     // Wrong password
     ret = user_manager.Login("user2", "abcdefg", &uuid2);
     EXPECT_EQ(ret, kPasswordError);
@@ -130,9 +134,9 @@ TEST(UserManageTest, SuperUserTest) {
     // Force user offline
     ret = user_manager.ForceOffline(rootid, "user1");
     EXPECT_EQ(ret, kOk);
-    // Force some unlogged user offline
+    // Force some unlogged user offline(will return ok)
     ret = user_manager.ForceOffline(rootid, "user3");
-    EXPECT_EQ(ret, kUnknownUser);
+    EXPECT_EQ(ret, kOk);
     // Force some inexisting user offline
     ret = user_manager.ForceOffline(rootid, "user2");
     EXPECT_EQ(ret, kUnknownUser);
