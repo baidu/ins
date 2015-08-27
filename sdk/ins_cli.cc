@@ -50,7 +50,7 @@ void reset_flags() {
     }
     FLAGS_ins_cmd = commands[0];
     if (FLAGS_ins_cmd == "delete" || FLAGS_ins_cmd == "get"
-        || FLAGS_ins_cmd == "watch") {
+        || FLAGS_ins_cmd == "watch" || FLAGS_ins_cmd == "lock") {
         FLAGS_ins_key = commands[1];
     } else if (FLAGS_ins_cmd == "put" || FLAGS_ins_cmd == "login"
                || FLAGS_ins_cmd == "register") {

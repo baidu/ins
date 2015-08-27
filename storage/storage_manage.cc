@@ -1,9 +1,14 @@
 #include "storage_manage.h"
 
 #include <assert.h>
+#include <gflags/gflags.h>
 #include "common/logging.h"
 #include "leveldb/db.h"
 #include "utils.h"
+
+DECLARE_bool(ins_data_compress);
+DECLARE_int32(ins_data_block_size);
+DECLARE_int32(ins_data_write_buffer_size);
 
 namespace galaxy {
 namespace ins {
