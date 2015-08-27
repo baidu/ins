@@ -685,7 +685,7 @@ void InsSDK::KeepWatchTask(const std::string& key,
     galaxy::ins::WatchResponse* response = new galaxy::ins::WatchResponse();
     {
         MutexLock lock(mu_);
-        request->set_user(logged_uuid_);
+        request->set_uuid(logged_uuid_);
     }
     request->set_session_id(GetSessionID());
     request->set_key(key);

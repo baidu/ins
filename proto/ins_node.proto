@@ -177,7 +177,7 @@ message WatchRequest {
     required string session_id = 2;
     optional bytes old_value = 3;
     optional bool key_exist = 4;
-    optional string user = 5;
+    optional string uuid = 5;
 }
 
 message WatchResponse {

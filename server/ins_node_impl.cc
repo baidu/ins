@@ -171,6 +171,14 @@ void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
     meta_->WriteCurrentTerm(current_term_);
 }
 
+inline std::string InsNodeImpl::BindKeyAndUser(const std::string& uuid, const std::string& key) {
+    return user_manager_->GetUsernameFromUuid(uuid) + "::" + key;
+}
+
+inline std::string InsNodeImpl::GetKeyFromEvent(const std::string& event_key) {
+    return event_key.substr(event_key.find_first_of(":") + 2); // len("::") = 2
+}
+
 void InsNodeImpl::CommitIndexObserv() {
     MutexLock lock(&mu_);
     while (!stop_) {
@@ -207,7 +215,8 @@ void InsNodeImpl::CommitIndexObserv() {
                     event_trigger_.AddTask(
                         boost::bind(&InsNodeImpl::TriggerEventWithParent,
                                     this,
-                                    log_entry.key, log_entry.value, false)
+                                    BindKeyAndUser(log_entry.user, log_entry.key),
+                                    log_entry.value, false)
                     );
                     if (log_entry.op == kLock) {
                         MutexLock lock_sk(&session_locks_mu_);
@@ -224,7 +233,8 @@ void InsNodeImpl::CommitIndexObserv() {
                     event_trigger_.AddTask(
                         boost::bind(&InsNodeImpl::TriggerEventWithParent,
                                     this,
-                                    log_entry.key, log_entry.value, true)
+                                    BindKeyAndUser(log_entry.user, log_entry.key),
+                                    log_entry.value, true)
                     );
                     break;
                 case kNop:
@@ -251,7 +261,8 @@ void InsNodeImpl::CommitIndexObserv() {
                                 event_trigger_.AddTask(
                                   boost::bind(&InsNodeImpl::TriggerEventWithParent,
                                               this,
-                                              key, old_session, true)
+                                              BindKeyAndUser(log_entry.user, key),
+                                              old_session, true)
                                 );
                             }
                         }
@@ -1471,8 +1482,8 @@ void InsNodeImpl::TriggerEvent(const std::string& watch_key,
         int event_count = 0;
         for (WatchEventKeyIndex::iterator it = it_start;
              it != it_end; it++) {
-            it->ack->response->set_watch_key(watch_key);
-            it->ack->response->set_key(key);
+            it->ack->response->set_watch_key(GetKeyFromEvent(watch_key));
+            it->ack->response->set_key(GetKeyFromEvent(key));
             it->ack->response->set_value(value);
             it->ack->response->set_deleted(deleted);
             it->ack->response->set_success(true);
@@ -1510,7 +1521,6 @@ void InsNodeImpl::RemoveEventBySessionAndKey(const std::string& session_id,
     }
 }
 
-
 void InsNodeImpl::TriggerEventBySessionAndKey(const std::string& session_id,
                                               const std::string& key,
                                               const std::string& value,
@@ -1527,8 +1537,8 @@ void InsNodeImpl::TriggerEventBySessionAndKey(const std::string& session_id,
             if (it->key == key) {
                 LOG(INFO, "trigger watch event: %s on %s",
                            it->key.c_str(), it->session_id.c_str());
-                it->ack->response->set_watch_key(key);
-                it->ack->response->set_key(key);
+                it->ack->response->set_watch_key(GetKeyFromEvent(key));
+                it->ack->response->set_key(GetKeyFromEvent(key));
                 it->ack->response->set_value(value);
                 it->ack->response->set_deleted(deleted);
                 it->ack->response->set_success(true);
@@ -1581,11 +1591,13 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
     
     WatchAck::Ptr ack_obj(new WatchAck(response, done));
     
-    std::string key = request->key();
+    const std::string& key = request->key();
+    const std::string& uuid = request->uuid();
+    const std::string& bindedkey = BindKeyAndUser(uuid, key);
     {
         MutexLock lock(&watch_mu_);
         WatchEvent watch_event;
-        watch_event.key = key;
+        watch_event.key = bindedkey;
         watch_event.session_id = request->session_id();
         watch_event.ack = ack_obj;
         RemoveEventBySessionAndKey(watch_event.session_id, watch_event.key);
@@ -1595,7 +1607,7 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
     if (tm_now - server_start_timestamp_ > FLAGS_session_expire_timeout) {
         Status s;
         std::string raw_value;
-        s = data_store_->Get(user_manager_->GetUsernameFromUuid(request->user()), key, &raw_value);
+        s = data_store_->Get(user_manager_->GetUsernameFromUuid(request->uuid()), key, &raw_value);
         bool key_exist = (s == kOk);
         std::string real_value;
         LogOperation op;
@@ -1605,12 +1617,12 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
             LOG(INFO, "key:%s, new_v: %s, old_v:%s", 
                 key.c_str(), real_value.c_str(), request->old_value().c_str());
             TriggerEventBySessionAndKey(request->session_id(),
-                                        key, real_value, (s == kNotFound));
+                                        bindedkey, real_value, (s == kNotFound));
         } else if (op == kLock && IsExpiredSession(real_value)) {
             LOG(INFO, "key(lock):%s, new_v: %s, old_v:%s", 
                 key.c_str(), real_value.c_str(), request->old_value().c_str());
             TriggerEventBySessionAndKey(request->session_id(),
-                                        key, "", true);
+                                        bindedkey, "", true);
         }
     }
 }

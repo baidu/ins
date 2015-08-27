@@ -225,6 +225,8 @@ private:
                     LogOperation& op, 
                     std::string& real_value);
     bool IsExpiredSession(const std::string& session_id);
+    std::string BindKeyAndUser(const std::string& user, const std::string& key);
+    std::string GetKeyFromEvent(const std::string& event_key);
     void RemoveEventBySession(const std::string& session_id);
     void TriggerEvent(const std::string& watch_key,
                       const std::string& key,
