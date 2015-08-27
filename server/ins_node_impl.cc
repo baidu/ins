@@ -634,16 +634,7 @@ void InsNodeImpl::DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* req
                 done->Run();
                 return;
             }
-            if (request->prev_log_index() - last_applied_index_ 
-                > FLAGS_max_commit_pending) {
-                response->set_current_term(current_term_);
-                response->set_success(false);
-                response->set_log_length(binlogger_->GetLength());
-                LOG(INFO, "[AppendEntries] speed to fast, %ld > %ld",
-                    request->prev_log_index(), last_applied_index_);
-                done->Run();
-                return;
-            }
+
             int64_t prev_log_term = -1;
             if (request->prev_log_index() >= 0) {
                 LogEntry prev_log_entry;
@@ -660,6 +651,16 @@ void InsNodeImpl::DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* req
                 LOG(INFO, "[AppendEntries] term not match, "
                     "term: %ld,%ld", 
                     prev_log_term, request->prev_log_term());
+                done->Run();
+                return;
+            }
+            if (request->prev_log_index() - last_applied_index_ 
+                > FLAGS_max_commit_pending) {
+                response->set_current_term(current_term_);
+                response->set_success(false);
+                response->set_log_length(binlogger_->GetLength());
+                LOG(INFO, "[AppendEntries] speed to fast, %ld > %ld",
+                    request->prev_log_index(), last_applied_index_);
                 done->Run();
                 return;
             }
