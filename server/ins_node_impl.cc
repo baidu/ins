@@ -24,6 +24,12 @@ DECLARE_int64(session_expire_timeout);
 DECLARE_bool(ins_data_compress);
 DECLARE_int32(ins_gc_interval);
 DECLARE_int32(max_write_pending);
+DECLARE_int32(max_commit_pending);
+DECLARE_int32(ins_data_block_size);
+DECLARE_int32(ins_data_write_buffer_size);
+DECLARE_bool(ins_binlog_compress);
+DECLARE_int32(ins_binlog_block_size);
+DECLARE_int32(ins_binlog_write_buffer_size);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -79,7 +85,9 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
     
     meta_ = new Meta(FLAGS_ins_data_dir + "/" + sub_dir);
     binlogger_ = new BinLogger(FLAGS_ins_binlog_dir + "/" + sub_dir, 
-                               FLAGS_ins_data_compress);
+                               FLAGS_ins_binlog_compress,
+                               FLAGS_ins_binlog_block_size * 1024,
+                               FLAGS_ins_binlog_write_buffer_size * 1024 * 1024);
     current_term_ = meta_->ReadCurrentTerm();
     meta_->ReadVotedFor(voted_for_);
     
@@ -91,6 +99,11 @@ InsNodeImpl::InsNodeImpl (std::string& server_id,
         options.compression = leveldb::kSnappyCompression;
         LOG(INFO, "enalbe snappy compress for data storage");
     }
+    options.write_buffer_size = FLAGS_ins_data_write_buffer_size * 1024 * 1024;
+    options.block_size = FLAGS_ins_data_block_size * 1024;
+    LOG(INFO, "[data]: block_size: %d, writer_buffer_size: %d", 
+        options.block_size,
+        options.write_buffer_size);
     leveldb::Status status = leveldb::DB::Open(options, 
                                                data_store_path, &data_store_);
     assert(status.ok());
@@ -621,6 +634,16 @@ void InsNodeImpl::DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* req
                 done->Run();
                 return;
             }
+            if (request->prev_log_index() - last_applied_index_ 
+                > FLAGS_max_commit_pending) {
+                response->set_current_term(current_term_);
+                response->set_success(false);
+                response->set_log_length(binlogger_->GetLength());
+                LOG(INFO, "[AppendEntries] speed to fast, %ld > %ld",
+                    request->prev_log_index(), last_applied_index_);
+                done->Run();
+                return;
+            }
             int64_t prev_log_term = -1;
             if (request->prev_log_index() >= 0) {
                 LogEntry prev_log_entry;
@@ -818,7 +841,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                                           &InsNode_Stub::AppendEntries,
                                           &request,
                                           &response,
-                                          5, 1);
+                                          60, 1);
         mu_.Lock();
         mu_.AssertHeld();
         if (ok && response.current_term() > current_term_) {

@@ -12,9 +12,12 @@ namespace ins {
 const std::string log_dbname = "binlog";
 const std::string length_tag = "#BINLOG_LEN#";
 
-BinLogger::BinLogger(const std::string& data_dir, bool compress) : db_(NULL),
-                                                                   length_(0),
-                                                                   last_log_term_(-1) {
+BinLogger::BinLogger(const std::string& data_dir,
+                     bool compress,
+                     int32_t block_size,
+                     int32_t write_buffer_size) : db_(NULL),
+                                                  length_(0),
+                                                  last_log_term_(-1) {
     bool ok = ins_common::Mkdirs(data_dir.c_str());
     if (!ok) {
         LOG(FATAL, "failed to create dir :%s", data_dir.c_str());
@@ -27,6 +30,11 @@ BinLogger::BinLogger(const std::string& data_dir, bool compress) : db_(NULL),
         options.compression = leveldb::kSnappyCompression;
         LOG(INFO, "enable snappy compress for binlog");
     }
+    options.write_buffer_size = write_buffer_size;
+    options.block_size = block_size;
+    LOG(INFO, "[binlog]: block_size: %d, writer_buffer_size: %d", 
+        options.block_size,
+        options.write_buffer_size);
     leveldb::Status status = leveldb::DB::Open(options, full_name, &db_);
     if (!status.ok()) {
         LOG(FATAL, "failed to open db %s err %s", 
