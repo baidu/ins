@@ -14,14 +14,33 @@ enum LogOperation {
     kDel = 2;
     kLock = 3;
     kUnLock = 4;
+    kLogin = 5;
+    kLogout = 6;
+    kRegister = 7;
     kNop = 10;
 };
+
+enum Status {
+    kOk = 0;
+    kNotFound = 1;
+    kUnknownUser = 2;
+    kUserExists = 3;
+    kPasswordError = 4;
+    kPermissionDenied = 5;
+    kError = 10;
+};
+
+message UserInfo {
+    required string username = 1;
+    required string passwd = 2;
+}
 
 message Entry {
     required string key = 1;
     required bytes value = 2;
     required int64 term = 3;
     optional LogOperation op = 4;
+    optional string user = 5;
 }
 
 message AppendEntriesRequest {
@@ -54,6 +73,7 @@ message VoteResponse {
 message PutRequest {
     required string key = 1;
     required bytes value = 2;
+    optional string user = 3;
 }
 
 message PutResponse {
@@ -63,6 +83,7 @@ message PutResponse {
 
 message GetRequest {
     required string key = 1; 
+    optional string user = 2;
 }
 
 message GetResponse {
@@ -74,6 +95,7 @@ message GetResponse {
 
 message DelRequest {
     required string key = 1;    
+    optional string user = 2;
 }
 
 message DelResponse {
@@ -85,6 +107,7 @@ message DelResponse {
 message UnLockRequest {
     required string key = 1;
     required string session_id = 2;  
+    optional string user = 3;
 }
 
 message UnLockResponse {
@@ -109,6 +132,7 @@ message ScanRequest {
     required string start_key = 1;
     required bytes end_key = 2;
     required int32 size_limit = 3;    
+    optional string user = 4;
 }
 
 message ScanItem {
@@ -121,12 +145,14 @@ message ScanResponse {
     repeated ScanItem items = 2;
     optional string leader_id = 3;
     required bool success = 4;
+    optional bool user_invalid = 5;
 }
 
 message LockRequest {
     required string key = 1;
     required string session_id = 2;
     optional string hostname = 3;
+    optional string user = 4;
 }
 
 message LockResponse {
@@ -136,7 +162,7 @@ message LockResponse {
 
 message KeepAliveRequest {
     required string session_id = 1;
-    optional string host_name = 2;
+    optional string uuid = 2;
     repeated string locks = 3;
     optional bool forward_from_leader = 4 [default = false];
 }
@@ -151,6 +177,7 @@ message WatchRequest {
     required string session_id = 2;
     optional bytes old_value = 3;
     optional bool key_exist = 4;
+    optional string uuid = 5;
 }
 
 message WatchResponse {
@@ -161,6 +188,37 @@ message WatchResponse {
     optional bool deleted = 5;
     optional bool canceled = 6 [default = false];
     optional string watch_key = 7;
+}
+
+message LoginRequest {
+    required string username = 1;
+    required string passwd = 2;
+//  optional string encrypt_method = 3;
+}
+
+message LoginResponse {
+    required Status status = 1;
+    optional string uuid = 2;
+    optional string leader_id = 3;
+}
+
+message LogoutRequest {
+    required string uuid = 1;
+}
+
+message LogoutResponse {
+    required Status status = 1;
+    optional string leader_id = 2;
+}
+
+message RegisterRequest {
+    required string username = 1;
+    required string passwd = 2;
+}
+
+message RegisterResponse {
+    required Status status = 1;
+    optional string leader_id = 2;
 }
 
 message CleanBinlogRequest {
@@ -181,6 +239,9 @@ service InsNode {
     rpc Lock(LockRequest) returns (LockResponse);
     rpc UnLock(UnLockRequest) returns (UnLockResponse);
     rpc Watch(WatchRequest) returns (WatchResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc Logout(LogoutRequest) returns (LogoutResponse);
+    rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc KeepAlive(KeepAliveRequest) returns (KeepAliveResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
     rpc CleanBinlog(CleanBinlogRequest) returns (CleanBinlogResponse);

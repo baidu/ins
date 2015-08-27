@@ -124,6 +124,7 @@ void BinLogger::AppendEntryList(
             LogEntry log_entry;
             std::string buf;
             log_entry.op = entries.Get(i).op();
+            log_entry.user = entries.Get(i).user();
             log_entry.key = entries.Get(i).key();
             log_entry.value = entries.Get(i).value();
             log_entry.term = entries.Get(i).term();
@@ -180,15 +181,21 @@ void BinLogger::Truncate(int64_t trunk_slot_index) {
 void BinLogger::DumpLogEntry(const LogEntry& log_entry, std::string* buf) {
     assert(buf);
     int32_t total_len = sizeof(uint8_t) 
+                        + sizeof(int32_t) + log_entry.user.size()
                         + sizeof(int32_t) + log_entry.key.size()
                         + sizeof(int32_t) + log_entry.value.size()
                         + sizeof(int64_t);
     buf->resize(total_len);
+    int32_t user_size = log_entry.user.size();
     int32_t key_size = log_entry.key.size();
     int32_t value_size = log_entry.value.size();
     char* p = reinterpret_cast<char*>(& ((*buf)[0]));
     p[0] = static_cast<uint8_t>(log_entry.op);
     p += sizeof(uint8_t);
+    memcpy(p, static_cast<const void*>(&user_size), sizeof(int32_t));
+    p += sizeof(int32_t);
+    memcpy(p, static_cast<const void*>(log_entry.user.data()), log_entry.user.size());
+    p += log_entry.user.size();
     memcpy(p, static_cast<const void*>(&key_size), sizeof(int32_t));
     p += sizeof(int32_t);
     memcpy(p, static_cast<const void*>(log_entry.key.data()), log_entry.key.size());
@@ -203,12 +210,18 @@ void BinLogger::DumpLogEntry(const LogEntry& log_entry, std::string* buf) {
 void BinLogger::LoadLogEntry(const std::string& buf, LogEntry* log_entry) {
     assert(log_entry);  
     const char* p = buf.data();
+    int32_t user_size = 0;
     int32_t key_size = 0;
     int32_t value_size = 0;
     uint8_t opcode = 0;
     memcpy(static_cast<void*>(&opcode), p, sizeof(uint8_t));
     log_entry->op = static_cast<LogOperation>(opcode);
     p += sizeof(uint8_t);
+    memcpy(static_cast<void*>(&user_size), p, sizeof(int32_t));
+    log_entry->user.resize(user_size);
+    p += sizeof(int32_t);
+    memcpy(static_cast<void*>(&log_entry->user[0]), p, user_size);
+    p += user_size;
     memcpy(static_cast<void*>(&key_size), p, sizeof(int32_t));
     log_entry->key.resize(key_size);
     p += sizeof(int32_t);

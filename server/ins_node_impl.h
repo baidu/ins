@@ -17,7 +17,8 @@
 #include "common/mutex.h"
 #include "common/thread_pool.h"
 #include "rpc/rpc_client.h"
-#include "leveldb/db.h"
+#include "storage/storage_manage.h"
+#include "server/user_manage.h"
 
 using namespace boost::multi_index;
 
@@ -32,11 +33,17 @@ struct ClientAck {
     galaxy::ins::DelResponse* del_response;
     galaxy::ins::LockResponse* lock_response;
     galaxy::ins::UnLockResponse* unlock_response;
+    galaxy::ins::LoginResponse* login_response;
+    galaxy::ins::LogoutResponse* logout_response;
+    galaxy::ins::RegisterResponse* register_response;
     google::protobuf::Closure* done;
     ClientAck() : response(NULL),
                   del_response(NULL),
                   lock_response(NULL),
                   unlock_response(NULL),
+                  login_response(NULL),
+                  logout_response(NULL),
+                  register_response(NULL),
                   done(NULL) {
     }
 };
@@ -61,12 +68,12 @@ struct ClientReadAck
 };
 
 struct Session {
-  std::string session_id;
-  std::string host_name;
-  int64_t last_report_time;
-  Session() : last_report_time(0) {
+    std::string session_id;
+    std::string uuid;
+    int64_t last_report_time;
+    Session() : last_report_time(0) {
 
-  }
+    }
 };
 
 typedef multi_index_container<
@@ -171,6 +178,18 @@ public:
                const ::galaxy::ins::WatchRequest* request,
                ::galaxy::ins::WatchResponse* response,
                ::google::protobuf::Closure* done);
+    void Login(::google::protobuf::RpcController* controller,
+               const ::galaxy::ins::LoginRequest* request,
+               ::galaxy::ins::LoginResponse* response,
+               ::google::protobuf::Closure* done);
+    void Logout(::google::protobuf::RpcController* controller,
+                const ::galaxy::ins::LogoutRequest* request,
+                ::galaxy::ins::LogoutResponse* response,
+                ::google::protobuf::Closure* done);
+    void Register(::google::protobuf::RpcController* controller,
+                  const ::galaxy::ins::RegisterRequest* request,
+                  ::galaxy::ins::RegisterResponse* response,
+                  ::google::protobuf::Closure* done);
     void CleanBinlog(::google::protobuf::RpcController* controller,
                      const ::galaxy::ins::CleanBinlogRequest* request,
                      ::galaxy::ins::CleanBinlogResponse* response,
@@ -207,6 +226,8 @@ private:
                     LogOperation& op, 
                     std::string& real_value);
     bool IsExpiredSession(const std::string& session_id);
+    std::string BindKeyAndUser(const std::string& user, const std::string& key);
+    std::string GetKeyFromEvent(const std::string& event_key);
     void RemoveEventBySession(const std::string& session_id);
     void TriggerEvent(const std::string& watch_key,
                       const std::string& key,
@@ -222,8 +243,9 @@ private:
     void RemoveEventBySessionAndKey(const std::string& session_id,
                                     const std::string& key);
     void DelBinlog(int64_t index);
-    bool LockIsAvailable(const std::string& key,
-                        const std::string& session_id);
+    bool LockIsAvailable(const std::string& user,
+                         const std::string& key,
+                         const std::string& session_id);
     void ForwardKeepAlive(const ::galaxy::ins::KeepAliveRequest * request,
                           ::galaxy::ins::KeepAliveResponse * response);
     void GarbageClean();
@@ -247,10 +269,11 @@ private:
     int64_t elect_leader_task_;
     std::string current_leader_;
     int32_t heartbeat_count_;
-    Meta * meta_;
+    Meta* meta_;
     BinLogger* binlogger_;
+    UserManager* user_manager_;
     //for leaders
-    leveldb::DB* data_store_;
+    StorageManager* data_store_;
     ThreadPool replicatter_;
     ThreadPool committer_;
     std::map<std::string, int64_t> next_index_;
