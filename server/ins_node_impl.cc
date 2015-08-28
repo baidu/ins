@@ -815,8 +815,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                     UpdateCommitIndex(index + batch_span - 1);
                 }
             } else { // (index, term ) miss match
-                next_index_[follower_id] -= 1;
-                next_index_[follower_id] = std::min(next_index_[follower_id],
+                next_index_[follower_id] = std::min(next_index_[follower_id] - 1,
                                                     response.log_length());
                 LOG(INFO, "adjust next_index of %s to %ld",
                     follower_id.c_str(), 
