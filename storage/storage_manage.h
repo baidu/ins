@@ -11,13 +11,6 @@
 namespace galaxy {
 namespace ins {
 
-struct DBEntry {
-    leveldb::DB* db;
-    Mutex* mu;
-    DBEntry() : db(NULL), mu(NULL) {
-    }
-};
-
 class StorageManager {
 public:
     StorageManager(const std::string& data_dir);
@@ -60,8 +53,9 @@ public:
 
     Iterator *NewIterator(const std::string& name);
 private:
+    Mutex mu_;
     std::string data_dir_;
-    std::map<std::string, DBEntry> dbs_;
+    std::map<std::string, leveldb::DB*> dbs_;
 };
 
 }

@@ -43,7 +43,6 @@ private:
     Mutex mu_;
     std::map<std::string, std::string> logged_users_;
     std::map<std::string, UserInfo> user_list_;
-    Mutex db_mu_;
     std::string data_dir_;
     leveldb::DB* user_db_;
 };

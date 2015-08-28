@@ -213,23 +213,26 @@ Status UserManager::TruncateOnlineUsers(const std::string& myid) {
 }
 
 Status UserManager::TruncateAllUsers(const std::string& myid) {
-    MutexLock lock(&mu_);
-    std::map<std::string, std::string>::const_iterator online_it = logged_users_.find(myid);
-    if (online_it == logged_users_.end()) {
-        return kUnknownUser;
-    }
-    if (online_it->second != root_name) {
-        return kPermissionDenied;
+    UserInfo root;
+    root.set_username(root_name);
+    {
+        MutexLock lock(&mu_);
+        std::map<std::string, std::string>::const_iterator online_it = logged_users_.find(myid);
+        if (online_it == logged_users_.end()) {
+            return kUnknownUser;
+        }
+        if (online_it->second != root_name) {
+            return kPermissionDenied;
+        }
+        root.set_passwd(user_list_[root_name].passwd());
     }
     if (!TruncateDatabase()) {
         return kError;
     }
-    UserInfo root;
-    root.set_username(root_name);
-    root.set_passwd(user_list_[root_name].passwd());
     if (!WriteToDatabase(root)) {
         return kError;
     }
+    MutexLock lock(&mu_);
     std::map<std::string, std::string>::iterator it = logged_users_.begin();
     while (it != logged_users_.end()) {
         if (it->second != root_name) {
@@ -253,9 +256,8 @@ std::string UserManager::GetUsernameFromUuid(const std::string& uuid) {
 
 bool UserManager::WriteToDatabase(const UserInfo& user) {
     if (!user.has_username() || !user.has_passwd()) {
-        return false;
+     return false;
     }
-    MutexLock lock(&db_mu_);
     leveldb::Status status = user_db_->Put(leveldb::WriteOptions(),
                                            user.username(),
                                            user.passwd());
@@ -263,19 +265,16 @@ bool UserManager::WriteToDatabase(const UserInfo& user) {
 }
 
 bool UserManager::WriteToDatabase(const std::string& name, const std::string& password) {
-    MutexLock lock(&db_mu_);
     leveldb::Status status = user_db_->Put(leveldb::WriteOptions(), name, password);
     return status.ok();
 }
 
 bool UserManager::DeleteUserFromDatabase(const std::string& name) {
-    MutexLock lock(&db_mu_);
     leveldb::Status status = user_db_->Delete(leveldb::WriteOptions(), name);
     return status.ok();
 }
 
 bool UserManager::TruncateDatabase() {
-    MutexLock lock(&db_mu_);
     leveldb::Iterator* it = user_db_->NewIterator(leveldb::ReadOptions());
     leveldb::WriteBatch batch;
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -289,7 +288,6 @@ bool UserManager::TruncateDatabase() {
 }
 
 bool UserManager::RecoverFromDatabase() {
-    MutexLock lock(&db_mu_);
     leveldb::Iterator* it = user_db_->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         const std::string& name = it->key().ToString();
