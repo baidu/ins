@@ -778,6 +778,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             bool slot_ok = binlogger_->ReadSlot(idx, &log_entry);
             if (!slot_ok) {
                 has_bad_slot = true;
+                break;
             }
             galaxy::ins::Entry * entry = request.add_entries();
             entry->set_term(log_entry.term);
