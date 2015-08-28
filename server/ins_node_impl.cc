@@ -825,6 +825,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             bool slot_ok = binlogger_->ReadSlot(idx, &log_entry);
             if (!slot_ok) {
                 has_bad_slot = true;
+                break;
             }
             galaxy::ins::Entry * entry = request.add_entries();
             entry->set_term(log_entry.term);
@@ -861,8 +862,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                     UpdateCommitIndex(index + batch_span - 1);
                 }
             } else { // (index, term ) miss match
-                next_index_[follower_id] -= 1;
-                next_index_[follower_id] = std::min(next_index_[follower_id],
+                next_index_[follower_id] = std::min(next_index_[follower_id] - 1,
                                                     response.log_length());
                 LOG(INFO, "adjust next_index of %s to %ld",
                     follower_id.c_str(), 
@@ -960,14 +960,13 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
                     response->set_hit(false);
                     response->set_success(true);
                     response->set_leader_id("");
-                } else{
+                } else {
                     response->set_hit(true);
                     response->set_success(true);
                     response->set_value(real_value);
                     response->set_leader_id("");
                 }
-            }
-            else {
+            } else {
                 response->set_hit(true);
                 response->set_success(true);
                 response->set_value(real_value);
