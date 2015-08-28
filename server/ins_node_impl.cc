@@ -659,6 +659,7 @@ void InsNodeImpl::DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* req
                 response->set_current_term(current_term_);
                 response->set_success(false);
                 response->set_log_length(binlogger_->GetLength());
+                response->set_is_busy(true);
                 LOG(INFO, "[AppendEntries] speed to fast, %ld > %ld",
                     request->prev_log_index(), last_applied_index_);
                 done->Run();
@@ -861,6 +862,12 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                 if (max_term == current_term_) {
                     UpdateCommitIndex(index + batch_span - 1);
                 }
+            } else if (response.is_busy()) {
+                mu_.Unlock();
+                LOG(FATAL, "delay replicate-rpc to %s , [busy]", 
+                    follower_id.c_str());
+                ThisThread::Sleep(FLAGS_replication_retry_timespan);
+                mu_.Lock();
             } else { // (index, term ) miss match
                 next_index_[follower_id] = std::min(next_index_[follower_id] - 1,
                                                     response.log_length());
