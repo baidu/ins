@@ -660,16 +660,7 @@ void InsNodeImpl::DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* req
                 done->Run();
                 return;
             }
-            if (request->prev_log_index() - last_applied_index_ 
-                > FLAGS_max_commit_pending) {
-                response->set_current_term(current_term_);
-                response->set_success(false);
-                response->set_log_length(binlogger_->GetLength());
-                LOG(INFO, "[AppendEntries] speed to fast, %ld > %ld",
-                    request->prev_log_index(), last_applied_index_);
-                done->Run();
-                return;
-            }
+
             int64_t prev_log_term = -1;
             if (request->prev_log_index() >= 0) {
                 LogEntry prev_log_entry;
@@ -686,6 +677,16 @@ void InsNodeImpl::DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* req
                 LOG(INFO, "[AppendEntries] term not match, "
                     "term: %ld,%ld", 
                     prev_log_term, request->prev_log_term());
+                done->Run();
+                return;
+            }
+            if (request->prev_log_index() - last_applied_index_ 
+                > FLAGS_max_commit_pending) {
+                response->set_current_term(current_term_);
+                response->set_success(false);
+                response->set_log_length(binlogger_->GetLength());
+                LOG(INFO, "[AppendEntries] speed to fast, %ld > %ld",
+                    request->prev_log_index(), last_applied_index_);
                 done->Run();
                 return;
             }
@@ -850,6 +851,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             bool slot_ok = binlogger_->ReadSlot(idx, &log_entry);
             if (!slot_ok) {
                 has_bad_slot = true;
+                break;
             }
             galaxy::ins::Entry * entry = request.add_entries();
             entry->set_term(log_entry.term);
@@ -886,8 +888,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                     UpdateCommitIndex(index + batch_span - 1);
                 }
             } else { // (index, term ) miss match
-                next_index_[follower_id] -= 1;
-                next_index_[follower_id] = std::min(next_index_[follower_id],
+                next_index_[follower_id] = std::min(next_index_[follower_id] - 1,
                                                     response.log_length());
                 LOG(INFO, "adjust next_index of %s to %ld",
                     follower_id.c_str(), 
@@ -985,14 +986,13 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
                     response->set_hit(false);
                     response->set_success(true);
                     response->set_leader_id("");
-                } else{
+                } else {
                     response->set_hit(true);
                     response->set_success(true);
                     response->set_value(real_value);
                     response->set_leader_id("");
                 }
-            }
-            else {
+            } else {
                 response->set_hit(true);
                 response->set_success(true);
                 response->set_value(real_value);

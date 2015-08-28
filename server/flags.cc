@@ -17,10 +17,10 @@ DEFINE_bool(ins_binlog_compress, true, "enable snappy compression on binlog");
 DEFINE_int32(ins_gc_interval, 60, "binlog clean interval (seconds)");
 DEFINE_int32(ins_max_throughput_in, -1, "max input throughput, MB");
 DEFINE_int32(ins_max_throughput_out, -1, "max output throughput, MB");
-DEFINE_int32(ins_data_block_size, 32, "for data, leveldb block_size, KB");
-DEFINE_int32(ins_binlog_block_size, 32, "for binlog, leveldb block_size, KB");
-DEFINE_int32(ins_data_write_buffer_size, 32, "for data, leveldb write_buffer_size, MB");
-DEFINE_int32(ins_binlog_write_buffer_size, 32, "for binlog, leveldb write_buffer_size, MB");
+DEFINE_int32(ins_data_block_size, 4, "for data, leveldb block_size, KB");
+DEFINE_int32(ins_binlog_block_size, 4, "for binlog, leveldb block_size, KB");
+DEFINE_int32(ins_data_write_buffer_size, 4, "for data, leveldb write_buffer_size, MB");
+DEFINE_int32(ins_binlog_write_buffer_size, 4, "for binlog, leveldb write_buffer_size, MB");
 
 //ins_cli only
 DEFINE_string(ins_cmd, "", "the command of inc shell");
