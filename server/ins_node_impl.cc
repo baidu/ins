@@ -913,14 +913,13 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
                     response->set_hit(false);
                     response->set_success(true);
                     response->set_leader_id("");
-                } else{
+                } else {
                     response->set_hit(true);
                     response->set_success(true);
                     response->set_value(real_value);
                     response->set_leader_id("");
                 }
-            }
-            else {
+            } else {
                 response->set_hit(true);
                 response->set_success(true);
                 response->set_value(real_value);
