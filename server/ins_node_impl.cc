@@ -1127,40 +1127,41 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
                        ::galaxy::ins::ScanResponse* response,
                        ::google::protobuf::Closure* done) {
     (void) controller;
-    MutexLock lock(&mu_);
-    if (status_ == kFollower) {
-        response->set_leader_id(current_leader_);
-        response->set_success(false);
-        done->Run();
-        return;
+    {
+        MutexLock lock(&mu_);
+        if (status_ == kFollower) {
+            response->set_leader_id(current_leader_);
+            response->set_success(false);
+            done->Run();
+            return;
+        }
+
+        if (status_ == kCandidate) {
+            response->set_leader_id("");
+            response->set_success(false);
+            done->Run();
+            return;
+        }
+
+        if (status_ == kLeader && in_safe_mode_) {
+            LOG(INFO, "leader is still in safe mode");
+            response->set_leader_id("");
+            response->set_success(false);
+            done->Run();
+            return;
+        }
+
+        int64_t tm_now = ins_common::timer::get_micros();
+        if (status_ == kLeader &&
+                (tm_now - server_start_timestamp_) < FLAGS_session_expire_timeout) {
+            LOG(INFO, "leader is still in safe mode for scan");
+            response->set_leader_id("");
+            response->set_success(false);
+            done->Run();
+            return;
+        }
     }
 
-    if (status_ == kCandidate) {
-        response->set_leader_id("");
-        response->set_success(false);
-        done->Run();
-        return;
-    }
-
-    if (status_ == kLeader && in_safe_mode_) {
-        LOG(INFO, "leader is still in safe mode");
-        response->set_leader_id("");
-        response->set_success(false);
-        done->Run();
-        return;
-    }
-
-    int64_t tm_now = ins_common::timer::get_micros();
-    if (status_ == kLeader &&
-        (tm_now - server_start_timestamp_) < FLAGS_session_expire_timeout) {
-        LOG(INFO, "leader is still in safe mode for scan");
-        response->set_leader_id("");
-        response->set_success(false);
-        done->Run();
-        return;
-    }
-
-    mu_.Unlock();
     std::string start_key = request->start_key();
     std::string end_key = request->end_key();
     int32_t size_limit = request->size_limit();
@@ -1198,8 +1199,6 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
     response->set_has_more(has_more);
     response->set_success(true);
     done->Run();
-
-    mu_.Lock();    
     return;
 }
 
