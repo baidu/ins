@@ -80,6 +80,7 @@ message PutRequest {
 message PutResponse {
     required bool success = 1;
     optional string leader_id = 2;
+    optional bool uuid_expired = 3;
 }
 
 message GetRequest {
@@ -92,6 +93,7 @@ message GetResponse {
     optional bytes value = 2;
     optional string leader_id = 3;
     required bool success = 4;
+    optional bool uuid_expired = 5;
 }
 
 message DelRequest {
@@ -102,6 +104,7 @@ message DelRequest {
 message DelResponse {
     required bool success = 1;
     optional string leader_id = 2;
+    optional bool uuid_expired = 3;
 }
 
 
@@ -114,6 +117,7 @@ message UnLockRequest {
 message UnLockResponse {
     required bool success = 1;
     optional string leader_id = 2;
+    optional bool uuid_expired = 3;
 }
 
 message ShowStatusRequest {
@@ -146,7 +150,7 @@ message ScanResponse {
     repeated ScanItem items = 2;
     optional string leader_id = 3;
     required bool success = 4;
-    optional bool user_invalid = 5;
+    optional bool uuid_expired = 5;
 }
 
 message LockRequest {
@@ -159,6 +163,7 @@ message LockRequest {
 message LockResponse {
     required bool success = 1;
     optional string leader_id = 2;
+    optional bool uuid_expired = 3;
 }
 
 message KeepAliveRequest {
@@ -189,6 +194,7 @@ message WatchResponse {
     optional bool deleted = 5;
     optional bool canceled = 6 [default = false];
     optional string watch_key = 7;
+    optional bool uuid_expired = 8;
 }
 
 message LoginRequest {

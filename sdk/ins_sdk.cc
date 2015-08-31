@@ -193,10 +193,14 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
             continue;
         }
 
-        if (response.success()) {
+        if (response.success() || response.uuid_expired()) {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
+            }
+            if (response.uuid_expired()) {
+                *error = kUnknownUser;
+                return false;
             }
             *error = kOK;
             return true;
@@ -208,10 +212,14 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Put,
                                              &request, &response, 2, 1);
-                if (ok && response.success()) {
+                if (ok && (response.success() || response.uuid_expired())) {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
+                    }
+                    if (response.uuid_expired()) {
+                        *error = kUnknownUser;
+                        return false;
                     }
                     *error = kOK;
                     return true;
@@ -249,16 +257,20 @@ bool InsSDK::Get(const std::string& key, std::string* value,
             continue;
         }
 
-        if (response.success()) {
+        if (response.success() || response.uuid_expired()) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
             *value = response.value();
+            if (response.uuid_expired()) {
+                *error = kUnknownUser;
+                return false;
+            }
             if (response.hit()) {
                 *error = kOK;
             } else {
                 *error = kNoSuchKey;
-            }
-            {
-                MutexLock lock(mu_);
-                leader_id_ = server_id;
             }
             return true;
         } else {
@@ -269,15 +281,18 @@ bool InsSDK::Get(const std::string& key, std::string* value,
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Get,
                                              &request, &response, 2, 1);
-                if (ok && response.success()) {
+                if (ok && (response.success() || response.uuid_expired())) {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
                     }
-                    *error = kOK;
+                    *value = response.value();
+                    if (response.uuid_expired()) {
+                        *error = kUnknownUser;
+                        return false;
+                    }
                     if (response.hit()) {
                         *error = kOK;
-                        *value = response.value();
                     } else {
                         *error = kNoSuchKey;
                     }
@@ -326,10 +341,14 @@ bool InsSDK::ScanOnce(const std::string& start_key,
             continue;
         }
 
-        if (response.success()) {
-            if (response.user_invalid()) {
+        if (response.success() || response.uuid_expired()) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+            }
+            if (response.uuid_expired()) {
                 *error = kUnknownUser;
-                return true;
+                return false;
             }
             *error = kOK;
             for(int i = 0; i < response.items_size(); i++) {
@@ -337,10 +356,6 @@ bool InsSDK::ScanOnce(const std::string& start_key,
                 kv_pair.key = response.items(i).key();
                 kv_pair.value = response.items(i).value();
                 buffer->push_back(kv_pair);
-            }
-            {
-                MutexLock lock(mu_);
-                leader_id_ = server_id;
             }
             return true;
         } else {
@@ -351,10 +366,14 @@ bool InsSDK::ScanOnce(const std::string& start_key,
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Scan,
                                               &request, &response, 5, 1);
-                if (ok && response.success()) {
+                if (ok && (response.success() || response.uuid_expired())) {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
+                    }
+                    if (response.uuid_expired()) {
+                        *error = kUnknownUser;
+                        return false;
                     }
                     *error = kOK;
                     for(int i = 0; i < response.items_size(); i++) {
@@ -396,10 +415,14 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
             continue;
         }
 
-        if (response.success()) {
+        if (response.success() || response.uuid_expired()) {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
+            }
+            if (response.uuid_expired()) {
+                *error = kUnknownUser;
+                return false;
             }
             *error = kOK;
             return true;
@@ -411,10 +434,14 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Delete,
                                              &request, &response, 2, 1);
-                if (ok && response.success()) {
+                if (ok && (response.success() || response.uuid_expired())) {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
+                    }
+                    if (response.uuid_expired()) {
+                        *error = kUnknownUser;
+                        return false;
                     }
                     *error = kOK;
                     return true;
@@ -766,10 +793,14 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
             continue;
         }
 
-        if (response.success()) {
+        if (response.success() || response.uuid_expired()) {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
+            }
+            if (response.uuid_expired()) {
+                *error = kUnknownUser;
+                return false;
             }
             *error = kOK;
             return true;
@@ -781,10 +812,14 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Lock,
                                               &request, &response, 2, 1);
-                if (ok && response.success()) {
+                if (ok && (response.success() || response.uuid_expired())) {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
+                    }
+                    if (response.uuid_expired()) {
+                        *error = kUnknownUser;
+                        return false;
                     }
                     *error = kOK;
                     return true;
@@ -821,11 +856,15 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
             continue;
         }
 
-        if (response.success()) {
+        if (response.success() || response.uuid_expired()) {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
                 lock_keys_.erase(key);
+            }
+            if (response.uuid_expired()) {
+                *error = kUnknownUser;
+                return false;
             }
             *error = kOK;
             return true;
@@ -837,11 +876,15 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
                 boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
                 ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::UnLock,
                                               &request, &response, 2, 1);
-                if (ok && response.success()) {
+                if (ok && (response.success() || response.uuid_expired())) {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
                         lock_keys_.erase(key);
+                    }
+                    if (response.uuid_expired()) {
+                        *error = kUnknownUser;
+                        return false;
                     }
                     *error = kOK;
                     return true;
@@ -906,12 +949,12 @@ bool InsSDK::Login(const std::string& username,
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
-            }
-            switch(response.status()) {
-            case galaxy::ins::kOk: *error = kOK; logged_uuid_ = response.uuid(); return true;
-            case galaxy::ins::kUnknownUser: *error = kUnknownUser; return true;
-            case galaxy::ins::kPasswordError: *error = kPasswordError; return true;
-            default: break; // pass
+                switch(response.status()) {
+                case galaxy::ins::kOk: *error = kOK; logged_uuid_ = response.uuid(); return true;
+                case galaxy::ins::kUnknownUser: *error = kUnknownUser; return false;
+                case galaxy::ins::kPasswordError: *error = kPasswordError; return false;
+                default: break; // pass
+                }
             }
         } else {
             if (!response.leader_id().empty()) {
@@ -925,14 +968,14 @@ bool InsSDK::Login(const std::string& username,
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
-                    }
-                    switch(response.status()) {
-                    case galaxy::ins::kOk: *error = kOK;
-                                           logged_uuid_ = response.uuid();
-                                           return true;
-                    case galaxy::ins::kUnknownUser: *error = kUnknownUser; return true;
-                    case galaxy::ins::kPasswordError: *error = kPasswordError; return true;
-                    default: break; // pass
+                        switch(response.status()) {
+                        case galaxy::ins::kOk: *error = kOK;
+                                               logged_uuid_ = response.uuid();
+                                               return true;
+                        case galaxy::ins::kUnknownUser: *error = kUnknownUser; return false;
+                        case galaxy::ins::kPasswordError: *error = kPasswordError; return false;
+                        default: break; // pass
+                        }
                     }
                 }
             }
@@ -973,12 +1016,14 @@ bool InsSDK::Logout(SDKError* error) {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
-            }
-            switch(response.status()) {
-            case galaxy::ins::kOk: *error = kOK; logged_uuid_ = ""; return true;
-            // Maybe have logged out due to time out
-            case galaxy::ins::kUnknownUser: *error = kUnknownUser; logged_uuid_ = ""; return true;
-            default: break; // pass
+                switch(response.status()) {
+                case galaxy::ins::kOk: *error = kOK; logged_uuid_ = ""; return true;
+                // Maybe have logged out due to time out
+                case galaxy::ins::kUnknownUser: *error = kUnknownUser;
+                                                logged_uuid_ = "";
+                                                return false;
+                default: break; // pass
+                }
             }
         } else {
             if (!response.leader_id().empty()) {
@@ -992,13 +1037,13 @@ bool InsSDK::Logout(SDKError* error) {
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
-                    }
-                    switch(response.status()) {
-                    case galaxy::ins::kOk: *error = kOK; logged_uuid_ = ""; return true;
-                    case galaxy::ins::kUnknownUser: *error = kUnknownUser;
-                                                    logged_uuid_ = "";
-                                                    return true;
-                    default: break; // pass
+                        switch(response.status()) {
+                        case galaxy::ins::kOk: *error = kOK; logged_uuid_ = ""; return true;
+                        case galaxy::ins::kUnknownUser: *error = kUnknownUser;
+                                                        logged_uuid_ = "";
+                                                        return false;
+                        default: break; // pass
+                        }
                     }
                 }
             }
@@ -1035,11 +1080,11 @@ bool InsSDK::Register(const std::string& username,
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
-            }
-            switch(response.status()) {
-            case galaxy::ins::kOk: *error = kOK; return true;
-            case galaxy::ins::kUserExists: *error = kUserExists; return true;
-            default: break; // pass
+                switch(response.status()) {
+                case galaxy::ins::kOk: *error = kOK; return true;
+                case galaxy::ins::kUserExists: *error = kUserExists; return false;
+                default: break; // pass
+                }
             }
         } else {
             if (!response.leader_id().empty()) {
@@ -1053,11 +1098,11 @@ bool InsSDK::Register(const std::string& username,
                     {
                         MutexLock lock(mu_);
                         leader_id_ = server_id;
-                    }
-                    switch(response.status()) {
-                    case galaxy::ins::kOk: *error = kOK; return true;
-                    case galaxy::ins::kUserExists: *error = kUserExists; return true;
-                    default: break; // pass
+                        switch(response.status()) {
+                        case galaxy::ins::kOk: *error = kOK; return true;
+                        case galaxy::ins::kUserExists: *error = kUserExists; return false;
+                        default: break; // pass
+                        }
                     }
                 }
             }

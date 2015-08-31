@@ -55,7 +55,6 @@ int main(int argc, char* argv[]) {
     }
     signal(SIGINT, SignalIntHandler);
     signal(SIGTERM, SignalIntHandler);
-    signal(SIGPIPE, SIG_IGN);
     while (!s_quit) {
     	sleep(1);
     }
