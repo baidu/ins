@@ -98,9 +98,9 @@ InsSDK::~InsSDK() {
     {
         MutexLock lock(mu_);
         stop_ = true;
-        keep_alive_pool_->Stop(true);
-        keep_watch_pool_->Stop(true);
     }
+    keep_alive_pool_->Stop(true);
+    keep_watch_pool_->Stop(true);
     delete rpc_client_;
     delete mu_;
     delete keep_alive_pool_;
