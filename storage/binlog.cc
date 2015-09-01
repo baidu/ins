@@ -9,7 +9,7 @@
 namespace galaxy {
 namespace ins {
 
-const std::string log_dbname = "binlog";
+const std::string log_dbname = "#binlog";
 const std::string length_tag = "#BINLOG_LEN#";
 
 BinLogger::BinLogger(const std::string& data_dir,
