@@ -32,7 +32,6 @@ public:
     std::string GetUsernameFromUuid(const std::string& uuid);
 
     static std::string CalcUuid(const std::string& name);
-    static std::string CalcName(const std::string& uuid);
 private:
     bool WriteToDatabase(const UserInfo& user);
     bool WriteToDatabase(const std::string& name, const std::string& password);
