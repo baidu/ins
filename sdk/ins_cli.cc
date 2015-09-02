@@ -208,17 +208,17 @@ int main(int argc, char* argv[]) {
             LOG(DEBUG, "user %s login", username.c_str());
             if (sdk.Login(username, password, &ins_err)) {
                 LOG(DEBUG, "login finished");
+                printf("login success\nperform actions for user %s now\n",
+                       username.c_str());
+                is_logged = true;
+            } else {
+                LOG(FATAL, "login failed");
                 switch(ins_err) {
-                case kOK: printf("login success\nperform actions for user %s now\n",
-                                  username.c_str());
-                          is_logged = true; break;
                 case kUnknownUser: printf("user doesn't exist\n"); break;
                 case kUserExists: printf("you have logged in\n"); break;
                 case kPasswordError: printf("wrong password\n"); break;
                 default: break;
                 }
-            } else {
-                LOG(FATAL, "login failed");
             }
         } else if (FLAGS_ins_cmd == "logout") {
             LOG(DEBUG, "user logout");
@@ -239,16 +239,22 @@ int main(int argc, char* argv[]) {
             LOG(DEBUG, "register new user %s", username.c_str());
             if (sdk.Register(username, password, &ins_err)) {
                 LOG(DEBUG, "register finished");
-                if (ins_err == kOK) {
-                    printf("register success\n");
-                } else {
-                    printf("username has been registered\n");
-                }
+                printf("register success\n");
             } else {
                 LOG(FATAL, "register failed");
+                if (ins_err == kUserExists) {
+                    printf("username has been registered\n");
+                } else if (ins_err == kPasswordError) {
+                    printf("password is not supposed to be empty.\n");
+                }
             }
         } else if (FLAGS_ins_cmd == "whoami") {
-            // TODO access user id or user name here
+            const std::string& uuid = sdk.GetCurrentUserID();
+            if (uuid.empty()) {
+                printf("You haven't logged in.\n");
+            } else {
+                printf("Your current uuid is %s.\n", uuid.c_str());
+            }
         } else if (is_logged) {
             printf("not a valid command for logged user, "
                     "you may want to logout by `logout' command\n");

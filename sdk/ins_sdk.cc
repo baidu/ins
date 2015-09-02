@@ -916,7 +916,11 @@ bool InsSDK::Login(const std::string& username,
         MutexLock lock(mu_);
         if (!logged_uuid_.empty()) {
             *error = kUserExists;
-            return true;
+            return false;
+        }
+        if (username.empty()) {
+            *error = kUnknownUser;
+            return false;
         }
         if (!is_keep_alive_bg_) {
             keep_alive_pool_->AddTask(
@@ -1056,6 +1060,14 @@ bool InsSDK::Logout(SDKError* error) {
 bool InsSDK::Register(const std::string& username,
                       const std::string& password,
                       SDKError* error) {
+    if (username.empty()) {
+        *error = kUserExists;
+        return false;
+    }
+    if (password.empty()) {
+        *error = kPasswordError;
+        return false;
+    }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
     std::vector<std::string>::const_iterator it;

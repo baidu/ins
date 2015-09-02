@@ -951,6 +951,7 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
         response->set_leader_id("");
         response->set_success(false);
         response->set_uuid_expired(true);
+        done->Run();
         return;
     }
 
@@ -1043,11 +1044,13 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+
     const std::string& uuid = request->uuid();
     if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
         response->set_success(false);
         response->set_leader_id("");
         response->set_uuid_expired(true);
+        done->Run();
         return;
     }
 
@@ -1089,6 +1092,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+
     if (client_ack_.size() > static_cast<size_t>(FLAGS_max_write_pending)) {
         LOG(WARNING, "write pending size: %d", client_ack_.size());
         response->set_success(false);
@@ -1096,11 +1100,13 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+
     const std::string& uuid = request->uuid();
     if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
         response->set_success(false);
         response->set_leader_id("");
         response->set_uuid_expired(true);
+        done->Run();
         return;
     }
     
@@ -1183,6 +1189,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* /*controller*/,
         response->set_success(false);
         response->set_leader_id("");
         response->set_uuid_expired(true);
+        done->Run();
         return;
     }
 
@@ -1268,6 +1275,7 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
             response->set_success(false);
             response->set_leader_id("");
             response->set_uuid_expired(true);
+            done->Run();
             return;
         }
 
@@ -1676,11 +1684,13 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
             return;
         } 
     }
+
     const std::string& uuid = request->uuid();
     if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
         response->set_success(false);
         response->set_leader_id("");
         response->set_uuid_expired(true);
+        done->Run();
         return;
     }
     
@@ -1740,11 +1750,13 @@ void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+
     const std::string& uuid = request->uuid();
     if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
         response->set_success(false);
         response->set_leader_id("");
         response->set_uuid_expired(true);
+        done->Run();
         return;
     }
 
@@ -1789,6 +1801,13 @@ void InsNodeImpl::Login(::google::protobuf::RpcController* /*controller*/,
     }
 
     const std::string& username = request->username();
+    if (!user_manager_->IsValidUser(username)) {
+        response->set_status(kUnknownUser);
+        response->set_leader_id("");
+        done->Run();
+        return;
+    }
+
     const std::string& passwd = request->passwd();
     LOG(DEBUG, "client wants to login :%s", username.c_str());
     LogEntry log_entry;
@@ -1826,10 +1845,12 @@ void InsNodeImpl::Logout(::google::protobuf::RpcController* /*controller*/,
         done->Run();
         return;
     }
+
     const std::string& uuid = request->uuid();
     if (!uuid.empty() && !user_manager_->IsLoggedIn(uuid)) {
         response->set_status(kUnknownUser);
         response->set_leader_id("");
+        done->Run();
         return;
     }
 
