@@ -34,6 +34,12 @@ do
 	"lock")
 		sh ./test_lock.sh $arg1
 	;;
+	"login")
+		sh ./test_log.sh $arg1 $arg2
+	;;
+	"register")
+		sh ./test_register.sh $arg1 $arg2
+	;;
 	"quit")
 		exit 0
 	;;
@@ -41,7 +47,7 @@ do
 	*)
 		echo "  show [ show cluster ]"
 		echo "  put (key) (value) [ update the data ] "
-	        echo "  get (key) [read the data by key ]"	
+		echo "  get (key) [read the data by key ]"
 		echo "  delete (key) [remove the data by key]"
 		echo "  scan (start-key) (end-key) [scan from start-key to end-key(excluded)]"
 		echo "  watch (key) [event will be triggered once value changed or deleted]"
