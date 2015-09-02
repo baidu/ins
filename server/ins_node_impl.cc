@@ -1138,7 +1138,7 @@ bool InsNodeImpl::LockIsAvailable(const std::string& user,
     std::string old_locker_session;
     std::string value;
     LogOperation op;
-    s = data_store_->Get(user_manager_->GetUsernameFromUuid(user), key, &value);
+    s = data_store_->Get(user, key, &value);
     ParseValue(value, op, old_locker_session);
     bool lock_is_available = false;
     if (s != kOk) {

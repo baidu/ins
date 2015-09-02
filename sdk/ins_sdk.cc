@@ -199,6 +199,7 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
                 leader_id_ = server_id;
             }
             if (response.uuid_expired()) {
+                LOG(WARNING, "uuid is expired before put :%s", key.c_str());
                 *error = kUnknownUser;
                 return false;
             }
@@ -218,6 +219,7 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
                         leader_id_ = server_id;
                     }
                     if (response.uuid_expired()) {
+                        LOG(WARNING, "uuid is expired before put :%s", key.c_str());
                         *error = kUnknownUser;
                         return false;
                     }
@@ -264,6 +266,7 @@ bool InsSDK::Get(const std::string& key, std::string* value,
             }
             *value = response.value();
             if (response.uuid_expired()) {
+                LOG(WARNING, "uuid is expired before get :%s", key.c_str());
                 *error = kUnknownUser;
                 return false;
             }
@@ -288,6 +291,7 @@ bool InsSDK::Get(const std::string& key, std::string* value,
                     }
                     *value = response.value();
                     if (response.uuid_expired()) {
+                        LOG(WARNING, "uuid is expired before get :%s", key.c_str());
                         *error = kUnknownUser;
                         return false;
                     }
@@ -347,6 +351,8 @@ bool InsSDK::ScanOnce(const std::string& start_key,
                 leader_id_ = server_id;
             }
             if (response.uuid_expired()) {
+                LOG(WARNING, "uuid is expired before scan :[%s, %s)",
+                        start_key.c_str(), end_key.c_str());
                 *error = kUnknownUser;
                 return false;
             }
@@ -372,6 +378,8 @@ bool InsSDK::ScanOnce(const std::string& start_key,
                         leader_id_ = server_id;
                     }
                     if (response.uuid_expired()) {
+                        LOG(WARNING, "uuid is expired before scan :[%s, %s)",
+                                start_key.c_str(), end_key.c_str());
                         *error = kUnknownUser;
                         return false;
                     }
@@ -421,6 +429,7 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
                 leader_id_ = server_id;
             }
             if (response.uuid_expired()) {
+                LOG(WARNING, "uuid is expired before delete :%s", key.c_str());
                 *error = kUnknownUser;
                 return false;
             }
@@ -440,6 +449,7 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
                         leader_id_ = server_id;
                     }
                     if (response.uuid_expired()) {
+                        LOG(WARNING, "uuid is expired before delete :%s", key.c_str());
                         *error = kUnknownUser;
                         return false;
                     }
@@ -616,6 +626,8 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
             WatchParam param;
             param.context = cb_ctx;
             if (response->uuid_expired()) {
+                LOG(WARNING, "uuid is expired before watch :%s",
+                        response->watch_key().c_str());
                 param.key = "";
                 param.value = "";
                 param.deleted = false;
@@ -809,6 +821,7 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
                 leader_id_ = server_id;
             }
             if (response.uuid_expired()) {
+                LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
                 *error = kUnknownUser;
                 return false;
             }
@@ -828,6 +841,7 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
                         leader_id_ = server_id;
                     }
                     if (response.uuid_expired()) {
+                        LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
                         *error = kUnknownUser;
                         return false;
                     }
@@ -873,6 +887,7 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
                 lock_keys_.erase(key);
             }
             if (response.uuid_expired()) {
+                LOG(WARNING, "uuid is expired before unlock :%s", key.c_str());
                 *error = kUnknownUser;
                 return false;
             }
@@ -893,6 +908,7 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
                         lock_keys_.erase(key);
                     }
                     if (response.uuid_expired()) {
+                        LOG(WARNING, "uuid is expired before unlock :%s", key.c_str());
                         *error = kUnknownUser;
                         return false;
                     }

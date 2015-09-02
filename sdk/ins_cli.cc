@@ -188,19 +188,19 @@ int main(int argc, char* argv[]) {
             if (!ret) {
                 if (ins_err == kUnknownUser) {
                     fprintf(stderr, "previous login may expired, please logout\n");
-                    continue;
                 } else {
                     fprintf(stderr, "lock error: %d\n", static_cast<int>(ins_err));
                     return 1;
                 }
-            }
-            sdk.RegisterSessionTimeout(session_timeout_callback, NULL);
-            fprintf(stderr, "lock successful on %s\n", key.c_str());
-            fprintf(stderr, "Press any key to release the lock.\n");
-            getchar();
-            ret = sdk.UnLock(key, &ins_err);
-            if (ret) {
-                fprintf(stderr, "unlock successful on %s\n", key.c_str());
+            } else {
+                sdk.RegisterSessionTimeout(session_timeout_callback, NULL);
+                fprintf(stderr, "lock successful on %s\n", key.c_str());
+                fprintf(stderr, "Press any key to release the lock.\n");
+                getchar();
+                ret = sdk.UnLock(key, &ins_err);
+                if (ret) {
+                    fprintf(stderr, "unlock successful on %s\n", key.c_str());
+                }
             }
         } else if (FLAGS_ins_cmd == "clean") {
             std::string server_id = FLAGS_ins_rm_binlog_server_id;
