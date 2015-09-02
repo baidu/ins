@@ -595,7 +595,7 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
             return;
         }
     }
-    if (!failed && response_ptr->success()) {
+    if (!failed && (response_ptr->success() || response->uuid_expired())) {
         WatchCallback cb = NULL;
         void * cb_ctx = NULL;
         {
@@ -614,11 +614,18 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                 LOG(INFO, "watch #%ld trigger", watch_id);
             }
             WatchParam param;
-            param.key = response_ptr->key();
-            param.value = response_ptr->value();
-            param.deleted = response_ptr->deleted();
             param.context = cb_ctx;
-            cb(param, kOK);
+            if (response->uuid_expired()) {
+                param.key = "";
+                param.value = "";
+                param.deleted = false;
+                cb(param, kUnknownUser);
+            } else {
+                param.key = response_ptr->key();
+                param.value = response_ptr->value();
+                param.deleted = response_ptr->deleted();
+                cb(param, kOK);
+            }
         }
         return;
     } else if (!failed && !response_ptr->leader_id().empty()) {
@@ -740,6 +747,9 @@ bool InsSDK::Lock(const std::string& key, SDKError* error) {
     }
     LOG(INFO, "try lock on :%s", key.c_str());
     while (!TryLock(key, error)) {
+        if (*error == kUnknownUser) {
+            break;
+        }
         LOG(INFO, "try lock again on :%s", key.c_str());
         ThisThread::Sleep(1000);
         {

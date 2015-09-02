@@ -24,10 +24,14 @@ DECLARE_int64(ins_rm_binlog_index);
 using namespace galaxy::ins::sdk;
 
 void my_watch_callback(const WatchParam& param, SDKError error) {
-    printf("key: %s\n", param.key.c_str());
-    printf("value: %s\n", param.value.c_str());
-    printf("deleted: %s\n", param.deleted ?"true":"false");
-    printf("error code: %d\n", static_cast<int>(error));
+    if (error == kUnknownUser) {
+        fprintf(stderr, "previous login may expired, please logout\n");
+    } else {
+        printf("key: %s\n", param.key.c_str());
+        printf("value: %s\n", param.value.c_str());
+        printf("deleted: %s\n", param.deleted ?"true":"false");
+        printf("error code: %d\n", static_cast<int>(error));
+    }
     bool* done = reinterpret_cast<bool*>(param.context);
     if (done) {
         *done = true;
@@ -182,8 +186,13 @@ int main(int argc, char* argv[]) {
             std::string key = FLAGS_ins_key;
             bool ret = sdk.Lock(key, &ins_err);
             if (!ret) {
-                fprintf(stderr, "lock error: %d\n", static_cast<int>(ins_err));
-                return 1;
+                if (ins_err == kUnknownUser) {
+                    fprintf(stderr, "previous login may expired, please logout\n");
+                    continue;
+                } else {
+                    fprintf(stderr, "lock error: %d\n", static_cast<int>(ins_err));
+                    return 1;
+                }
             }
             sdk.RegisterSessionTimeout(session_timeout_callback, NULL);
             fprintf(stderr, "lock successful on %s\n", key.c_str());
