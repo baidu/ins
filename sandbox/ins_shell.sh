@@ -40,6 +40,9 @@ do
 	"register")
 		sh ./test_register.sh $arg1 $arg2
 	;;
+	"whoami")
+		sh ./test_whoami.sh
+	;;
 	"quit")
 		exit 0
 	;;
@@ -52,6 +55,8 @@ do
 		echo "  scan (start-key) (end-key) [scan from start-key to end-key(excluded)]"
 		echo "  watch (key) [event will be triggered once value changed or deleted]"
 		echo "  lock (key) [lock on specific key]"
+		echo "  register (username) (password) [register a new user]"
+		echo "  login (username) (password) [login and open a new session]"
 		echo "  enter quit to exit shell"
 	;;
 
