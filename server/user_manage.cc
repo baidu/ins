@@ -94,6 +94,7 @@ Status UserManager::Register(const std::string& name, const std::string& passwor
     }
     user_list_[name].set_username(name);
     user_list_[name].set_passwd(password);
+    LOG(INFO, "%s registered ok.", name.c_str());
     return kOk;
 }
 
@@ -218,7 +219,8 @@ Status UserManager::TruncateAllUsers(const std::string& myid) {
 }
 
 std::string UserManager::GetUsernameFromUuid(const std::string& uuid) {
-    if (IsLoggedIn(uuid)) {
+    MutexLock lock(&mu_);
+    if (logged_users_.find(uuid) != logged_users_.end()){
         return logged_users_[uuid];
     }
     return "";
