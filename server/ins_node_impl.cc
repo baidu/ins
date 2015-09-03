@@ -226,8 +226,9 @@ void InsNodeImpl::CommitIndexObserv() {
             switch(log_entry.op) {
                 case kPut:
                 case kLock:
-                    LOG(DEBUG, "add to data_store_, key: %s, value: %s",
-                        log_entry.key.c_str(), log_entry.value.c_str());
+                    LOG(DEBUG, "add to data_store_, key: %s, value: %s, user: %s",
+                        log_entry.key.c_str(), log_entry.value.c_str(),
+                        log_entry.user.c_str());
                     type_and_value.append(1, static_cast<char>(log_entry.op));
                     type_and_value.append(log_entry.value);
                     s = data_store_->Put(log_entry.user, log_entry.key, type_and_value);
@@ -859,6 +860,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             entry->set_key(log_entry.key);
             entry->set_value(log_entry.value);
             entry->set_op(log_entry.op);
+            entry->set_user(log_entry.user);
             max_term = std::max(max_term, log_entry.term);
         }
         if (has_bad_slot) {

@@ -118,7 +118,7 @@ Status StorageManager::Put(const std::string& name,
     {
         MutexLock lock(&mu_);
         if (dbs_.find(name) == dbs_.end()) {
-            LOG(WARNING, "Inexist or unlogged user :%s", name.c_str());
+            LOG(WARNING, "Put fail, Inexist or unlogged user :%s", name.c_str());
             return kUnknownUser;
         }
         db_ptr = dbs_[name];
