@@ -286,9 +286,12 @@ void InsNodeImpl::CommitIndexObserv() {
                     }
                     break;
                 case kLogin:
-                    log_status = user_manager_->Login(log_entry.user, log_entry.key, &new_uuid);
+                    log_status = user_manager_->Login(log_entry.key,
+                                                      log_entry.value,
+                                                      log_entry.user);
                     if (log_status == kOk) {
-                        data_store_->OpenDatabase(log_entry.user);
+                        new_uuid = log_entry.user;
+                        data_store_->OpenDatabase(log_entry.key);
                     }
                     break;
                 case kLogout:
@@ -1813,8 +1816,10 @@ void InsNodeImpl::Login(::google::protobuf::RpcController* /*controller*/,
     const std::string& passwd = request->passwd();
     LOG(DEBUG, "client wants to login :%s", username.c_str());
     LogEntry log_entry;
-    log_entry.user = username;
-    log_entry.key = passwd;
+    log_entry.user = UserManager::CalcUuid(username);
+    LOG(DEBUG, "now calc uuid :%s", log_entry.user.c_str());
+    log_entry.key = username;
+    log_entry.value = passwd;
     log_entry.term = current_term_;
     log_entry.op = kLogin;
     binlogger_->AppendEntry(log_entry);
