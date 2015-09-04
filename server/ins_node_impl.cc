@@ -1984,7 +1984,7 @@ void InsNodeImpl::GarbageClean() {
             }
         }
         if (ret_all) {
-            int64_t safe_clean_index = min_applied_index;
+            int64_t safe_clean_index = min_applied_index - 1;
             int64_t old_index;
             {
                 MutexLock lock(&mu_);
