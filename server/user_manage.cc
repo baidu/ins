@@ -45,7 +45,7 @@ UserManager::UserManager(const std::string& data_dir,
 
 Status UserManager::Login(const std::string& name,
                           const std::string& password,
-                          std::string* uuid) {
+                          const std::string& uuid) {
     MutexLock lock(&mu_);
     std::map<std::string, UserInfo>::iterator user_it = user_list_.find(name);
     if (user_it == user_list_.end()) {
@@ -56,12 +56,12 @@ Status UserManager::Login(const std::string& name,
         LOG(WARNING, "Password error for logging :%s", name.c_str());
         return kPasswordError;
     }
-
-    const std::string& newuuid = CalcUuid(name);
-    logged_users_[newuuid] = name;
-    if (uuid != NULL) {
-        *uuid = newuuid;
+    if (uuid.empty()) {
+        LOG(FATAL, "provide improper uuid :%s", name.c_str());
+        return kError;
     }
+
+    logged_users_[uuid] = name;
     return kOk;
 }
 
@@ -228,7 +228,7 @@ std::string UserManager::GetUsernameFromUuid(const std::string& uuid) {
 
 bool UserManager::WriteToDatabase(const UserInfo& user) {
     if (!user.has_username() || !user.has_passwd()) {
-     return false;
+        return false;
     }
     leveldb::Status status = user_db_->Put(leveldb::WriteOptions(),
                                            user.username(),

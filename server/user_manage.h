@@ -17,7 +17,7 @@ public:
     UserManager(const std::string& data_dir, const UserInfo& root);
     virtual ~UserManager() { }
 
-    Status Login(const std::string& name, const std::string& password, std::string* uuid);
+    Status Login(const std::string& name, const std::string& password, const std::string& uuid);
     Status Logout(const std::string& uuid);
     Status Register(const std::string& name, const std::string& password);
     Status ForceOffline(const std::string& myid, const std::string& name);
