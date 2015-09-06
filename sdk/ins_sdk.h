@@ -120,7 +120,11 @@ private:
                            bool failed, int error,
                            std::string server_id,
                            int64_t watch_id);
-    void BackupWatchTask(const std::string& key, int64_t watch_id);
+    void BackupWatchTask(const std::string& key, 
+                         const std::string& old_value,
+                         bool key_exist,
+                         std::string session_id,
+                         int64_t watch_id);
     static std::string HashPassword(const std::string& password);
     std::string leader_id_;
     std::string session_id_;
