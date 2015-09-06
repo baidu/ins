@@ -161,11 +161,11 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* /*controller*/,
                              const ::galaxy::ins::ShowStatusRequest* /*request*/,
                              ::galaxy::ins::ShowStatusResponse* response,
                              ::google::protobuf::Closure* done) {
-    LOG(INFO, "ShowStatus start");
+    LOG(DEBUG, "ShowStatus start");
     int64_t last_log_index;
     int64_t last_log_term;
     GetLastLogIndexAndTerm(&last_log_index, &last_log_term);
-    LOG(INFO, "last_log_index: %ld, last_log_term: %d", 
+    LOG(DEBUG, "last_log_index: %ld, last_log_term: %d", 
         last_log_index, last_log_term);
     {
         MutexLock lock(&mu_);
@@ -177,7 +177,7 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* /*controller*/,
         response->set_last_applied(last_applied_index_);
     }
     done->Run();
-    LOG(INFO, "ShowStatus done.");
+    LOG(DEBUG, "ShowStatus done.");
 }
 
 void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
