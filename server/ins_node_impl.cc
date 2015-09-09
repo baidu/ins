@@ -264,6 +264,8 @@ void InsNodeImpl::CommitIndexObserv() {
                         if (log_entry.term == current_term_) {
                             nop_committed = true;
                         }
+                        LOG(INFO, "nop term: %ld, cur term: %ld", 
+                            log_entry.term, current_term_);
                     }
                     break;
                 case kUnLock:
