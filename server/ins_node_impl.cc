@@ -259,7 +259,12 @@ void InsNodeImpl::CommitIndexObserv() {
                 case kNop:
                     LOG(DEBUG, "kNop got, do nothing, key: %s", 
                               log_entry.key.c_str());
-                    nop_committed = true;
+                    {
+                        MutexLock locker(&mu_);
+                        if (log_entry.term == current_term_) {
+                            nop_committed = true;
+                        }
+                    }
                     break;
                 case kUnLock:
                     {
