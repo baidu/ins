@@ -20,7 +20,7 @@ https://github.com/fxsjy/ins/wiki
 # 快速体验
   只需要*一台机器*，通过多个进程模拟分布式	
   
-  *免编译体验* -- 采用statifier静态化的预编译版本，在主流64位Linux发型版上都能直接运行：	
+  *免编译体验* -- 采用statifier静态化的预编译版本，在主流64位Linux发行版上都能直接运行：	
   *下载* -- [ins_prebuild.tar.gz] (http://github.com/fxsjy/thirdparty/raw/master/ins_prebuild.tar.gz)		
 	
 	cd sandbox
