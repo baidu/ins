@@ -17,7 +17,8 @@ https://github.com/fxsjy/ins/wiki
 #Ubuntu系统下的编译
 * [./ubuntu_build.sh ](https://github.com/fxsjy/ins/blob/master/ubuntu_build.sh)
 
-# 快速体验（只需要一台机器，通过多个进程模拟分布式）
+# 快速体验
+  * 只需要一台机器，通过多个进程模拟分布式	
   *免编译体验* -- 采用statifier静态化的预编译版本，在主流64位Linux发型版上都能直接运行：	
   *下载* -- [ins_prebuild.tar.gz] (http://github.com/fxsjy/thirdparty/raw/master/ins_prebuild.tar.gz)		
 	
