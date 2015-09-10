@@ -14,15 +14,13 @@ https://github.com/fxsjy/ins/wiki
 * comake2
 * make
 
-# 通用的编译方式
-* read [.travis.yml](https://github.com/fxsjy/ins/blob/master/.travis.yml) and install the depends libs
-* make && make install
-
 #Ubuntu系统下的编译
 * [./ubuntu_build.sh ](https://github.com/fxsjy/ins/blob/master/ubuntu_build.sh)
 
 # 快速体验（只需要一台机器，通过多个进程模拟分布式）
-
+  *免编译体验* -- 采用statifier静态化的预编译版本，在主流64位Linux发型版上都能直接运行：	
+  *下载* -- [ins_prebuild.tar.gz] (http://github.com/fxsjy/thirdparty/raw/master/ins_prebuild.tar.gz)		
+	
 	cd sandbox
 	./start_all.sh  (启动本机5个进程监听不同端口，模拟一个集群）
 	./ins_shell.sh  （进入命令行管理界面）
@@ -45,3 +43,11 @@ https://github.com/fxsjy/ins/wiki
 # use the SDK (client library)
 * include [ins_sdk.h](https://github.com/fxsjy/ins/blob/master/sdk/ins_sdk.h) , link the static library libins_sdk.a
 * usage example: https://github.com/fxsjy/ins/blob/master/sdk/sample.cc
+
+
+
+# 通用的编译方式
+* read [.travis.yml](https://github.com/fxsjy/ins/blob/master/.travis.yml) and install the depends libs
+* make && make install
+* 如果只编译sdk：make install_sdk, 不依赖leveldb
+
