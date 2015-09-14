@@ -266,7 +266,9 @@ bool UserManager::RecoverFromDatabase() {
         user_list_[name].set_username(name);
         user_list_[name].set_passwd(it->value().ToString());
     }
-    return it->status().ok();
+    bool result = it->status().ok();
+    delete it;
+    return result;
 }
 
 }

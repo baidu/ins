@@ -161,11 +161,11 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* /*controller*/,
                              const ::galaxy::ins::ShowStatusRequest* /*request*/,
                              ::galaxy::ins::ShowStatusResponse* response,
                              ::google::protobuf::Closure* done) {
-    LOG(INFO, "ShowStatus start");
+    LOG(DEBUG, "ShowStatus start");
     int64_t last_log_index;
     int64_t last_log_term;
     GetLastLogIndexAndTerm(&last_log_index, &last_log_term);
-    LOG(INFO, "last_log_index: %ld, last_log_term: %d", 
+    LOG(DEBUG, "last_log_index: %ld, last_log_term: %d", 
         last_log_index, last_log_term);
     {
         MutexLock lock(&mu_);
@@ -177,7 +177,7 @@ void InsNodeImpl::ShowStatus(::google::protobuf::RpcController* /*controller*/,
         response->set_last_applied(last_applied_index_);
     }
     done->Run();
-    LOG(INFO, "ShowStatus done.");
+    LOG(DEBUG, "ShowStatus done.");
 }
 
 void InsNodeImpl::TransToFollower(const char* msg, int64_t new_term) {
@@ -259,7 +259,14 @@ void InsNodeImpl::CommitIndexObserv() {
                 case kNop:
                     LOG(DEBUG, "kNop got, do nothing, key: %s", 
                               log_entry.key.c_str());
-                    nop_committed = true;
+                    {
+                        MutexLock locker(&mu_);
+                        if (log_entry.term == current_term_) {
+                            nop_committed = true;
+                        }
+                        LOG(INFO, "nop term: %ld, cur term: %ld", 
+                            log_entry.term, current_term_);
+                    }
                     break;
                 case kUnLock:
                     {
@@ -1984,7 +1991,7 @@ void InsNodeImpl::GarbageClean() {
             }
         }
         if (ret_all) {
-            int64_t safe_clean_index = min_applied_index;
+            int64_t safe_clean_index = min_applied_index - 1;
             int64_t old_index;
             {
                 MutexLock lock(&mu_);

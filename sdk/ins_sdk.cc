@@ -621,7 +621,8 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                 watch_cbs_.erase(response->watch_key());
                 watch_ctx_.erase(response->watch_key());
                 pending_watches_.erase(watch_id);
-                LOG(INFO, "watch #%ld trigger", watch_id);
+                LOG(INFO, "watch #%ld trigger, key: %s", watch_id, 
+                    response->watch_key().c_str());
             }
             WatchParam param;
             param.context = cb_ctx;
@@ -660,7 +661,8 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                 return;
             }
         }
-        LOG(INFO, "watch again to %s", server_id.c_str());
+        LOG(INFO, "watch redirect to %s, key: %s", server_id.c_str(), 
+            request->key().c_str());
         galaxy::ins::InsNode_Stub *stub;
         rpc_client_->GetStub(server_id, &stub);
         boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
@@ -676,23 +678,18 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                                   req, rsps, callback, 
                                   FLAGS_ins_watch_timeout, 1); //120s timeout
     } else {
-        LOG(INFO, "the previous watch is canceled");
+        LOG(INFO, "the previous watch #%ld is canceled, key: %s", 
+            watch_id, request->key().c_str());
     }
 }
 
-void InsSDK::BackupWatchTask(const std::string& key, int64_t watch_id) {
-    std::string old_value;
-    SDKError error;
-    Get(key, &old_value, &error);
-    if (error != kOK && error != kNoSuchKey) {
-        LOG(FATAL, "faild to issue a backup watch: %s", key.c_str());
-        return;
-    }
-    bool key_exist = true;
-    if (error == kNoSuchKey) {
-        key_exist = false;
-    }
-    KeepWatchTask(key, old_value, key_exist, GetSessionID(), watch_id);
+void InsSDK::BackupWatchTask(const std::string& key, 
+                             const std::string& old_value,
+                             bool key_exist,
+                             std::string session_id,
+                             int64_t watch_id) {
+    LOG(INFO, "issue backup watch on key: %s", key.c_str());
+    KeepWatchTask(key, old_value, key_exist, session_id, watch_id);
 }
 
 void InsSDK::KeepWatchTask(const std::string& key, 
@@ -717,13 +714,14 @@ void InsSDK::KeepWatchTask(const std::string& key,
     }
 
     keep_watch_pool_->DelayTask(FLAGS_ins_backup_watch_timeout * 1000, //ms
-        boost::bind(&InsSDK::BackupWatchTask, this, key, watch_id)
+        boost::bind(&InsSDK::BackupWatchTask, this, key, old_value, key_exist,
+                    session_id, watch_id)
     );
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
     int s_no = (int32_t) (server_list.size() * rand()/(RAND_MAX+1.0));
     std::string server_id = server_list[s_no];
-    LOG(INFO, "watch to %s", server_id.c_str());
+    LOG(INFO, "try watch to %s, key: %s", server_id.c_str(), key.c_str());
     galaxy::ins::InsNode_Stub *stub;
     rpc_client_->GetStub(server_id, &stub);
     boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
