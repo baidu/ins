@@ -115,7 +115,7 @@ bool SDKWatch(InsSDK* sdk, const char* key, CWatchCallback wrapper,
         return false;
     }
     CallbackPack* pack = new CallbackPack;
-    pack->callback_wrapper = reinterpret_cast<void*>(wrapper);
+    pack->callback_wrapper = (void*)(wrapper);
     pack->callback_id = callback_id;
     pack->ctx = context;
     return sdk->Watch(key, WatchCallbackWrapper, pack, error);
@@ -198,7 +198,7 @@ void SDKRegisterSessionTimeout(InsSDK* sdk, SessionTimeoutCallback handle_sessio
         return;
     }
     CallbackPack* pack = new CallbackPack();
-    pack->callback_wrapper = reinterpret_cast<void*>(handle_session_timeout);
+    pack->callback_wrapper = (void*)(handle_session_timeout);
     pack->callback_id = callback_id;
     pack->ctx = ctx;
     sdk->RegisterSessionTimeout(handle_session_timeout, ctx);
