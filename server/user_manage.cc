@@ -253,8 +253,10 @@ bool UserManager::TruncateDatabase() {
         batch.Delete(it->key().ToString());
     }
     if (!it->status().ok()) {
+        delete it;
         return false;
     }
+    delete it;
     leveldb::Status status = user_db_->Write(leveldb::WriteOptions(), &batch);
     return status.ok();
 }
