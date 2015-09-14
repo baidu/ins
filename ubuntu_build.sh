@@ -16,7 +16,7 @@ cd -
 
 wget https://github.com/gflags/gflags/archive/v2.1.2.tar.gz
 tar xf v2.1.2.tar.gz
-cd gflags-2.1.2 && cmake -DGFLAGS_NAMESPACE=google && make -j4 && sudo make install
+cd gflags-2.1.2 && cmake -DGFLAGS_NAMESPACE=google -DCMAKE_CXX_FLAGS=-fPIC && make -j4 && sudo make install
 cd -
 
 make -j4

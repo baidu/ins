@@ -28,6 +28,13 @@ LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(LEVELDB_PATH)/lib -lleveldb \
           -lz -lpthread
 
+LDFLAGS_SO = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
+          -L$(PBRPC_PATH)/lib -Wl,--whole-archive -lsofa-pbrpc -lprotobuf -Wl,--no-whole-archive \
+          -L$(SNAPPY_PATH)/lib -lsnappy \
+          -L$(GFLAGS_PATH)/lib -Wl,--whole-archive -lgflags -Wl,--no-whole-archive \
+          -L$(LEVELDB_PATH)/lib -lleveldb \
+          -lz -lpthread
+
 CXXFLAGS += $(OPT)
 
 PROTO_FILE = $(wildcard proto/*.proto)
@@ -61,6 +68,7 @@ TEST_OBJ = $(patsubst %.cc, %.o, $(TEST_SRC))
 TESTS = test_binlog test_storage_manager test_user_manager
 BIN = ins ins_cli sample
 LIB = libins_sdk.a
+PY_LIB = libins_py.so
 
 all: $(BIN) cp $(LIB)
 
@@ -90,7 +98,7 @@ $(LIB): $(SDK_OBJ)
 	$(PROTOC) --proto_path=./proto/ --proto_path=/usr/local/include --cpp_out=./proto/ $<
 
 clean:
-	rm -rf $(BIN) $(LIB) $(TESTS)
+	rm -rf $(BIN) $(LIB) $(TESTS) $(PY_LIB)
 	rm -rf $(INS_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) $(SDK_OBJ) $(TEST_OBJ) $(UTIL_OBJ)
 	rm -rf $(PROTO_SRC) $(PROTO_HEADER)
 	rm -rf output/
@@ -110,6 +118,11 @@ sdk: $(LIB)
 	mkdir -p output/lib
 	cp sdk/ins_sdk.h output/include
 	cp libins_sdk.a output/lib
+
+python: $(SDK_OBJ) sdk/ins_wrapper.o
+	$(CXX) -shared -fPIC -Wl,-soname,$(PY_LIB) -o $(PY_LIB) $(LDFLAGS_SO) $^
+	mkdir -p output/python
+	cp $(PY_LIB) sdk/ins_sdk.py output/python
 	
 install: $(LIB)
 	cp sdk/ins_sdk.h $(PREFIX)/include
