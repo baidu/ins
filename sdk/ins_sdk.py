@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from ctypes import CDLL, byref, CFUNCTYPE, POINTER, Structure
+from ctypes import CDLL, byref, CFUNCTYPE, POINTER, Structure, cast, addressof
 from ctypes import c_void_p, c_char_p, c_long, c_int, c_bool, py_object
 from collections import Iterable
 import threading
@@ -12,6 +12,13 @@ SDKError = ('OK', 'ClusterDown', 'NoSuchKey', 'Timeout', 'LockFail',
 NodeStatus = ('Leader', 'Candidate', 'Follower', 'Offline')
 ClusterInfo = ('server_id', 'status', 'term', 'last_log_index', 'last_log_term',
                'commit_index', 'last_applied')
+
+class WatchParam:
+    def __init__(self, key, value, deleted, context):
+        self.key = key
+        self.value = value
+        self.deleted = deleted
+        self.context = context
 
 class InsSDK:
     class _ClusterNodeInfo(Structure):
@@ -28,24 +35,27 @@ class InsSDK:
                     ('deleted', c_bool),
                     ('context', c_void_p)]
 
+    WatchCallback = CFUNCTYPE(None, POINTER(_WatchParam), c_long, c_int)
+    SessionTimeoutCallback = CFUNCTYPE(None, c_long, c_void_p)
+
     def __init__(self, members):
         if isinstance(members, basestring):
-            self.sdk = _ins.GetSDK(members)
+            self._sdk = _ins.GetSDK(members)
         else:
-            self.sdk = _ins.GetSDKFromArray(members)
-        self.local = threading.local()
-        self.local.errno = c_int()
+            self._sdk = _ins.GetSDKFromArray(members)
+        self._local = threading.local()
+        self._local.errno = c_int()
 
     def __del__(self):
         if _ins != None:
-            _ins.DeleteSDK(self.sdk)
+            _ins.DeleteSDK(self._sdk)
 
     def error(self):
-        return SDKError[self.local.errno]
+        return SDKError[self._local.errno]
 
     def show(self):
         count = c_int()
-        cluster_ptr = _ins.SDKShowCluster(self.sdk, byref(count))
+        cluster_ptr = _ins.SDKShowCluster(self._sdk, byref(count))
         count = count.value
         ClusterArray = self._ClusterNodeInfo * count
         clusters = ClusterArray.from_address(cluster_ptr)
@@ -64,55 +74,73 @@ class InsSDK:
         return cluster_list
 
     def get(self, key):
-        return _ins.SDKGet(self.sdk, key, byref(self.local.errno))
+        return _ins.SDKGet(self._sdk, key, byref(self._local.errno))
 
     def put(self, key, value):
-        return _ins.SDKPut(self.sdk, key, value, byref(self.local.errno))
+        return _ins.SDKPut(self._sdk, key, value, byref(self._local.errno))
 
     def delete(self, key):
-        return _ins.SDKDelete(self.sdk, key, byref(self.local.errno))
+        return _ins.SDKDelete(self._sdk, key, byref(self._local.errno))
 
     def scan(self, start_key, end_key):
-        self.local.errno = c_int(0)
-        return ScanResult(_ins.SDKScan(self.sdk, start_key, end_key))
+        self._local.errno = c_int(0)
+        return ScanResult(_ins.SDKScan(self._sdk, start_key, end_key))
 
-    # TODO unable to transfer the function pointer
     def watch(self, key, callback, context):
-        WatchCallback = CFUNCTYPE(self._WatchParam, c_int)
         ctx = py_object(context)
-        return _ins.SDKWatch(self.sdk, key, WatchCallback(callback), ctx, byref(self.local.errno))
+        self._contexts[addressof(ctx)] = ctx
+        self._callback[id(callback)] = callback
+        def _watch_wrapper(param, cb, error):
+            param = param.contents
+            context = cast(c_void_p(param.context), POINTER(py_object)).contents
+            pm = WatchParam(param.key, param.value, param.deleted, context.value)
+            InsSDK._callback[cb](pm, SDKError[error])
+            del InsSDK._callback[cb]
+            del InsSDK._contexts[addressof(context)]
+        return _ins.SDKWatch(self._sdk, key, self.WatchCallback(_watch_wrapper), \
+                             id(callback), byref(ctx), byref(self._local.errno))
 
     def lock(self, key):
-        return _ins.SDKLock(self.sdk, key, byref(self.local.errno))
+        return _ins.SDKLock(self._sdk, key, byref(self._local.errno))
 
     def trylock(self, key):
-        return _ins.SDKTryLock(self.sdk, key, byref(self.local.errno))
+        return _ins.SDKTryLock(self._sdk, key, byref(self._local.errno))
 
     def unlock(self, key):
-        return _ins.SDKUnLock(self.sdk, key, byref(self.local.errno))
+        return _ins.SDKUnLock(self._sdk, key, byref(self._local.errno))
 
     def login(self, username, password):
-        return _ins.SDKLogin(self.sdk, username, password, byref(self.local.errno))
+        return _ins.SDKLogin(self._sdk, username, password, byref(self._local.errno))
 
     def logout(self):
-        return _ins.SDKLogout(self.sdk, byref(self.local.errno))
+        return _ins.SDKLogout(self._sdk, byref(self._local.errno))
 
     def register(self, username, password):
-        return _ins.SDKRegister(self.sdk, username, password, byref(self.local.errno))
+        return _ins.SDKRegister(self._sdk, username, password, byref(self._local.errno))
 
     def get_session_id(self):
-        return _ins.SDKGetSessionID(self.sdk)
+        return _ins.SDKGetSessionID(self._sdk)
 
     def get_current_user_id(self):
-        return _ins.SDKGetCurrentUserID(self.sdk)
+        return _ins.SDKGetCurrentUserID(self._sdk)
 
     def is_logged_in(self):
-        return _ins.SDKIsLoggedIn(self.sdk)
+        return _ins.SDKIsLoggedIn(self._sdk)
 
     def register_session_timeout(self, callback, context):
-        SessionTimeoutCallback = CFUNCTYPE(c_void_p)
         ctx = py_object(context)
-        _ins.SDKRegisterSessionTimeout(self.sdk, SessionTimeoutCallback(callback), byref(ctx))
+        self._contexts[addressof(context)] = context
+        self._callback[id(callback)] = callback
+        def _timeout_wrapper(cb, ctx):
+            context = cast(ctx, POINTER(py_object)).contents
+            InsSDK._callback[cb](context.value)
+            del InsSDK._callback[cb]
+            del InsSDK._contexts[addressof(context)]
+        _ins.SDKRegisterSessionTimeout(self._sdk, self.SessionTimeoutCallback(wrapper), \
+                                       id(callback), byref(ctx))
+
+    _contexts = {}
+    _callback = {}
 
 # <-- InsSDK class definition ends here
 
@@ -164,7 +192,8 @@ def _set_function_sign():
     _ins.SDKDelete.restype = c_bool
     _ins.SDKScan.argtypes = [c_void_p, c_char_p, c_char_p]
     _ins.SDKScan.restype = c_void_p
-    _ins.SDKWatch.argtypes = [c_void_p, c_char_p, c_char_p, c_void_p]
+    _ins.SDKWatch.argtypes = [c_void_p, c_char_p, InsSDK.WatchCallback, \
+                              c_long, c_void_p, c_void_p]
     _ins.SDKWatch.restype = c_bool
     _ins.SDKLock.argtypes = [c_void_p, c_char_p, POINTER(c_int)]
     _ins.SDKLock.restype = c_bool
@@ -184,7 +213,8 @@ def _set_function_sign():
     _ins.SDKGetCurrentUserID.restype = c_char_p
     _ins.SDKIsLoggedIn.argtypes = [c_void_p]
     _ins.SDKIsLoggedIn.restype = c_bool
-    _ins.SDKRegisterSessionTimeout.argtypes = [c_void_p, CFUNCTYPE(c_void_p), c_void_p]
+    _ins.SDKRegisterSessionTimeout.argtypes = [c_void_p, InsSDK.SessionTimeoutCallback, \
+                                               c_long, c_void_p]
     _ins.ScanResultDone.argtypes = [c_void_p]
     _ins.ScanResultDone.restype = c_bool
     _ins.ScanResultError.argtypes = [c_void_p]
@@ -196,21 +226,19 @@ def _set_function_sign():
 _set_function_sign()
 
 g_done = False
-def default_callback(error):
-    print 'status: %s' % SDKError[error]
-    #print 'key: %s' % param.key
-    #print 'value: %s' % param.value
-    #print 'deleted: %s' % param.deleted
-    #print 'context: %s' % param.context
+def default_callback(param, error):
+    print 'status: %s' % error
+    print 'key: %s' % param.key
+    print 'value: %s' % param.value
+    print 'deleted: %s' % param.deleted
+    print 'context: %s' % repr(param.context)
+    global g_done
     g_done = True
 
 if __name__ == '__main__':
     FLAG_members = 'john-ubuntu:8868,john-ubuntu:8869,john-ubuntu:8870,john-ubuntu:8871,john-ubuntu:8872'
-    result = sdk.scan('','')
-    while not result.done():
-        print result.key(), result.value()
-        result.next()
-    sdk.watch('test', default_callback, 'context')
+    sdk = InsSDK(FLAG_members)
+    sdk.watch('test', default_callback, WatchParam('key', 'value', True, 123))
     while not g_done:
         time.sleep(1)
 
