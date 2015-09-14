@@ -2,9 +2,7 @@
 
 from ctypes import CDLL, byref, CFUNCTYPE, POINTER, Structure, cast, addressof
 from ctypes import c_void_p, c_char_p, c_long, c_int, c_bool, py_object
-from collections import Iterable
 import threading
-import time
 
 SDKError = ('OK', 'ClusterDown', 'NoSuchKey', 'Timeout', 'LockFail',
             'CleanBinlogFail', 'UserExists', 'PermissionDenied', 'PasswordError',
@@ -224,21 +222,4 @@ def _set_function_sign():
     _ins.ScanResultValue.argtypes = [c_void_p]
     _ins.ScanResultValue.restype = c_char_p
 _set_function_sign()
-
-g_done = False
-def default_callback(param, error):
-    print 'status: %s' % error
-    print 'key: %s' % param.key
-    print 'value: %s' % param.value
-    print 'deleted: %s' % param.deleted
-    print 'context: %s' % repr(param.context)
-    global g_done
-    g_done = True
-
-if __name__ == '__main__':
-    FLAG_members = 'john-ubuntu:8868,john-ubuntu:8869,john-ubuntu:8870,john-ubuntu:8871,john-ubuntu:8872'
-    sdk = InsSDK(FLAG_members)
-    sdk.watch('test', default_callback, WatchParam('key', 'value', True, 123))
-    while not g_done:
-        time.sleep(1)
 
