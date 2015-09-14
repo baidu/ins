@@ -10,9 +10,10 @@ extern "C" {
 typedef void (*SessionTimeoutCallback)(void*);
 typedef void (*CWatchCallback)(WatchParam*, long, SDKError);
 typedef void (*CTimeoutCallback)(long, void*);
+typedef void (*AbstractFunc)();
 
 struct CallbackPack {
-    void* callback_wrapper;
+    AbstractFunc callback_wrapper;
     long callback_id;
     void* ctx;
 };
@@ -115,7 +116,7 @@ bool SDKWatch(InsSDK* sdk, const char* key, CWatchCallback wrapper,
         return false;
     }
     CallbackPack* pack = new CallbackPack;
-    pack->callback_wrapper = (void*)(wrapper);
+    pack->callback_wrapper = reinterpret_cast<AbstractFunc>(wrapper);
     pack->callback_id = callback_id;
     pack->ctx = context;
     return sdk->Watch(key, WatchCallbackWrapper, pack, error);
@@ -198,7 +199,7 @@ void SDKRegisterSessionTimeout(InsSDK* sdk, SessionTimeoutCallback handle_sessio
         return;
     }
     CallbackPack* pack = new CallbackPack();
-    pack->callback_wrapper = (void*)(handle_session_timeout);
+    pack->callback_wrapper = reinterpret_cast<AbstractFunc>(handle_session_timeout);
     pack->callback_id = callback_id;
     pack->ctx = ctx;
     sdk->RegisterSessionTimeout(handle_session_timeout, ctx);
