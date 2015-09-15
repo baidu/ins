@@ -49,13 +49,14 @@ https://github.com/fxsjy/ins/wiki
 * 9100 write per second
 
 # use the SDK (client library)
+* C++ 客户端库编译：make install_sdk
+* Python 客户端编译： make python
 * include [ins_sdk.h](https://github.com/fxsjy/ins/blob/master/sdk/ins_sdk.h) , link the static library libins_sdk.a
 * usage example: https://github.com/fxsjy/ins/blob/master/sdk/sample.cc
-
 
 
 # 通用的编译方式
 * read [.travis.yml](https://github.com/fxsjy/ins/blob/master/.travis.yml) and install the depends libs
 * make && make install
-* 如果只编译sdk：make install_sdk, 不依赖leveldb
+* 如果只编译sdk, 不依赖leveldb
 
