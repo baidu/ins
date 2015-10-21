@@ -10,7 +10,7 @@ iNexus原本是Galaxy集群管理系统的一个组件，它的产生源于我�
 iNexus的理论基础是Raft一致性协议，这个协议主要解决了多个节点之间的数据变更一致性同步，从而可以由多个节点构成一个高可用的数据存储集群(半数一下节点宕机不影响服务)。iNexus实现了Raft协议的主要部分，但目前还不支持动态改变集群membership。Raft的paper只论述了集群选主和数据一致性复制，iNexus结合实际需求，又加上了Watch(事件主动通知)和Lock(分布式锁)。
 
 
-[![Build Status](https://travis-ci.org/fxsjy/ins.svg?branch=master)](https://travis-ci.org/fxsjy/ins)
+[![Build Status](https://travis-ci.org/baidu/ins.svg?branch=master)](https://travis-ci.org/baidu/ins)
 
 # API使用说明
 https://github.com/fxsjy/ins/wiki
@@ -56,7 +56,7 @@ https://github.com/fxsjy/ins/wiki
 
 
 # 通用的编译方式
-* read [.travis.yml](https://github.com/fxsjy/ins/blob/master/.travis.yml) and install the depends libs
+* read [.travis.yml](https://github.com/baidu/ins/blob/master/.travis.yml) and install the depends libs
 * make && make install
 * 如果只编译sdk, 不依赖leveldb
 
