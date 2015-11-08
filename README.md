@@ -7,7 +7,7 @@ iNexus (简称ins) 是一个基于Raft协议实现的高可用的分布式Key-Va
 # 简介
 iNexus原本是Galaxy集群管理系统的一个组件，它的产生源于我们的业务需要一个类似于Google Chubby一样的组件。它能提供分布式naming、lock服务，并能存储一定规模的元数据(百GB的级别)。
 
-iNexus的理论基础是Raft一致性协议，这个协议主要解决了多个节点之间的数据变更一致性同步，从而可以由多个节点构成一个高可用的数据存储集群(半数一下节点宕机不影响服务)。iNexus实现了Raft协议的主要部分，但目前还不支持动态改变集群membership。Raft的paper只论述了集群选主和数据一致性复制，iNexus结合实际需求，又加上了Watch(事件主动通知)和Lock(分布式锁)。
+iNexus的理论基础是Raft一致性协议，这个协议主要解决了多个节点之间的数据变更一致性同步，从而可以由多个节点构成一个高可用的数据存储集群(半数以下节点宕机不影响服务)。iNexus实现了Raft协议的主要部分，但目前还不支持动态改变集群membership。Raft的paper只论述了集群选主和数据一致性复制，iNexus结合实际需求，又加上了Watch(事件主动通知)和Lock(分布式锁)。
 
 
 [![Build Status](https://travis-ci.org/baidu/ins.svg?branch=master)](https://travis-ci.org/baidu/ins)
