@@ -19,6 +19,7 @@
 #include "rpc/rpc_client.h"
 #include "storage/storage_manage.h"
 #include "server/user_manage.h"
+#include "server/performance_center.h"
 
 using namespace boost::multi_index;
 
@@ -305,6 +306,7 @@ private:
     ThreadPool follower_worker_;
     bool single_node_mode_;
     int64_t last_safe_clean_index_;
+    PerformanceCenter perform_;
 };
 
 } //namespace ins

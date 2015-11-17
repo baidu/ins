@@ -27,6 +27,7 @@ DECLARE_int32(max_commit_pending);
 DECLARE_bool(ins_binlog_compress);
 DECLARE_int32(ins_binlog_block_size);
 DECLARE_int32(ins_binlog_write_buffer_size);
+DECLARE_int32(performance_buffer_size);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -50,7 +51,8 @@ InsNodeImpl::InsNodeImpl(std::string& server_id,
                              commit_index_(-1),
                              last_applied_index_(-1),
                              single_node_mode_(false),
-                             last_safe_clean_index_(-1) {
+                             last_safe_clean_index_(-1),
+                             perform_(FLAGS_performance_buffer_size) {
     srand(time(NULL));
     replication_cond_ = new CondVar(&mu_);
     commit_cond_ = new CondVar(&mu_);
@@ -931,6 +933,7 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
                       const ::galaxy::ins::GetRequest* request,
                       ::galaxy::ins::GetResponse* response,
                       ::google::protobuf::Closure* done) {
+    perform_.Get();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_hit(false);
@@ -1042,6 +1045,7 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
                         const ::galaxy::ins::DelRequest* request,
                         ::galaxy::ins::DelResponse* response,
                         ::google::protobuf::Closure* done) {
+    perform_.Delete();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_success(false);
@@ -1090,6 +1094,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
                       const ::galaxy::ins::PutRequest* request,
                       ::galaxy::ins::PutResponse* response,
                       ::google::protobuf::Closure* done) {
+    perform_.Put();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_success(false);
@@ -1181,6 +1186,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* /*controller*/,
                        const ::galaxy::ins::LockRequest* request,
                        ::galaxy::ins::LockResponse* response,
                        ::google::protobuf::Closure* done) {
+    perform_.Lock();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_success(false);
@@ -1266,6 +1272,7 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
                        const ::galaxy::ins::ScanRequest* request,
                        ::galaxy::ins::ScanResponse* response,
                        ::google::protobuf::Closure* done) {
+    perform_.Scan();
     const std::string& uuid = request->uuid();
     {
         MutexLock lock(&mu_);
@@ -1362,6 +1369,7 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* /*controller*/,
                             const ::galaxy::ins::KeepAliveRequest* request,
                             ::galaxy::ins::KeepAliveResponse* response,
                             ::google::protobuf::Closure* done) {
+    perform_.KeepAlive();
     {
         MutexLock lock(&mu_);
         if (status_ == kFollower && !request->forward_from_leader()) {
@@ -1680,6 +1688,7 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
                         const ::galaxy::ins::WatchRequest* request,
                         ::galaxy::ins::WatchResponse* response,
                         ::google::protobuf::Closure* done) {
+    perform_.Watch();
     {
         MutexLock lock(&mu_);
         if (status_ == kFollower) {
@@ -1748,6 +1757,7 @@ void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
                          const ::galaxy::ins::UnLockRequest* request,
                          ::galaxy::ins::UnLockResponse* response,
                          ::google::protobuf::Closure* done) {
+    perform_.Unlock();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_success(false);

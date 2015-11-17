@@ -35,7 +35,9 @@ CONFIGS('third-64/tcmalloc@base')
 
 INCPATHS('. ./src ./output/include')
 
-ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc server/user_manage.cc storage/meta.cc common/logging.cc storage/binlog.cc storage/storage_manage.cc proto/ins_node.proto'
+ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc \
+               server/user_manage.cc server/performance_center.cc common/logging.cc \
+               storage/meta.cc storage/binlog.cc storage/storage_manage.cc proto/ins_node.proto'
 
 ins_sdk_sources = 'sdk/ins_sdk.cc common/logging.cc proto/ins_node.proto server/flags.cc'
 ins_sdk_headers = 'sdk/ins_sdk.h'

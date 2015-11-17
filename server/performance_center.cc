@@ -1,5 +1,6 @@
 #include "server/performance_center.h"
 
+#include <boost/bind.hpp>
 #include "gflags/gflags.h"
 
 DECLARE_int32(performance_interval);
