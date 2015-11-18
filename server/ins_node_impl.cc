@@ -2026,6 +2026,7 @@ void InsNodeImpl::RpcStat(::google::protobuf::RpcController* /*controller*/,
         stat->set_current_stat(current_stat);
         stat->set_average_stat(average_stat);
     }
+    response->set_status(status_);
     done->Run();
 }
 

@@ -154,7 +154,7 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
 std::string InsSDK::StatusToString(int32_t status) {
     switch (status) {
         case kLeader:
-            return "Leader  ";
+            return "Leader";
             break;
         case kCandidate:
             return "Candidate";
@@ -1217,6 +1217,41 @@ bool InsSDK::CleanBinlog(const std::string& server_id,
         *error = kCleanBinlogFail;
         LOG(FATAL, "remove binlog at %ld is unsafe", end_index);
         return false;
+    }
+    return true;
+}
+
+bool InsSDK::ShowStatistics(std::vector<NodeStatInfo>* statistics) {
+    if (statistics == NULL) {
+        return true;
+    }
+    std::vector<std::string>::iterator it;
+    for(it = members_.begin(); it != members_.end(); it++) {
+        NodeStatInfo node_stat;
+        node_stat.server_id = *it;
+        galaxy::ins::InsNode_Stub* stub;
+        rpc_client_->GetStub(*it, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::RpcStatRequest request;
+        galaxy::ins::RpcStatResponse response;
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::RpcStat,
+                                           &request, &response, 2, 1);
+        if (!ok) {
+            node_stat.status = kOffline;
+            for (int i = 0; i < 8; ++i) {
+                node_stat.stats[i].current = -1;
+                node_stat.stats[i].average = -1;
+            }
+        } else {
+            node_stat.status = response.status();
+            size_t stat_size = response.stats_size();
+            for (size_t i = 0; i < stat_size; ++i) {
+                node_stat.stats[i].current = response.stats(i).current_stat();
+                node_stat.stats[i].average = response.stats(i).average_stat();
+            }
+        }
+
+        statistics->push_back(node_stat);
     }
     return true;
 }

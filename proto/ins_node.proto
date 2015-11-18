@@ -258,7 +258,8 @@ message RpcStatRequest {
 }
 
 message RpcStatResponse {
-    repeated StatInfo stats = 1;
+    optional NodeStatus status = 1;    
+    repeated StatInfo stats = 2;
 }
 
 service InsNode {

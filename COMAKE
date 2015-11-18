@@ -44,7 +44,7 @@ ins_sdk_headers = 'sdk/ins_sdk.h'
 
 ins_python_sources = 'sdk/ins_sdk.cc sdk/ins_wrapper.cc common/logging.cc proto/ins_node.proto server/flags.cc'
 
-ins_cli_sources = 'sdk/ins_sdk.cc proto/ins_node.proto common/logging.cc sdk/ins_cli.cc server/flags.cc'
+ins_cli_sources = 'sdk/ins_sdk.cc proto/ins_node.proto common/logging.cc common/tprinter.cc sdk/ins_cli.cc server/flags.cc'
 sample_sources = 'sdk/sample.cc'
 
 
