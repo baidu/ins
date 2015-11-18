@@ -16,7 +16,10 @@ PerformanceCenter::PerformanceCenter(int buffer_size) :
         keepalive_buffer_(buffer_size),
         lock_buffer_(buffer_size),
         unlock_buffer_(buffer_size),
-        watch_buffer_(buffer_size) { }
+        watch_buffer_(buffer_size),
+        ticktock_(1) {
+    ticktock_.AddTask(boost::bind(&PerformanceCenter::TickTock, this));
+}
 
 int64_t PerformanceCenter::CalcAverageOfBuffer(const boost::circular_buffer<Counter>& buffer) {
     lock_.Lock();
