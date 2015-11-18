@@ -75,6 +75,24 @@ ClusterNodeInfo* SDKShowCluster(InsSDK* sdk, int* count) {
     return cluster_arr;
 }
 
+NodeStatInfo* SDKShowStatistics(InsSDK* sdk, int* count) {
+    if (sdk == NULL) {
+        return NULL;
+    }
+    std::vector<NodeStatInfo> stat_info;
+    sdk->ShowStatistics(&stat_info);
+    *count = stat_info.size();
+    NodeStatInfo* stat_arr = new NodeStatInfo[*count];
+    std::copy(stat_info.begin(), stat_info.end(), stat_arr);
+    return stat_arr;
+}
+
+void DeleteStatArray(NodeStatInfo* pointer) {
+    if (pointer != NULL) {
+        delete pointer;
+    }
+}
+
 bool SDKPut(InsSDK* sdk, const char* key, const char* value, SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;

@@ -8,6 +8,8 @@
 #include <boost/scoped_ptr.hpp>
 #include <gflags/gflags.h>
 #include <limits>
+#include <algorithm>
+#include <vector>
 #include "common/this_thread.h"
 #include "common/timer.h"
 #include "storage/meta.h"
@@ -27,6 +29,7 @@ DECLARE_int32(max_commit_pending);
 DECLARE_bool(ins_binlog_compress);
 DECLARE_int32(ins_binlog_block_size);
 DECLARE_int32(ins_binlog_write_buffer_size);
+DECLARE_int32(performance_buffer_size);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -50,7 +53,8 @@ InsNodeImpl::InsNodeImpl(std::string& server_id,
                              commit_index_(-1),
                              last_applied_index_(-1),
                              single_node_mode_(false),
-                             last_safe_clean_index_(-1) {
+                             last_safe_clean_index_(-1),
+                             perform_(FLAGS_performance_buffer_size) {
     srand(time(NULL));
     replication_cond_ = new CondVar(&mu_);
     commit_cond_ = new CondVar(&mu_);
@@ -931,6 +935,7 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* /*controller*/,
                       const ::galaxy::ins::GetRequest* request,
                       ::galaxy::ins::GetResponse* response,
                       ::google::protobuf::Closure* done) {
+    perform_.Get();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_hit(false);
@@ -1042,6 +1047,7 @@ void InsNodeImpl::Delete(::google::protobuf::RpcController* /*controller*/,
                         const ::galaxy::ins::DelRequest* request,
                         ::galaxy::ins::DelResponse* response,
                         ::google::protobuf::Closure* done) {
+    perform_.Delete();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_success(false);
@@ -1090,6 +1096,7 @@ void InsNodeImpl::Put(::google::protobuf::RpcController* /*controller*/,
                       const ::galaxy::ins::PutRequest* request,
                       ::galaxy::ins::PutResponse* response,
                       ::google::protobuf::Closure* done) {
+    perform_.Put();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_success(false);
@@ -1181,6 +1188,7 @@ void InsNodeImpl::Lock(::google::protobuf::RpcController* /*controller*/,
                        const ::galaxy::ins::LockRequest* request,
                        ::galaxy::ins::LockResponse* response,
                        ::google::protobuf::Closure* done) {
+    perform_.Lock();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_success(false);
@@ -1266,6 +1274,7 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* /*controller*/,
                        const ::galaxy::ins::ScanRequest* request,
                        ::galaxy::ins::ScanResponse* response,
                        ::google::protobuf::Closure* done) {
+    perform_.Scan();
     const std::string& uuid = request->uuid();
     {
         MutexLock lock(&mu_);
@@ -1362,6 +1371,7 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* /*controller*/,
                             const ::galaxy::ins::KeepAliveRequest* request,
                             ::galaxy::ins::KeepAliveResponse* response,
                             ::google::protobuf::Closure* done) {
+    perform_.KeepAlive();
     {
         MutexLock lock(&mu_);
         if (status_ == kFollower && !request->forward_from_leader()) {
@@ -1680,6 +1690,7 @@ void InsNodeImpl::Watch(::google::protobuf::RpcController* /*controller*/,
                         const ::galaxy::ins::WatchRequest* request,
                         ::galaxy::ins::WatchResponse* response,
                         ::google::protobuf::Closure* done) {
+    perform_.Watch();
     {
         MutexLock lock(&mu_);
         if (status_ == kFollower) {
@@ -1748,6 +1759,7 @@ void InsNodeImpl::UnLock(::google::protobuf::RpcController* /*controller*/,
                          const ::galaxy::ins::UnLockRequest* request,
                          ::galaxy::ins::UnLockResponse* response,
                          ::google::protobuf::Closure* done) {
+    perform_.Unlock();
     MutexLock lock(&mu_);
     if (status_ == kFollower) {
         response->set_success(false);
@@ -1956,6 +1968,65 @@ void InsNodeImpl::CleanBinlog(::google::protobuf::RpcController* /*controller*/,
         boost::bind(&InsNodeImpl::DelBinlog, this, del_end_index -1 )
     );
     response->set_success(true);
+    done->Run();
+}
+
+void InsNodeImpl::RpcStat(::google::protobuf::RpcController* /*controller*/,
+                          const ::galaxy::ins::RpcStatRequest* request,
+                          ::galaxy::ins::RpcStatResponse* response,
+                          ::google::protobuf::Closure* done) {
+    std::vector<int> stats;
+    if (request->op_size() == 0) {
+        for (int i = 1; i <= 8; ++i) {
+            stats.push_back(i);
+        }
+    } else {
+        stats.resize(request->op_size());
+        std::copy(request->op().begin(), request->op().end(), stats.begin());
+    }
+    for (std::vector<int>::iterator it = stats.begin(); it != stats.end(); ++it) {
+        int64_t current_stat = 0l;
+        int64_t average_stat = 0l;
+        switch (StatOperation(*it)) {
+        case kPutOp:
+            current_stat = perform_.CurrentPut();
+            average_stat = perform_.AveragePut();
+            break;
+        case kGetOp:
+            current_stat = perform_.CurrentGet();
+            average_stat = perform_.AverageGet();
+            break;
+        case kDeleteOp:
+            current_stat = perform_.CurrentDelete();
+            average_stat = perform_.AverageDelete();
+            break;
+        case kScanOp:
+            current_stat = perform_.CurrentScan();
+            average_stat = perform_.AverageScan();
+            break;
+        case kKeepAliveOp:
+            current_stat = perform_.CurrentKeepAlive();
+            average_stat = perform_.AverageKeepAlive();
+            break;
+        case kLockOp:
+            current_stat = perform_.CurrentLock();
+            average_stat = perform_.AverageLock();
+            break;
+        case kUnlockOp:
+            current_stat = perform_.CurrentUnlock();
+            average_stat = perform_.AverageUnlock();
+            break;
+        case kWatchOp:
+            current_stat = perform_.CurrentWatch();
+            average_stat = perform_.AverageWatch();
+            break;
+        default: break;
+        }
+        StatInfo* stat = response->add_stats();
+        stat->set_current_stat(current_stat);
+        stat->set_average_stat(average_stat);
+    }
+    response->set_status(status_);
     done->Run();
 }
 

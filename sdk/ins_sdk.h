@@ -48,6 +48,19 @@ struct ClusterNodeInfo {
     int64_t last_applied;
 };
 
+struct StatInfo {
+    int64_t current;
+    int64_t average;
+};
+
+struct NodeStatInfo {
+    std::string server_id;
+    int32_t status;
+    // Statistics is in proper order:
+    //   Put, Get, Delete, Scan, KeepAlive, Lock, Unlock, Watch
+    StatInfo stats[8];
+};
+
 struct KVPair {
     std::string key;
     std::string value;
@@ -99,6 +112,7 @@ public:
     bool CleanBinlog(const std::string& server_id,
                      int64_t end_index, 
                      SDKError* error);
+    bool ShowStatistics(std::vector<NodeStatInfo>* statistics);
     std::string GetSessionID();
     std::string GetCurrentUserID();
     bool IsLoggedIn();

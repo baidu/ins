@@ -27,6 +27,10 @@ class InsSDK:
                     ('last_log_term', c_long),
                     ('commit_index', c_long),
                     ('last_applied', c_long)]
+    class _NodeStatInfo(Structure):
+        _fields_ = [('server_id', c_char_p),
+                    ('status', c_int),
+                    ('stats', c_long * 2 * 8)]
     class _WatchParam(Structure):
         _fields_ = [('key', c_char_p),
                     ('value', c_char_p),
@@ -70,6 +74,53 @@ class InsSDK:
             })
         _ins.DeleteClusterArray(cluster_ptr)
         return cluster_list
+
+    def stat(self):
+        count = c_int()
+        stat_ptr = _ins.SDKShowStatistics(self._sdk, byref(count))
+        count = count.value
+        StatArray = self._NodeStatInfo * count
+        stats = StatArray.from_address(stat_ptr)
+        stat_list = []
+        for i in xrange(count):
+            stat_list.append({
+                'server_id' : str(stats[i].server_id),
+                'status' : NodeStatus[stats[i].status],
+                'put' : {
+                    'current' : int(stats[i].stats[0][0]),
+                    'average' : int(stats[i].stats[0][1]),
+                },
+                'get' : {
+                    'current' : int(stats[i].stats[1][0]),
+                    'average' : int(stats[i].stats[1][1]),
+                },
+                'delete' : {
+                    'current' : int(stats[i].stats[2][0]),
+                    'average' : int(stats[i].stats[2][1]),
+                },
+                'scan' : {
+                    'current' : int(stats[i].stats[3][0]),
+                    'average' : int(stats[i].stats[3][1]),
+                },
+                'keepalive' : {
+                    'current' : int(stats[i].stats[4][0]),
+                    'average' : int(stats[i].stats[4][1]),
+                },
+                'lock' : {
+                    'current' : int(stats[i].stats[5][0]),
+                    'average' : int(stats[i].stats[5][1]),
+                },
+                'unlock' : {
+                    'current' : int(stats[i].stats[6][0]),
+                    'average' : int(stats[i].stats[6][1]),
+                },
+                'watch' : {
+                    'current' : int(stats[i].stats[7][0]),
+                    'average' : int(stats[i].stats[7][1]),
+                }
+            })
+        _ins.DeleteStatArray(stat_ptr)
+        return stat_list
 
     def get(self, key):
         return _ins.SDKGet(self._sdk, key, byref(self._local.errno))
@@ -182,6 +233,8 @@ _ins = CDLL('./libins_py.so')
 def _set_function_sign():
     _ins.SDKShowCluster.argtypes = [c_void_p, POINTER(c_int)]
     _ins.SDKShowCluster.restype = c_void_p
+    _ins.SDKShowStatistics.argtypes = [c_void_p, POINTER(c_int)]
+    _ins.SDKShowStatistics.restype = c_void_p
     _ins.SDKGet.argtypes = [c_void_p, c_char_p, POINTER(c_int)]
     _ins.SDKGet.restype = c_char_p
     _ins.SDKPut.argtypes = [c_void_p, c_char_p, c_char_p, POINTER(c_int)]

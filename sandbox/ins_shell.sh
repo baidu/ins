@@ -7,6 +7,10 @@ do
 		sh ./show_cluster.sh
 	;;
 
+	"stat")
+		sh ./test_stat.sh
+	;;
+
 	"put")
 		sh ./test_put.sh $arg1 $arg2
 	;;
@@ -49,6 +53,7 @@ do
 
 	*)
 		echo "  show [ show cluster ]"
+		echo "  stat [ show statistics ]"
 		echo "  put (key) (value) [ update the data ] "
 		echo "  get (key) [read the data by key ]"
 		echo "  delete (key) [remove the data by key]"

@@ -12,6 +12,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include "common/logging.h"
+#include "common/tprinter.h"
 
 DECLARE_string(ins_cmd);
 DECLARE_string(ins_key);
@@ -75,45 +76,26 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> members;
     InsSDK::ParseFlagFromArgs(argc, argv, &members);
     InsSDK sdk(members);
-    char cli_header[2048] = {'\0'};
-    snprintf(cli_header, sizeof(cli_header), 
-             "%-*s\t%-*s\t%-*s\t%-*s\t%-*s\t%-*s\t%-*s", 
-             35, "server node",
-             10, "role",
-             15, "term",
-             15, "last_log_index",
-             15, "last_log_term",
-             15, "commit_index",
-             15, "last_applied");
-    std::string header_line;
-    header_line.resize(strlen(cli_header) + 8);
-    std::fill(header_line.begin(), header_line.end(), '-');
     galaxy::ins::sdk::SDKError ins_err;
     bool is_logged = false;
     do {
         if (FLAGS_ins_cmd == "show") {
+            TPrinter cprinter(7);
+            cprinter.AddRow(7, "server node", "role", "term", "last_log_index",
+                           "last_log_term", "commit_index", "last_applied");
             std::vector<ClusterNodeInfo> cluster_info;
             sdk.ShowCluster(&cluster_info);
             std::vector<ClusterNodeInfo>::iterator it;
-            std::cout << cli_header
-                      << std::endl
-                      << header_line
-                      << std::endl;
             for(it = cluster_info.begin(); it != cluster_info.end(); it++ ) {
                 std::string s_status = InsSDK::StatusToString(it->status);
-                char raw_info[1024] = {'\0'};
-                snprintf(raw_info, sizeof(raw_info),
-                         "%-*s\t%-*s\t%-*ld\t%-*ld\t%-*ld\t%-*ld\t%-*ld",
-                         35, it->server_id.c_str(),
-                         10, s_status.c_str(),
-                         15, it->term,
-                         15, it->last_log_index,
-                         15, it->last_log_term,
-                         15, it->commit_index,
-                         15, it->last_applied);
-                std::cout << raw_info
-                          << std::endl;
+                cprinter.AddRow(7, it->server_id.c_str(), s_status.c_str(),
+                        boost::lexical_cast<std::string>(it->term).c_str(),
+                        boost::lexical_cast<std::string>(it->last_log_index).c_str(),
+                        boost::lexical_cast<std::string>(it->last_log_term).c_str(),
+                        boost::lexical_cast<std::string>(it->commit_index).c_str(),
+                        boost::lexical_cast<std::string>(it->last_applied).c_str());
             }
+            std::cout << cprinter.ToString();
         } else if (FLAGS_ins_cmd == "put") {
             std::string key = FLAGS_ins_key;
             std::string value = FLAGS_ins_value;
@@ -211,6 +193,46 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
             fprintf(stderr, "clean ok\n");
+        } else if (FLAGS_ins_cmd == "stat") {
+            TPrinter sprinter(11);
+            sprinter.AddRow(11, "server id", "status", "kind", "Put", "Get",
+                    "Delete", "Scan", "KeepAlive", "Lock", "Unlock", "Watch");
+            std::vector<NodeStatInfo> stat_info;
+            bool ret = sdk.ShowStatistics(&stat_info);
+            if (!ret) {
+                fprintf(stderr, "show statistics fail due to ins cluster issue\n");
+                return 1;
+            }
+            for (std::vector<NodeStatInfo>::iterator it = stat_info.begin();
+                    it != stat_info.end(); ++it) {
+                const std::string& s_status = InsSDK::StatusToString(it->status);
+                if (s_status != "Leader") {
+                    continue;
+                }
+                sprinter.AddRow(11, it->server_id.c_str(), s_status.c_str(), "current",
+                        boost::lexical_cast<std::string>(it->stats[0].current).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[1].current).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[2].current).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[3].current).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[4].current).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[5].current).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[6].current).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[7].current).c_str());
+                sprinter.AddRow(11, "", "", "average",
+                        boost::lexical_cast<std::string>(it->stats[0].average).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[1].average).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[2].average).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[3].average).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[4].average).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[5].average).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[6].average).c_str(),
+                        boost::lexical_cast<std::string>(it->stats[7].average).c_str());
+            }
+            if (sprinter.Rows() == 0) {
+                fprintf(stderr, "show statistics fail due to ins cluster issue\n");
+                return 1;
+            }
+            std::cout << sprinter.ToString();
         } else if (FLAGS_ins_cmd == "login") {
             std::string username = FLAGS_ins_key;
             std::string password = FLAGS_ins_value;

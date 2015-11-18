@@ -117,7 +117,9 @@ void InsSDK::PrepareServerList(std::vector<std::string>& server_list) {
 }
 
 bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
-    assert(cluster_info);
+    if (cluster_info == NULL) {
+        return true;
+    }
     std::vector<std::string>::iterator it;
     for(it = members_.begin(); it != members_.end(); it++) {
         ClusterNodeInfo  node_info;
@@ -152,7 +154,7 @@ bool InsSDK::ShowCluster(std::vector<ClusterNodeInfo>* cluster_info) {
 std::string InsSDK::StatusToString(int32_t status) {
     switch (status) {
         case kLeader:
-            return "Leader  ";
+            return "Leader";
             break;
         case kCandidate:
             return "Candidate";
@@ -171,6 +173,10 @@ std::string InsSDK::StatusToString(int32_t status) {
 bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* error) {
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
@@ -238,6 +244,10 @@ bool InsSDK::Get(const std::string& key, std::string* value,
                  SDKError* error) {
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
@@ -316,6 +326,10 @@ bool InsSDK::ScanOnce(const std::string& start_key,
                       SDKError* error) {
     assert(buffer);
     std::string value;
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     if (!Get(start_key, &value, error)) { //avoid network partition problem
         LOG(FATAL, "the leader may be unavilable");
         return false;
@@ -403,6 +417,10 @@ bool InsSDK::ScanOnce(const std::string& start_key,
 bool InsSDK::Delete(const std::string& key, SDKError* error) {
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
@@ -469,6 +487,10 @@ bool InsSDK::Watch(const std::string& key,
                    void* context,
                    SDKError* error) {
     std::string old_value;
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     Get(key, &old_value, error);
     if (*error != kOK && *error != kNoSuchKey) {
         LOG(FATAL, "faild to issue a watch: %s", key.c_str());
@@ -756,6 +778,10 @@ bool InsSDK::Lock(const std::string& key, SDKError* error) {
         }
     }
     LOG(INFO, "try lock on :%s", key.c_str());
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     while (!TryLock(key, error)) {
         if (*error == kUnknownUser) {
             break;
@@ -791,6 +817,10 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
     }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
@@ -856,6 +886,10 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
 bool InsSDK::UnLock(const std::string& key, SDKError* error) {
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     std::vector<std::string>::const_iterator it ;
     for (it = server_list.begin(); it != server_list.end(); it++){
         std::string server_id = *it;
@@ -955,6 +989,10 @@ bool InsSDK::Login(const std::string& username,
     }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     std::vector<std::string>::const_iterator it;
     for (it = server_list.begin(); it != server_list.end(); ++it) {
         std::string server_id = *it;
@@ -1023,6 +1061,10 @@ bool InsSDK::Logout(SDKError* error) {
     }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     std::vector<std::string>::const_iterator it;
     for (it = server_list.begin(); it != server_list.end(); ++it) {
         std::string server_id = *it;
@@ -1094,6 +1136,10 @@ bool InsSDK::Register(const std::string& username,
     }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     std::vector<std::string>::const_iterator it;
     for (it = server_list.begin(); it != server_list.end(); ++it) {
         std::string server_id = *it;
@@ -1151,6 +1197,10 @@ bool InsSDK::Register(const std::string& username,
 bool InsSDK::CleanBinlog(const std::string& server_id,
                          int64_t end_index, 
                          SDKError* error) {
+    SDKError err_temp = kOK;
+    if (error == NULL) {
+        error = &err_temp;
+    }
     galaxy::ins::InsNode_Stub *stub;
     rpc_client_->GetStub(server_id, &stub);
     boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
@@ -1167,6 +1217,41 @@ bool InsSDK::CleanBinlog(const std::string& server_id,
         *error = kCleanBinlogFail;
         LOG(FATAL, "remove binlog at %ld is unsafe", end_index);
         return false;
+    }
+    return true;
+}
+
+bool InsSDK::ShowStatistics(std::vector<NodeStatInfo>* statistics) {
+    if (statistics == NULL) {
+        return true;
+    }
+    std::vector<std::string>::iterator it;
+    for(it = members_.begin(); it != members_.end(); it++) {
+        NodeStatInfo node_stat;
+        node_stat.server_id = *it;
+        galaxy::ins::InsNode_Stub* stub;
+        rpc_client_->GetStub(*it, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
+        galaxy::ins::RpcStatRequest request;
+        galaxy::ins::RpcStatResponse response;
+        bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::RpcStat,
+                                           &request, &response, 2, 1);
+        if (!ok) {
+            node_stat.status = kOffline;
+            for (int i = 0; i < 8; ++i) {
+                node_stat.stats[i].current = -1;
+                node_stat.stats[i].average = -1;
+            }
+        } else {
+            node_stat.status = response.status();
+            size_t stat_size = response.stats_size();
+            for (size_t i = 0; i < stat_size; ++i) {
+                node_stat.stats[i].current = response.stats(i).current_stat();
+                node_stat.stats[i].average = response.stats(i).average_stat();
+            }
+        }
+
+        statistics->push_back(node_stat);
     }
     return true;
 }

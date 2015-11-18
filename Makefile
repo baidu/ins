@@ -42,8 +42,8 @@ PROTO_SRC = $(patsubst %.proto,%.pb.cc,$(PROTO_FILE))
 PROTO_HEADER = $(patsubst %.proto,%.pb.h,$(PROTO_FILE))
 PROTO_OBJ = $(patsubst %.proto,%.pb.o,$(PROTO_FILE))
 
-UTIL_SRC = $(filter-out $(wildcard */*test.cc) $(wildcard */*main.cc), \
-             $(wildcard server/ins_*.cc) $(wildcard storage/*.cc) server/user_manage.cc)
+UTIL_SRC = $(filter-out $(wildcard */*test.cc) $(wildcard */*main.cc) server/flags.cc, \
+             $(wildcard server/*.cc) $(wildcard storage/*.cc))
 UTIL_OBJ = $(patsubst %.cc, %.o, $(UTIL_SRC))
 UTIL_HEADER = $(wildcard server/*.h) $(wildcard storage/*.h)
 
@@ -65,7 +65,7 @@ OBJS = $(FLAGS_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) $(UTIL_OBJ)
 SDK_OBJ = $(patsubst %.cc, %.o, sdk/ins_sdk.cc) $(PROTO_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ)
 TEST_SRC = $(wildcard server/*_test.cc) $(wildcard storage/*_test.cc)
 TEST_OBJ = $(patsubst %.cc, %.o, $(TEST_SRC))
-TESTS = test_binlog test_storage_manager test_user_manager
+TESTS = test_binlog test_storage_manager test_user_manager test_performance_center
 BIN = ins ins_cli sample
 LIB = libins_sdk.a
 PY_LIB = libins_py.so
@@ -132,11 +132,12 @@ install_sdk: $(LIB)
 	cp sdk/ins_sdk.h $(PREFIX)/include
 	cp libins_sdk.a $(PREFIX)/lib
 
-.PHONY: test test_binlog test_storage_manager test_user_manager
+.PHONY: test test_binlog test_storage_manager test_user_manager test_performance_center
 test: $(TESTS)
 	./test_binlog
 	./test_storage_manager
 	./test_user_manager
+	./test_performance_center
 	echo "Test done"
 
 test_binlog: storage/binlog_test.o $(UTIL_OBJ) $(OBJS)
@@ -146,5 +147,8 @@ test_storage_manager: storage/storage_manage_test.o $(UTIL_OBJ) $(OBJS)
 	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
 
 test_user_manager: server/user_manage_test.o $(UTIL_OBJ) $(OBJS)
+	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
+
+test_performance_center: server/performance_center_test.o $(UTIL_OBJ) $(OBJS)
 	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
 

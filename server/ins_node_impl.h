@@ -19,6 +19,7 @@
 #include "rpc/rpc_client.h"
 #include "storage/storage_manage.h"
 #include "server/user_manage.h"
+#include "server/performance_center.h"
 
 using namespace boost::multi_index;
 
@@ -199,6 +200,10 @@ public:
                      const ::galaxy::ins::CleanBinlogRequest* request,
                      ::galaxy::ins::CleanBinlogResponse* response,
                      ::google::protobuf::Closure* done);
+    void RpcStat(::google::protobuf::RpcController* controller,
+                 const ::galaxy::ins::RpcStatRequest* request,
+                 ::galaxy::ins::RpcStatResponse* response,
+                 ::google::protobuf::Closure* done);
 private:
     void VoteCallback(const ::galaxy::ins::VoteRequest* request,
                       ::galaxy::ins::VoteResponse* response,
@@ -305,6 +310,7 @@ private:
     ThreadPool follower_worker_;
     bool single_node_mode_;
     int64_t last_safe_clean_index_;
+    PerformanceCenter perform_;
 };
 
 } //namespace ins
