@@ -200,6 +200,10 @@ public:
                      const ::galaxy::ins::CleanBinlogRequest* request,
                      ::galaxy::ins::CleanBinlogResponse* response,
                      ::google::protobuf::Closure* done);
+    void RpcStat(::google::protobuf::RpcController* controller,
+                 const ::galaxy::ins::RpcStatRequest* request,
+                 ::galaxy::ins::RpcStatResponse* response,
+                 ::google::protobuf::Closure* done);
 private:
     void VoteCallback(const ::galaxy::ins::VoteRequest* request,
                       ::galaxy::ins::VoteResponse* response,

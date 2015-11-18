@@ -8,6 +8,8 @@
 #include <boost/scoped_ptr.hpp>
 #include <gflags/gflags.h>
 #include <limits>
+#include <algorithm>
+#include <vector>
 #include "common/this_thread.h"
 #include "common/timer.h"
 #include "storage/meta.h"
@@ -1966,6 +1968,64 @@ void InsNodeImpl::CleanBinlog(::google::protobuf::RpcController* /*controller*/,
         boost::bind(&InsNodeImpl::DelBinlog, this, del_end_index -1 )
     );
     response->set_success(true);
+    done->Run();
+}
+
+void InsNodeImpl::RpcStat(::google::protobuf::RpcController* /*controller*/,
+                          const ::galaxy::ins::RpcStatRequest* request,
+                          ::galaxy::ins::RpcStatResponse* response,
+                          ::google::protobuf::Closure* done) {
+    std::vector<int> stats;
+    if (request->op_size() == 0) {
+        for (int i = 1; i <= 8; ++i) {
+            stats.push_back(i);
+        }
+    } else {
+        stats.resize(request->op_size());
+        std::copy(request->op().begin(), request->op().end(), stats.begin());
+    }
+    for (std::vector<int>::iterator it = stats.begin(); it != stats.end(); ++it) {
+        int64_t current_stat = 0l;
+        int64_t average_stat = 0l;
+        switch (StatOperation(*it)) {
+        case kPutOp:
+            current_stat = perform_.CurrentPut();
+            average_stat = perform_.AveragePut();
+            break;
+        case kGetOp:
+            current_stat = perform_.CurrentGet();
+            average_stat = perform_.AverageGet();
+            break;
+        case kDeleteOp:
+            current_stat = perform_.CurrentDelete();
+            average_stat = perform_.AverageDelete();
+            break;
+        case kScanOp:
+            current_stat = perform_.CurrentScan();
+            average_stat = perform_.AverageScan();
+            break;
+        case kKeepAliveOp:
+            current_stat = perform_.CurrentKeepAlive();
+            average_stat = perform_.AverageKeepAlive();
+            break;
+        case kLockOp:
+            current_stat = perform_.CurrentLock();
+            average_stat = perform_.AverageLock();
+            break;
+        case kUnlockOp:
+            current_stat = perform_.CurrentUnlock();
+            average_stat = perform_.AverageUnlock();
+            break;
+        case kWatchOp:
+            current_stat = perform_.CurrentWatch();
+            average_stat = perform_.AverageWatch();
+            break;
+        default: break;
+        }
+        StatInfo* stat = response->add_stats();
+        stat->set_current_stat(current_stat);
+        stat->set_average_stat(average_stat);
+    }
     done->Run();
 }
 

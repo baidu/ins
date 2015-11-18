@@ -30,6 +30,17 @@ enum Status {
     kError = 10;
 };
 
+enum StatOperation {
+    kPutOp = 1;
+    kGetOp = 2;
+    kDeleteOp = 3;
+    kScanOp = 4;
+    kKeepAliveOp = 5;
+    kLockOp = 6;
+    kUnlockOp = 7;
+    kWatchOp = 8;
+}
+
 message UserInfo {
     required string username = 1;
     required string passwd = 2;
@@ -41,6 +52,11 @@ message Entry {
     required int64 term = 3;
     optional LogOperation op = 4;
     optional string user = 5;
+}
+
+message StatInfo {
+    optional int64 current_stat = 1;
+    optional int64 average_stat = 2;
 }
 
 message AppendEntriesRequest {
@@ -236,6 +252,15 @@ message CleanBinlogResponse {
     required bool success = 1;
 }
 
+message RpcStatRequest {
+    // Return all stats if op is not given
+    repeated StatOperation op = 1;
+}
+
+message RpcStatResponse {
+    repeated StatInfo stats = 1;
+}
+
 service InsNode {
     rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse);
     rpc Vote(VoteRequest) returns (VoteResponse);
@@ -252,5 +277,6 @@ service InsNode {
     rpc KeepAlive(KeepAliveRequest) returns (KeepAliveResponse);
     rpc ShowStatus(ShowStatusRequest) returns (ShowStatusResponse);
     rpc CleanBinlog(CleanBinlogRequest) returns (CleanBinlogResponse);
+    rpc RpcStat(RpcStatRequest) returns (RpcStatResponse);
 }
 
