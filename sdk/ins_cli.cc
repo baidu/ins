@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
             if (sdk.Get(key, &value, &ins_err)) {
                 LOG(DEBUG, "get success");
                 if (ins_err == kOK) {
-                    printf("value: %s\n", value.c_str());
+                    std::cout << "value:" << value << std::endl;
                 } else if (ins_err == kUnknownUser) {
                     fprintf(stderr, "previous login may expired, please logout\n");
                 } else {
@@ -145,8 +145,7 @@ int main(int argc, char* argv[]) {
             } else {
                 int i = 0;
                 while (!result->Done()) {
-                    printf("[%d]\t%s -> %s\n", ++i,
-                           result->Key().c_str(), result->Value().c_str());
+                    std::cout << "[" << ++i << "]\t" << result->Key() << " -> " << result->Value() << std::endl;
                     result->Next();
                 }
             }
