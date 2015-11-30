@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from ctypes import CDLL, byref, CFUNCTYPE, POINTER, Structure, cast, addressof
-from ctypes import c_void_p, c_char_p, c_long, c_int, c_bool, py_object
+from ctypes import c_void_p, c_char_p, c_long, c_int, c_bool, py_object, string_at
 import threading
 
 SDKError = ('OK', 'ClusterDown', 'NoSuchKey', 'Timeout', 'LockFail',
@@ -123,10 +123,20 @@ class InsSDK:
         return stat_list
 
     def get(self, key):
-        return _ins.SDKGet(self._sdk, key, byref(self._local.errno))
+        buf = c_char_p()
+        buf_len = c_int()
+        ok = _ins.SDKGet(self._sdk, key, byref(buf), byref(buf_len), byref(self._local.errno))
+        if ok:
+            if buf_len == 0:
+                return ""
+            value =  string_at(buf, buf_len)
+            _ins.FreeString(buf)
+            return value
+        else:
+            return ""
 
     def put(self, key, value):
-        return _ins.SDKPut(self._sdk, key, value, byref(self._local.errno))
+        return _ins.SDKPut(self._sdk, key, value, len(value), byref(self._local.errno))
 
     def delete(self, key):
         return _ins.SDKDelete(self._sdk, key, byref(self._local.errno))
@@ -214,7 +224,14 @@ class ScanResult:
         return _ins.ScanResultKey(self.scanner)
 
     def value(self):
-        return _ins.ScanResultValue(self.scanner)
+        buf = c_char_p()
+        buf_len = c_int()
+        ret = _ins.ScanResultValue(self.scanner, byref(buf), byref(buf_len))
+        if not ret:
+            return ""
+        value = string_at(buf, buf_len)
+        _ins.FreeString(buf)
+        return value
 
     def pair(self):
         return self.key(), self.value()
@@ -235,9 +252,9 @@ def _set_function_sign():
     _ins.SDKShowCluster.restype = c_void_p
     _ins.SDKShowStatistics.argtypes = [c_void_p, POINTER(c_int)]
     _ins.SDKShowStatistics.restype = c_void_p
-    _ins.SDKGet.argtypes = [c_void_p, c_char_p, POINTER(c_int)]
-    _ins.SDKGet.restype = c_char_p
-    _ins.SDKPut.argtypes = [c_void_p, c_char_p, c_char_p, POINTER(c_int)]
+    _ins.SDKGet.argtypes = [c_void_p, c_char_p, POINTER(c_char_p), POINTER(c_int), POINTER(c_int)]
+    _ins.SDKGet.restype = c_bool
+    _ins.SDKPut.argtypes = [c_void_p, c_char_p, c_char_p, c_int, POINTER(c_int)]
     _ins.SDKPut.restype = c_bool
     _ins.SDKDelete.argtypes = [c_void_p, c_char_p, POINTER(c_int)]
     _ins.SDKDelete.restype = c_bool
@@ -272,7 +289,9 @@ def _set_function_sign():
     _ins.ScanResultError.restype = c_int
     _ins.ScanResultKey.argtypes = [c_void_p]
     _ins.ScanResultKey.restype = c_char_p
-    _ins.ScanResultValue.argtypes = [c_void_p]
-    _ins.ScanResultValue.restype = c_char_p
+    _ins.ScanResultValue.argtypes = [c_void_p, POINTER(c_char_p), POINTER(c_int)]
+    _ins.ScanResultValue.restype = c_bool
+    _ins.FreeString.argtypes = [c_char_p]
+    _ins.FreeString.restype = c_void_p
 _set_function_sign()
 

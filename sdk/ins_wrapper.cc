@@ -93,22 +93,31 @@ void DeleteStatArray(NodeStatInfo* pointer) {
     }
 }
 
-bool SDKPut(InsSDK* sdk, const char* key, const char* value, SDKError* error) {
+bool SDKPut(InsSDK* sdk, const char* key, const char* buf, int buf_len, SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
         return false;
     }
-    return sdk->Put(key, value, error);
+    return sdk->Put(key, std::string(buf, buf_len), error);
 }
 
-const char* SDKGet(InsSDK* sdk, const char* key, SDKError* error) {
+bool SDKGet(InsSDK* sdk, const char* key, char** buf_ptr, int32_t* buf_len, SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
         return "";
     }
     std::string value;
-    sdk->Get(key, &value, error);
-    return value.c_str();
+    bool ret = sdk->Get(key, &value, error);
+    if (ret) {
+        *buf_len = value.size();
+        char* buf = static_cast<char*>(malloc(value.size()));
+        memcpy(buf, value.data(), value.size());
+        *buf_ptr = buf;
+    } else {
+        *buf_ptr = NULL;
+        *buf_len = 0;
+    }
+    return ret;
 }
 
 bool SDKDelete(InsSDK* sdk, const char* key, SDKError* error) {
@@ -251,11 +260,16 @@ const char* ScanResultKey(ScanResult* result) {
     return result->Key().c_str();
 }
 
-const char* ScanResultValue(ScanResult* result) {
+bool ScanResultValue(ScanResult* result, char** buf_ptr, int* buf_len) {
     if (result == NULL) {
-        return "";
+        return false;
     }
-    return result->Value().c_str();
+    const std::string& value = result->Value();
+    *buf_len = value.size();
+    char* buf = static_cast<char*>(malloc(value.size()));
+    memcpy(buf, value.data(), value.size());
+    *buf_ptr = buf;
+    return true;
 }
 
 void ScanResultNext(ScanResult* result) {
@@ -265,5 +279,11 @@ void ScanResultNext(ScanResult* result) {
     result->Next();
 }
 
+void FreeString(char* buf) {
+    if (buf) {
+        free(buf);
+    }
 }
+
+}// "extern C"
 
