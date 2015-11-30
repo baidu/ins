@@ -1,6 +1,7 @@
 #include "ins_sdk.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <algorithm>
 
 using namespace galaxy::ins::sdk;
