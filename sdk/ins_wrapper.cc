@@ -94,21 +94,23 @@ void DeleteStatArray(NodeStatInfo* pointer) {
     }
 }
 
-bool SDKPut(InsSDK* sdk, const char* key, const char* buf, int buf_len, SDKError* error) {
+bool SDKPut(InsSDK* sdk, const char* key, int key_len, const char* buf, int buf_len,
+            SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
         return false;
     }
-    return sdk->Put(key, std::string(buf, buf_len), error);
+    return sdk->Put(std::string(key, key_len), std::string(buf, buf_len), error);
 }
 
-bool SDKGet(InsSDK* sdk, const char* key, char** buf_ptr, int32_t* buf_len, SDKError* error) {
+bool SDKGet(InsSDK* sdk, const char* key, int key_len, char** buf_ptr, int32_t* buf_len,
+            SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
         return "";
     }
     std::string value;
-    bool ret = sdk->Get(key, &value, error);
+    bool ret = sdk->Get(std::string(key, key_len), &value, error);
     if (ret) {
         *buf_len = value.size();
         char* buf = static_cast<char*>(malloc(value.size()));
@@ -121,24 +123,25 @@ bool SDKGet(InsSDK* sdk, const char* key, char** buf_ptr, int32_t* buf_len, SDKE
     return ret;
 }
 
-bool SDKDelete(InsSDK* sdk, const char* key, SDKError* error) {
+bool SDKDelete(InsSDK* sdk, const char* key, int key_len, SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
         return false;
     }
-    return sdk->Delete(key, error);
+    return sdk->Delete(std::string(key, key_len), error);
 }
 
-ScanResult* SDKScan(InsSDK* sdk, const char* start_key, const char* end_key) {
+ScanResult* SDKScan(InsSDK* sdk, const char* start_key, int start_key_len,
+                    const char* end_key, int end_key_len) {
     if (sdk == NULL) {
         return NULL;
     }
-    return sdk->Scan(start_key, end_key);
+    return sdk->Scan(std::string(start_key, start_key_len), std::string(end_key, end_key_len));
 }
 
 // NOTE: This interface is customized for python sdk.
 //       For other purpose, please implement another watch interface
-bool SDKWatch(InsSDK* sdk, const char* key, CWatchCallback wrapper,
+bool SDKWatch(InsSDK* sdk, const char* key, int key_len, CWatchCallback wrapper,
               long callback_id, void* context, SDKError* error) {
     if (sdk == NULL) {
         return false;
@@ -147,31 +150,31 @@ bool SDKWatch(InsSDK* sdk, const char* key, CWatchCallback wrapper,
     pack->callback_wrapper = reinterpret_cast<AbstractFunc>(wrapper);
     pack->callback_id = callback_id;
     pack->ctx = context;
-    return sdk->Watch(key, WatchCallbackWrapper, pack, error);
+    return sdk->Watch(std::string(key, key_len), WatchCallbackWrapper, pack, error);
 }
 
-bool SDKLock(InsSDK* sdk, const char* key, SDKError* error) {
+bool SDKLock(InsSDK* sdk, const char* key, int key_len, SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
         return false;
     }
-    return sdk->Lock(key, error);
+    return sdk->Lock(std::string(key, key_len), error);
 }
 
-bool SDKTryLock(InsSDK* sdk, const char* key, SDKError* error) {
+bool SDKTryLock(InsSDK* sdk, const char* key, int key_len, SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
         return false;
     }
-    return sdk->TryLock(key, error);
+    return sdk->TryLock(std::string(key, key_len), error);
 }
 
-bool SDKUnLock(InsSDK* sdk, const char* key, SDKError* error) {
+bool SDKUnLock(InsSDK* sdk, const char* key, int key_len, SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
         return false;
     }
-    return sdk->UnLock(key, error);
+    return sdk->UnLock(std::string(key, key_len), error);
 }
 
 bool SDKLogin(InsSDK* sdk, const char* username, const char* password, SDKError* error) {
@@ -254,11 +257,16 @@ SDKError ScanResultError(ScanResult* result) {
     return result->Error();
 }
 
-const char* ScanResultKey(ScanResult* result) {
+bool ScanResultKey(ScanResult* result, char** buf_ptr, int* buf_len) {
     if (result == NULL) {
-        return "";
+        return false;
     }
-    return result->Key().c_str();
+    const std::string key = result->Key();
+    *buf_len = key.size();
+    char* buf = static_cast<char*>(malloc(key.size()));
+    memcpy(buf, key.data(), key.size());
+    *buf_ptr = buf;
+    return true;
 }
 
 bool ScanResultValue(ScanResult* result, char** buf_ptr, int* buf_len) {

@@ -53,7 +53,7 @@ class InsSDK:
             _ins.DeleteSDK(self._sdk)
 
     def error(self):
-        return SDKError[self._local.errno]
+        return SDKError[self._local.errno.value]
 
     def show(self):
         count = c_int()
@@ -125,7 +125,7 @@ class InsSDK:
     def get(self, key):
         buf = c_char_p()
         buf_len = c_int()
-        ok = _ins.SDKGet(self._sdk, key, byref(buf), byref(buf_len), byref(self._local.errno))
+        ok = _ins.SDKGet(self._sdk, key, len(key), byref(buf), byref(buf_len), byref(self._local.errno))
         if ok:
             if buf_len == 0:
                 return ""
@@ -136,14 +136,14 @@ class InsSDK:
             return ""
 
     def put(self, key, value):
-        return _ins.SDKPut(self._sdk, key, value, len(value), byref(self._local.errno))
+        return _ins.SDKPut(self._sdk, key, len(key), value, len(value), byref(self._local.errno))
 
     def delete(self, key):
-        return _ins.SDKDelete(self._sdk, key, byref(self._local.errno))
+        return _ins.SDKDelete(self._sdk, key, len(key), byref(self._local.errno))
 
     def scan(self, start_key, end_key):
         self._local.errno = c_int(0)
-        return ScanResult(_ins.SDKScan(self._sdk, start_key, end_key))
+        return ScanResult(_ins.SDKScan(self._sdk, start_key, len(start_key), end_key, len(end_key)))
 
     def watch(self, key, callback, context):
         ctx = py_object(context)
@@ -156,17 +156,17 @@ class InsSDK:
             InsSDK._callback[cb](pm, SDKError[error])
             del InsSDK._callback[cb]
             del InsSDK._contexts[addressof(context)]
-        return _ins.SDKWatch(self._sdk, key, self.WatchCallback(_watch_wrapper), \
+        return _ins.SDKWatch(self._sdk, key, len(key), self.WatchCallback(_watch_wrapper), \
                              id(callback), byref(ctx), byref(self._local.errno))
 
     def lock(self, key):
-        return _ins.SDKLock(self._sdk, key, byref(self._local.errno))
+        return _ins.SDKLock(self._sdk, key, len(key), byref(self._local.errno))
 
     def trylock(self, key):
-        return _ins.SDKTryLock(self._sdk, key, byref(self._local.errno))
+        return _ins.SDKTryLock(self._sdk, key, len(key), byref(self._local.errno))
 
     def unlock(self, key):
-        return _ins.SDKUnLock(self._sdk, key, byref(self._local.errno))
+        return _ins.SDKUnLock(self._sdk, key, len(key), byref(self._local.errno))
 
     def login(self, username, password):
         return _ins.SDKLogin(self._sdk, username, password, byref(self._local.errno))
@@ -221,7 +221,14 @@ class ScanResult:
         return SDKError[_ins.ScanResultError(self.scanner)]
 
     def key(self):
-        return _ins.ScanResultKey(self.scanner)
+        buf = c_char_p()
+        buf_len = c_int()
+        ret = _ins.ScanResultKey(self.scanner, byref(buf), byref(buf_len))
+        if not ret:
+            return ""
+        key = string_at(buf, buf_len)
+        _ins.FreeString(buf)
+        return key
 
     def value(self):
         buf = c_char_p()
@@ -252,22 +259,22 @@ def _set_function_sign():
     _ins.SDKShowCluster.restype = c_void_p
     _ins.SDKShowStatistics.argtypes = [c_void_p, POINTER(c_int)]
     _ins.SDKShowStatistics.restype = c_void_p
-    _ins.SDKGet.argtypes = [c_void_p, c_char_p, POINTER(c_char_p), POINTER(c_int), POINTER(c_int)]
+    _ins.SDKGet.argtypes = [c_void_p, c_char_p, c_int, POINTER(c_char_p), POINTER(c_int), POINTER(c_int)]
     _ins.SDKGet.restype = c_bool
-    _ins.SDKPut.argtypes = [c_void_p, c_char_p, c_char_p, c_int, POINTER(c_int)]
+    _ins.SDKPut.argtypes = [c_void_p, c_char_p, c_int, c_char_p, c_int, POINTER(c_int)]
     _ins.SDKPut.restype = c_bool
-    _ins.SDKDelete.argtypes = [c_void_p, c_char_p, POINTER(c_int)]
+    _ins.SDKDelete.argtypes = [c_void_p, c_char_p, c_int, POINTER(c_int)]
     _ins.SDKDelete.restype = c_bool
-    _ins.SDKScan.argtypes = [c_void_p, c_char_p, c_char_p]
+    _ins.SDKScan.argtypes = [c_void_p, c_char_p, c_int, c_char_p, c_int]
     _ins.SDKScan.restype = c_void_p
-    _ins.SDKWatch.argtypes = [c_void_p, c_char_p, InsSDK.WatchCallback, \
+    _ins.SDKWatch.argtypes = [c_void_p, c_char_p, c_int, InsSDK.WatchCallback, \
                               c_long, c_void_p, c_void_p]
     _ins.SDKWatch.restype = c_bool
-    _ins.SDKLock.argtypes = [c_void_p, c_char_p, POINTER(c_int)]
+    _ins.SDKLock.argtypes = [c_void_p, c_char_p, c_int, POINTER(c_int)]
     _ins.SDKLock.restype = c_bool
-    _ins.SDKTryLock.argtypes = [c_void_p, c_char_p, POINTER(c_int)]
+    _ins.SDKTryLock.argtypes = [c_void_p, c_char_p, c_int, POINTER(c_int)]
     _ins.SDKTryLock.restype = c_bool
-    _ins.SDKUnLock.argtypes = [c_void_p, c_char_p, POINTER(c_int)]
+    _ins.SDKUnLock.argtypes = [c_void_p, c_char_p, c_int, POINTER(c_int)]
     _ins.SDKUnLock.restype = c_bool
     _ins.SDKLogin.argtypes = [c_void_p, c_char_p, c_char_p, POINTER(c_int)]
     _ins.SDKLogin.restype = c_bool
@@ -287,8 +294,8 @@ def _set_function_sign():
     _ins.ScanResultDone.restype = c_bool
     _ins.ScanResultError.argtypes = [c_void_p]
     _ins.ScanResultError.restype = c_int
-    _ins.ScanResultKey.argtypes = [c_void_p]
-    _ins.ScanResultKey.restype = c_char_p
+    _ins.ScanResultKey.argtypes = [c_void_p, POINTER(c_char_p), POINTER(c_int)]
+    _ins.ScanResultKey.restype = c_bool
     _ins.ScanResultValue.argtypes = [c_void_p, POINTER(c_char_p), POINTER(c_int)]
     _ins.ScanResultValue.restype = c_bool
     _ins.FreeString.argtypes = [c_char_p]
