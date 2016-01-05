@@ -500,12 +500,14 @@ bool InsSDK::Watch(const std::string& key,
     if (*error == kNoSuchKey) {
         key_exist = false;
     }
+    int64_t watch_id = 0;
+    std::string cur_session_id;
     {
         MutexLock lock(mu_);
         watch_keys_.insert(key);
         watch_cbs_[key] = user_callback;
         watch_ctx_[key] = context;
-        int64_t watch_id = (++watch_task_id_);
+        watch_id = (++watch_task_id_);
         pending_watches_.insert(watch_id);
         if (!is_keep_alive_bg_) {
             keep_alive_pool_->AddTask(
@@ -513,11 +515,9 @@ bool InsSDK::Watch(const std::string& key,
             );
             is_keep_alive_bg_ = true;
         }
-        keep_watch_pool_->AddTask(
-            boost::bind(&InsSDK::KeepWatchTask, this, key,
-                        old_value, key_exist, session_id_, watch_id)
-        );
+        cur_session_id = session_id_;
     }
+    KeepWatchTask(key, old_value, key_exist, cur_session_id, watch_id);
     *error = kOK;
     return true;
 }
