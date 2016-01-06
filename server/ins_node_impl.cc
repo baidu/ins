@@ -1583,11 +1583,17 @@ void InsNodeImpl::TriggerEventWithParent(const std::string& key,
     }
     TriggerEvent(key, key, value, deleted);
     if (!parent_key.empty()) {
-        TriggerEvent(parent_key, key, value, deleted);
+        bool triggered = TriggerEvent(parent_key, key, value, deleted);
+        if (!triggered) {
+            event_trigger_.DelayTask(2000,
+                boost::bind(&InsNodeImpl::TriggerEvent, this,
+                            parent_key, key, value, deleted)
+            );
+        }
     }
 }
 
-void InsNodeImpl::TriggerEvent(const std::string& watch_key,
+bool InsNodeImpl::TriggerEvent(const std::string& watch_key,
                                const std::string& key,
                                const std::string& value,
                                bool deleted) {
@@ -1611,8 +1617,10 @@ void InsNodeImpl::TriggerEvent(const std::string& watch_key,
         key_idx.erase(it_start, it_end);
         LOG(INFO, "trigger #%d watch event: %s",
                   event_count, key.c_str());
+        return true;
     } else {
         LOG(DEBUG, "watch list: no such key : %s", key.c_str());
+        return false;
     }
 }
 
@@ -1940,7 +1948,7 @@ void InsNodeImpl::DelBinlog(int64_t index) {
     LOG(DEBUG, "delete binlog [%ld]", index);
     bool ret = binlogger_->RemoveSlot(index);
     if (ret) {
-        binlog_cleaner_.DelayTask(10, //10ms delay
+        binlog_cleaner_.DelayTask(4, //4ms delay
             boost::bind(&InsNodeImpl::DelBinlog, this, index -1 )
         );
     } else {
