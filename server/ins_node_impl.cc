@@ -236,6 +236,10 @@ void InsNodeImpl::CommitIndexObserv() {
                     type_and_value.append(1, static_cast<char>(log_entry.op));
                     type_and_value.append(log_entry.value);
                     s = data_store_->Put(log_entry.user, log_entry.key, type_and_value);
+                    if (log_entry.op == kLock) {
+                        TouchParentKey(log_entry.user, log_entry.key, 
+                                       log_entry.value, "lock");
+                    }
                     event_trigger_.AddTask(
                         boost::bind(&InsNodeImpl::TriggerEventWithParent,
                                     this,
@@ -286,6 +290,8 @@ void InsNodeImpl::CommitIndexObserv() {
                                 s = data_store_->Delete(log_entry.user, key);
                                 assert(s == kOk);
                                 LOG(INFO, "unlock on %s", key.c_str());
+                                TouchParentKey(log_entry.user, log_entry.key, 
+                                               cur_session, "unlock");
                                 event_trigger_.AddTask(
                                   boost::bind(&InsNodeImpl::TriggerEventWithParent,
                                               this,
@@ -1573,16 +1579,39 @@ bool InsNodeImpl::IsExpiredSession(const std::string& session_id) {
     return expired_session;
 }
 
+bool InsNodeImpl::GetParentKey(const std::string& key, std::string* parent_key) {
+    if (!parent_key) {
+        return false;
+    }
+    std::string::size_type tail_index = key.rfind("/");
+    if (tail_index != std::string::npos) {
+        *parent_key = key.substr(0, tail_index);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void InsNodeImpl::TouchParentKey(const std::string& user, const std::string& key,
+                                 const std::string& changed_session,
+                                 const std::string& action) {
+    std::string parent_key;
+    if (GetParentKey(key, &parent_key)) {
+        std::string type_and_value;
+        type_and_value.append(1, kPut);
+        type_and_value.append(action + "," + changed_session);
+        data_store_->Put(user, parent_key, type_and_value);
+    }
+}
+
 void InsNodeImpl::TriggerEventWithParent(const std::string& key,
                                          const std::string& value,
                                          bool deleted) {
-    std::string::size_type tail_index = key.rfind("/");
-    std::string parent_key = "";
-    if (tail_index != std::string::npos) {
-        parent_key = key.substr(0, tail_index);
-    }
+    std::string parent_key;
+    bool has_parent_key = GetParentKey(key, &parent_key);
     TriggerEvent(key, key, value, deleted);
-    if (!parent_key.empty()) {
+    (void) has_parent_key;
+    if (has_parent_key) {
         bool triggered = TriggerEvent(parent_key, key, value, deleted);
         if (!triggered) {
             event_trigger_.DelayTask(2000,

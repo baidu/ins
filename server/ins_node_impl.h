@@ -262,6 +262,10 @@ private:
     void DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* request,
                          ::galaxy::ins::AppendEntriesResponse* response,
                          ::google::protobuf::Closure* done);
+    bool GetParentKey(const std::string& key, std::string* parent_key);
+    void TouchParentKey(const std::string& user, const std::string& key,
+                        const std::string& changed_session, 
+                        const std::string& action);
 public:
     std::vector<std::string> members_;
 private:
