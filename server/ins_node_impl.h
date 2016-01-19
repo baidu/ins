@@ -266,6 +266,8 @@ private:
     void TouchParentKey(const std::string& user, const std::string& key,
                         const std::string& changed_session, 
                         const std::string& action);
+    void SampleAccessLog(const ::google::protobuf::RpcController* controller,
+                         const char* action);
 public:
     std::vector<std::string> members_;
 private:
