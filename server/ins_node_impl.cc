@@ -31,6 +31,7 @@ DECLARE_bool(ins_binlog_compress);
 DECLARE_int32(ins_binlog_block_size);
 DECLARE_int32(ins_binlog_write_buffer_size);
 DECLARE_int32(performance_buffer_size);
+DECLARE_double(ins_trace_ratio);
 
 const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 
@@ -2142,7 +2143,7 @@ void InsNodeImpl::GarbageClean() {
 void InsNodeImpl::SampleAccessLog(const ::google::protobuf::RpcController* controller,
                                   const char* action) {
     double rn = rand() / (RAND_MAX+0.0);
-    if (rn < 0.005 && controller) {
+    if (rn < FLAGS_ins_trace_ratio && controller) {
         const sofa::pbrpc::RpcController* sofa_controller;
         sofa_controller = static_cast<const sofa::pbrpc::RpcController*>(controller);
         LOG(INFO, "[trace] %s from %s", action, 
