@@ -10,7 +10,7 @@ PROTOC=protoc
 PBRPC_PATH ?=./thirdparty/sofa-pbrpc/output/
 BOOST_PATH ?=./thirdparty/boost/
 GFLAGS_PATH=./thirdparty/gflags/
-LEVELDB_PATH=./thirdparty/leveldb/
+NEXUS_LDB_PATH=./thirdparty/leveldb/
 GTEST_PATH=./gtest-1.7.0/
 PREFIX=/usr/local/
 
@@ -18,21 +18,21 @@ INCLUDE_PATH = -I./ -I$(PREFIX)/include -I$(PROTOBUF_PATH)/include \
                -I$(PBRPC_PATH)/include \
                -I$(SNAPPY_PATH)/include \
                -I$(GFLAGS_PATH)/include \
-               -I$(LEVELDB_PATH)/include \
+               -I$(NEXUS_LDB_PATH)/include \
                -I$(BOOST_PATH)
 
 LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(PBRPC_PATH)/lib -lsofa-pbrpc -lprotobuf \
           -L$(SNAPPY_PATH)/lib -lsnappy \
           -L$(GFLAGS_PATH)/lib -lgflags \
-          -L$(LEVELDB_PATH)/lib -lleveldb \
+          -L$(NEXUS_LDB_PATH) -lleveldb \
           -lrt -lz -lpthread
 
 LDFLAGS_SO = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(PBRPC_PATH)/lib -Wl,--whole-archive -lsofa-pbrpc -lprotobuf -Wl,--no-whole-archive \
           -L$(SNAPPY_PATH)/lib -lsnappy \
           -L$(GFLAGS_PATH)/lib -Wl,--whole-archive -lgflags -Wl,--no-whole-archive \
-          -L$(LEVELDB_PATH)/lib -lleveldb \
+          -L$(NEXUS_LDB_PATH) -lleveldb \
           -lz -lpthread
 
 CXXFLAGS += $(OPT)
