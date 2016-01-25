@@ -26,7 +26,7 @@ LDFLAGS = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(SNAPPY_PATH)/lib -lsnappy \
           -L$(GFLAGS_PATH)/lib -lgflags \
           -L$(LEVELDB_PATH)/lib -lleveldb \
-          -lz -lpthread
+          -lrt -lz -lpthread
 
 LDFLAGS_SO = -L$(PREFIX)/lib -L$(PROTOBUF_PATH)/lib \
           -L$(PBRPC_PATH)/lib -Wl,--whole-archive -lsofa-pbrpc -lprotobuf -Wl,--no-whole-archive \
