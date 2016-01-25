@@ -24,16 +24,16 @@ CXXFLAGS('-g -pipe -W -Wall -Werror -fPIC')
 PROTOC('../../../third-64/protobuf/bin/protoc')
 
 #链接参数.
-LDFLAGS('-lpthread -lcrypto -lrt -lz')
+LDFLAGS('-lleveldb -lpthread -lcrypto -lrt -lz -L ./thirdparty/leveldb')
 
 #依赖模块
 CONFIGS('public/sofa-pbrpc@trunk@comake')
 CONFIGS('third-64/gtest@1.6.0.100')
 CONFIGS('third-64/gflags@gflags_2-0-0-100_PD_BL')
-CONFIGS('third-64/leveldb@base')
+#CONFIGS('third-64/leveldb@base')
 CONFIGS('third-64/tcmalloc@base')
 
-INCPATHS('. ./src ./output/include')
+INCPATHS('. ./src ./output/include ./thirdparty/leveldb/include')
 
 ins_sources = 'server/ins_main.cc server/ins_node_impl.cc server/flags.cc \
                server/user_manage.cc server/performance_center.cc common/logging.cc \

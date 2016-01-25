@@ -1984,16 +1984,8 @@ void InsNodeImpl::Register(::google::protobuf::RpcController* /*controller*/,
 }
 
 void InsNodeImpl::DelBinlog(int64_t index) {
-    LOG(DEBUG, "delete binlog [%ld]", index);
-    bool ret = binlogger_->RemoveSlot(index);
-    if (ret) {
-        binlog_cleaner_.DelayTask(4, //4ms delay
-            boost::bind(&InsNodeImpl::DelBinlog, this, index -1 )
-        );
-    } else {
-        LOG(INFO, "delete binlog stop at [%ld]", index);
-        return;
-    }
+    LOG(INFO, "delete binlog before [%ld]", index);
+    binlogger_->RemoveSlotBefore(index);
 }
 
 void InsNodeImpl::CleanBinlog(::google::protobuf::RpcController* /*controller*/,

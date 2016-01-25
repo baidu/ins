@@ -98,6 +98,11 @@ bool BinLogger::RemoveSlot(int64_t slot_index) {
     }
 }
 
+bool BinLogger::RemoveSlotBefore(int64_t slot_gc_index) {
+    db_->SetNexusGCKey(slot_gc_index);
+    return true;
+}
+
 bool BinLogger::ReadSlot(int64_t slot_index, LogEntry* log_entry) {
     std::string value;
     std::string key = IntToString(slot_index);

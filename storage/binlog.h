@@ -39,6 +39,7 @@ public:
        const ::google::protobuf::RepeatedPtrField< ::galaxy::ins::Entry > &entries
     );
     bool RemoveSlot(int64_t slot_index);
+    bool RemoveSlotBefore(int64_t slot_gc_index);
     static std::string IntToString(int64_t num);
     static int64_t StringToInt(const std::string& s);
     void GetLastLogIndexAndTerm(int64_t* last_log_index, int64_t* last_log_term);
