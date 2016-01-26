@@ -583,6 +583,21 @@ void DBImpl::CompactRange(const Slice* begin, const Slice* end) {
 
 void DBImpl::SetNexusGCKey(int64_t gc_key) {
   nexus_gc_key_ = gc_key;
+  Log(options_.info_log, "major compcat start ...");
+  int max_level_with_files = 1;
+  {
+    MutexLock l(&mutex_);
+    Version* base = versions_->current();
+    for (int level = 1; level < config::kNumLevels; level++) {
+      if (base->OverlapInLevel(level, NULL, NULL)) {
+        max_level_with_files = level;
+      }
+    }
+  }
+  for (int level = 1; level < max_level_with_files; level++) {
+    TEST_CompactRange(level, NULL, NULL);
+  }
+  Log(options_.info_log, "major compcat done.");
 }
 
 void DBImpl::TEST_CompactRange(int level, const Slice* begin,const Slice* end) {
