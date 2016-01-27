@@ -26,4 +26,5 @@ tar xf v2.1.2.tar.gz
 cd gflags-2.1.2 && cmake -DGFLAGS_NAMESPACE=google -DCMAKE_CXX_FLAGS=-fPIC -DCMAKE_INSTALL_PREFIX:PATH="$base_dir/depends" && make -j4 && make install
 
 cd $base_dir
+export PATH=$PATH:./depends/bin
 make -j4
