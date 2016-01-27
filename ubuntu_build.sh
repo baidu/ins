@@ -1,24 +1,29 @@
 #! /bin/bash
 
 sudo apt-get install libboost-dev libsnappy-dev
+sudo apt-get install zlib1g-dev
 
+mkdir depends
+script_name=`readlink -f $0`
+base_dir=`dirname $script_name`
+
+cd $base_dir/thirdparty
 git clone --depth=1 https://github.com/00k/protobuf >/dev/null
 mv protobuf/protobuf-2.6.1.tar.gz .
 tar zxf protobuf-2.6.1.tar.gz >/dev/null
 cd protobuf-2.6.1
-./configure --disable-shared --with-pic  >/dev/null
+./configure --disable-shared --with-pic --prefix $base_dir/depends >/dev/null
 make -j4 >/dev/null
-sudo make install
-cd -
+make install
 
-sudo apt-get install zlib1g-dev
-git clone https://github.com/baidu/sofa-pbrpc.git ./thirdparty/sofa-pbrpc
-cd thirdparty/sofa-pbrpc && make -j4 && make install
-cd -
+cd $base_dir/thirdparty
+git clone https://github.com/baidu/sofa-pbrpc.git ./sofa-pbrpc
+cd ./sofa-pbrpc && make -j4 && make install
 
+cd $base_dir/thirdparty
 wget https://github.com/gflags/gflags/archive/v2.1.2.tar.gz
 tar xf v2.1.2.tar.gz
-cd gflags-2.1.2 && cmake -DGFLAGS_NAMESPACE=google -DCMAKE_CXX_FLAGS=-fPIC && make -j4 && sudo make install
-cd -
+cd gflags-2.1.2 && cmake -DGFLAGS_NAMESPACE=google -DCMAKE_CXX_FLAGS=-fPIC -DCMAKE_INSTALL_PREFIX:PATH="$base_dir/depends" && make -j4 && make install
 
+cd $base_dir
 make -j4
