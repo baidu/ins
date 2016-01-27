@@ -70,8 +70,10 @@ BIN = ins ins_cli sample
 LIB = libins_sdk.a
 PY_LIB = libins_py.so
 
-all: $(BIN) cp $(LIB)
+all: nexus_ldb $(BIN) cp $(LIB)
 
+nexus_ldb: 
+	cd ./thirdparty/leveldb && make
 # Depends
 $(INS_OBJ) $(INS_CLI_OBJ) $(TEST_OBJ) $(UTIL_OBJ): $(PROTO_HEADER)
 $(UTIL_OBJ): $(UTIL_HEADER)

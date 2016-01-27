@@ -1,12 +1,14 @@
 #! /bin/bash
 
-sudo apt-get install libleveldb-dev
 sudo apt-get install libboost-dev libsnappy-dev
 
-PROTOBUF_VERSION=2.6.0
-wget https://github.com/google/protobuf/releases/download/v$PROTOBUF_VERSION/protobuf-$PROTOBUF_VERSION.tar.gz
-tar xf protobuf-$PROTOBUF_VERSION.tar.gz
-cd protobuf-$PROTOBUF_VERSION && ./configure && make -j4 && sudo make install && sudo ldconfig
+git clone --depth=1 https://github.com/00k/protobuf >/dev/null
+mv protobuf/protobuf-2.6.1.tar.gz .
+tar zxf protobuf-2.6.1.tar.gz >/dev/null
+cd protobuf-2.6.1
+./configure --disable-shared --with-pic  >/dev/null
+make -j4 >/dev/null
+sudo make install
 cd -
 
 sudo apt-get install zlib1g-dev
