@@ -1,5 +1,9 @@
 language: cpp
 compiler: gcc
 sudo: required
+install:
+    - echo | sudo apt-add-repository ppa:boost-latest/ppa
+    - sudo apt-get update
+    - sudo apt-get install libboost-dev libsnappy-dev zlib1g-dev
 script: 
     - sh -x ubuntu_build.sh

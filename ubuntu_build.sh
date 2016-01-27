@@ -18,6 +18,7 @@ make install
 
 cd $base_dir/thirdparty
 git clone https://github.com/baidu/sofa-pbrpc.git ./sofa-pbrpc
+sed -r 's|PROTOBUF_DIR=(.+)|PROTOBUF_DIR='"${base_dir}/depends"'|g' -i ./sofa-pbrpc/depends.mk
 cd ./sofa-pbrpc && make -j4 && make install
 
 cd $base_dir/thirdparty
