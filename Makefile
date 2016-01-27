@@ -71,7 +71,7 @@ BIN = ins ins_cli sample
 LIB = libins_sdk.a
 PY_LIB = libins_py.so
 
-all: nexus_ldb $(BIN) cp $(LIB)
+all: $(BIN) cp $(LIB)
 
 nexus_ldb: 
 	cd ./thirdparty/leveldb && make
@@ -82,13 +82,13 @@ $(INS_CLI_OBJ): $(INS_CLI_HEADER)
 $(SAMPLE_OBJ): $(SAMPLE_HEADER)
 
 # Targets
-ins: $(INS_OBJ) $(UTIL_OBJS) $(OBJS)
+ins: $(INS_OBJ) $(UTIL_OBJS) $(OBJS) nexus_ldb
 	$(CXX) $(INS_OBJ) $(UTIL_OBJS) $(OBJS) -o $@ $(LDFLAGS)
 
-ins_cli: $(INS_CLI_OBJ) $(OBJS)
+ins_cli: $(INS_CLI_OBJ) $(OBJS) nexus_ldb
 	$(CXX) $(INS_CLI_OBJ) $(OBJS) -o $@ $(LDFLAGS)
 
-sample: $(SAMPLE_OBJ) $(SDK_OBJ) $(LIB)
+sample: $(SAMPLE_OBJ) $(SDK_OBJ) $(LIB) nexus_ldb
 	$(CXX) $(SAMPLE_OBJ) $(LIB) -o $@ $(LDFLAGS)
 
 $(LIB): $(SDK_OBJ)
