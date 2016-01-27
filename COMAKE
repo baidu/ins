@@ -53,7 +53,9 @@ user_manage_test_sources = 'server/user_manage.cc server/user_manage_test.cc com
 storage_manage_test_sources = 'storage/storage_manage.cc storage/storage_manage_test.cc server/flags.cc common/logging.cc proto/ins_node.proto'
 performance_center_test_sources = 'server/performance_center.cc server/performance_center_test.cc server/flags.cc'
 
-Application('ins', Sources(ins_sources))
+TARGET('nexus_ldb', ShellCommands('cd thirdparty/leveldb && make'))
+
+Application('ins', Sources(ins_sources), Depends('nexus_ldb'))
 Application('ins_cli', Sources(ins_cli_sources))
 SharedLibrary('ins_py', Sources(ins_python_sources), LinkDeps(True))
 SharedLibrary('ins_sdk', Sources(ins_sdk_sources), LinkDeps(True))
@@ -65,3 +67,5 @@ Application('storage_manage_test', Sources(storage_manage_test_sources))
 Application('user_manage_test', Sources(user_manage_test_sources))
 Application('performance_center_test', Sources(performance_center_test_sources))
 Application('sample', Sources(sample_sources), Libraries('libins_sdk.a'))
+
+
