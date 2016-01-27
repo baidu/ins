@@ -1,4 +1,5 @@
 language: cpp
 compiler: gcc
+sudo: required
 script: 
     - sh -x ubuntu_build.sh
