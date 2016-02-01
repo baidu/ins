@@ -13,7 +13,7 @@ iNexus的理论基础是Raft一致性协议，这个协议主要解决了多个�
 [![Build Status](https://travis-ci.org/baidu/ins.svg?branch=master)](https://travis-ci.org/baidu/ins)
 
 # API使用说明
-https://github.com/fxsjy/ins/wiki
+https://github.com/baidu/ins/wiki
 
 # build for Baiduer
 * comake2 -UB
