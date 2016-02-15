@@ -15,11 +15,11 @@ GTEST_PATH=./gtest-1.7.0/
 PREFIX=/usr/local/
 DEPENDS=./depends/
 
-INCLUDE_PATH = -I./ -I$(PREFIX)/include -I$(PROTOBUF_PATH)/include \
+INCLUDE_PATH = -I./ -I$(NEXUS_LDB_PATH)/include -I$(PREFIX)/include -I$(PROTOBUF_PATH)/include \
                -I$(PBRPC_PATH)/include \
                -I$(SNAPPY_PATH)/include \
                -I$(GFLAGS_PATH)/include \
-               -I$(NEXUS_LDB_PATH)/include -I$(DEPENDS)/include \
+               -I$(DEPENDS)/include \
                -I$(BOOST_PATH)
 
 LDFLAGS = -L$(DEPENDS)/lib -L$(PROTOBUF_PATH)/lib \
