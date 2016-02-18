@@ -603,10 +603,6 @@ void InsSDK::KeepAliveTask() {
     if (session_expire) {
         MakeSessionID();
         LOG(INFO, "create a new session: %s", GetSessionID().c_str());
-        {
-            MutexLock lock(mu_);
-            lock_keys_.clear();
-        }
     }
     
     keep_alive_pool_->DelayTask(2000,
@@ -627,7 +623,20 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
             return;
         }
     }
-    if (!failed && (response_ptr->success() || response->uuid_expired())) {
+    bool trigger_when_session_timeout = false;
+    if (failed && request->session_id() != GetSessionID()) {
+        MutexLock lock(mu_);
+        if (lock_keys_.find(request->key()) != lock_keys_.end()) {
+            trigger_when_session_timeout = true;
+            response->set_watch_key(request->key());
+        }
+    }
+    if (trigger_when_session_timeout ||
+        (!failed && (response_ptr->success() || response->uuid_expired())) ){
+        if (trigger_when_session_timeout) {
+            LOG(INFO, "force trigger %s because session timeout", 
+                response_ptr->watch_key().c_str());
+        }
         WatchCallback cb = NULL;
         void * cb_ctx = NULL;
         {
