@@ -25,6 +25,7 @@
 DECLARE_string(cluster_members);
 DECLARE_int32(ins_watch_timeout);
 DECLARE_int32(ins_backup_watch_timeout);
+DECLARE_int64(ins_sdk_session_timeout);
 
 namespace galaxy {
 namespace ins {
@@ -591,7 +592,7 @@ void InsSDK::KeepAliveTask() {
         MutexLock lock(mu_);
         int64_t now = ins_common::timer::get_micros();
         int64_t span = now - last_succ_alive_timestamp_;
-        if (span > 30000000) {// 30 seconds
+        if (span > FLAGS_ins_sdk_session_timeout) {
             if (handle_session_timeout_) { //session timeout callback
                 LOG(INFO, "call user callback of session timeout: %x",
                     handle_session_timeout_);
@@ -624,7 +625,8 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
         }
     }
     bool trigger_when_session_timeout = false;
-    if (failed && request->session_id() != GetSessionID()) {
+    bool session_expired = (request->session_id() != GetSessionID());
+    if (session_expired) {
         MutexLock lock(mu_);
         if (lock_keys_.find(request->key()) != lock_keys_.end()) {
             trigger_when_session_timeout = true;
@@ -681,7 +683,7 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
         server_id = server_list[s_no];
     }
     if (!response_ptr->canceled()) { //retry, if not cancel
-        if (request->session_id() != GetSessionID()) {
+        if (session_expired) {
             LOG(INFO, "callback, no retry on expired watch");
             return;        
         }
