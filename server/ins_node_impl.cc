@@ -1189,6 +1189,9 @@ bool InsNodeImpl::LockIsAvailable(const std::string& user,
             if (old_it == sessions_.end() //expired session
                 && self_it != sessions_.end()) { 
                 lock_is_available = true;
+            } else if (old_it != sessions_.end() 
+                       && old_it->session_id == session_id) {
+                lock_is_available = true; // allow reentry
             }
         }
     }
