@@ -238,6 +238,11 @@ void InsNodeImpl::CommitIndexObserv() {
                     type_and_value.append(1, static_cast<char>(log_entry.op));
                     type_and_value.append(log_entry.value);
                     s = data_store_->Put(log_entry.user, log_entry.key, type_and_value);
+                    if (s == kUnknownUser) {
+                        if (data_store_->OpenDatabase(log_entry.user)) {
+                            s = data_store_->Put(log_entry.user, log_entry.key, type_and_value);
+                        }
+                    }
                     if (log_entry.op == kLock) {
                         TouchParentKey(log_entry.user, log_entry.key, 
                                        log_entry.value, "lock");
@@ -258,6 +263,11 @@ void InsNodeImpl::CommitIndexObserv() {
                     LOG(INFO, "delete from data_store_, key: %s",
                         log_entry.key.c_str());
                     s = data_store_->Delete(log_entry.user, log_entry.key);
+                    if (s == kUnknownUser) {
+                        if (data_store_->OpenDatabase(log_entry.user)) {
+                            s = data_store_->Delete(log_entry.user, log_entry.key);
+                        }
+                    }
                     assert(s == kOk);
                     event_trigger_.AddTask(
                         boost::bind(&InsNodeImpl::TriggerEventWithParent,
@@ -290,6 +300,11 @@ void InsNodeImpl::CommitIndexObserv() {
                             ParseValue(value, op, cur_session);
                             if (op == kLock && cur_session == old_session) { //DeleteIf
                                 s = data_store_->Delete(log_entry.user, key);
+                                if (s == kUnknownUser) {
+                                    if (data_store_->OpenDatabase(log_entry.user)) {
+                                       s = data_store_->Delete(log_entry.user, key); 
+                                    }
+                                }
                                 assert(s == kOk);
                                 LOG(INFO, "unlock on %s", key.c_str());
                                 TouchParentKey(log_entry.user, log_entry.key, 
