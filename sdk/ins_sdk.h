@@ -159,6 +159,7 @@ private:
     int64_t last_succ_alive_timestamp_;
     int64_t watch_task_id_;
     std::set<int64_t> pending_watches_;
+    bool loggin_expired_;
 };
 
 class ScanResult {

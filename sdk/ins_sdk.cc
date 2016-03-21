@@ -54,7 +54,8 @@ InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
                                                           keep_alive_pool_(NULL),
                                                           stop_(false),
                                                           keep_watch_pool_(NULL),
-                                                          session_timeout_ctx_(NULL) {
+                                                          session_timeout_ctx_(NULL),
+                                                          loggin_expired_(false) {
     Init(members);
 }
 void InsSDK::Init(const std::vector<std::string>& members) {
@@ -208,6 +209,10 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
             if (response.uuid_expired()) {
                 LOG(WARNING, "uuid is expired before put :%s", key.c_str());
                 *error = kUnknownUser;
+                {
+                    MutexLock lock(mu_);
+                    loggin_expired_ = true;
+                }
                 return false;
             }
             *error = kOK;
@@ -228,6 +233,10 @@ bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* err
                     if (response.uuid_expired()) {
                         LOG(WARNING, "uuid is expired before put :%s", key.c_str());
                         *error = kUnknownUser;
+                        {
+                            MutexLock lock(mu_);
+                            loggin_expired_ = true;
+                        }
                         return false;
                     }
                     *error = kOK;
@@ -279,6 +288,10 @@ bool InsSDK::Get(const std::string& key, std::string* value,
             if (response.uuid_expired()) {
                 LOG(WARNING, "uuid is expired before get :%s", key.c_str());
                 *error = kUnknownUser;
+                {
+                    MutexLock lock(mu_);
+                    loggin_expired_ = true;
+                }
                 return false;
             }
             if (response.hit()) {
@@ -304,6 +317,10 @@ bool InsSDK::Get(const std::string& key, std::string* value,
                     if (response.uuid_expired()) {
                         LOG(WARNING, "uuid is expired before get :%s", key.c_str());
                         *error = kUnknownUser;
+                        {
+                            MutexLock lock(mu_);
+                            loggin_expired_ = true;
+                        }
                         return false;
                     }
                     if (response.hit()) {
@@ -369,6 +386,10 @@ bool InsSDK::ScanOnce(const std::string& start_key,
                 LOG(WARNING, "uuid is expired before scan :[%s, %s)",
                         start_key.c_str(), end_key.c_str());
                 *error = kUnknownUser;
+                {
+                    MutexLock lock(mu_);
+                    loggin_expired_ = true;
+                }
                 return false;
             }
             *error = kOK;
@@ -396,6 +417,10 @@ bool InsSDK::ScanOnce(const std::string& start_key,
                         LOG(WARNING, "uuid is expired before scan :[%s, %s)",
                                 start_key.c_str(), end_key.c_str());
                         *error = kUnknownUser;
+                        {
+                            MutexLock lock(mu_);
+                            loggin_expired_ = true;
+                        }
                         return false;
                     }
                     *error = kOK;
@@ -450,6 +475,10 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
             if (response.uuid_expired()) {
                 LOG(WARNING, "uuid is expired before delete :%s", key.c_str());
                 *error = kUnknownUser;
+                {
+                    MutexLock lock(mu_);
+                    loggin_expired_ = true;
+                }
                 return false;
             }
             *error = kOK;
@@ -470,6 +499,10 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
                     if (response.uuid_expired()) {
                         LOG(WARNING, "uuid is expired before delete :%s", key.c_str());
                         *error = kUnknownUser;
+                        {
+                            MutexLock lock(mu_);
+                            loggin_expired_ = true;
+                        }
                         return false;
                     }
                     *error = kOK;
@@ -665,6 +698,10 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                 param.key = "";
                 param.value = "";
                 param.deleted = false;
+                {
+                    MutexLock lock(mu_);
+                    loggin_expired_ = true;
+                }
                 cb(param, kUnknownUser);
             } else {
                 param.key = response_ptr->key();
@@ -862,6 +899,10 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
             if (response.uuid_expired()) {
                 LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
                 *error = kUnknownUser;
+                {
+                    MutexLock lock(mu_);
+                    loggin_expired_ = true;
+                }
                 return false;
             }
             *error = kOK;
@@ -882,6 +923,10 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
                     if (response.uuid_expired()) {
                         LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
                         *error = kUnknownUser;
+                        {
+                            MutexLock lock(mu_);
+                            loggin_expired_ = true;
+                        }
                         return false;
                     }
                     *error = kOK;
@@ -932,6 +977,10 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
             if (response.uuid_expired()) {
                 LOG(WARNING, "uuid is expired before unlock :%s", key.c_str());
                 *error = kUnknownUser;
+                {
+                    MutexLock lock(mu_);
+                    loggin_expired_ = true;
+                }
                 return false;
             }
             *error = kOK;
@@ -953,6 +1002,10 @@ bool InsSDK::UnLock(const std::string& key, SDKError* error) {
                     if (response.uuid_expired()) {
                         LOG(WARNING, "uuid is expired before unlock :%s", key.c_str());
                         *error = kUnknownUser;
+                        {
+                            MutexLock lock(mu_);
+                            loggin_expired_ = true;
+                        }
                         return false;
                     }
                     *error = kOK;
@@ -983,7 +1036,7 @@ bool InsSDK::Login(const std::string& username,
                    SDKError* error) {
     {
         MutexLock lock(mu_);
-        if (!logged_uuid_.empty()) {
+        if (!logged_uuid_.empty() && !loggin_expired_) {
             *error = kUserExists;
             return false;
         }
@@ -1027,7 +1080,11 @@ bool InsSDK::Login(const std::string& username,
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
                 switch(response.status()) {
-                case galaxy::ins::kOk: *error = kOK; logged_uuid_ = response.uuid(); return true;
+                case galaxy::ins::kOk:
+                    *error = kOK; 
+                    logged_uuid_ = response.uuid();
+                    loggin_expired_ = false;
+                    return true;
                 case galaxy::ins::kUnknownUser: *error = kUnknownUser; return false;
                 case galaxy::ins::kPasswordError: *error = kPasswordError; return false;
                 default: break; // pass
@@ -1048,6 +1105,7 @@ bool InsSDK::Login(const std::string& username,
                         switch(response.status()) {
                         case galaxy::ins::kOk: *error = kOK;
                                                logged_uuid_ = response.uuid();
+                                               loggin_expired_ = false;
                                                return true;
                         case galaxy::ins::kUnknownUser: *error = kUnknownUser; return false;
                         case galaxy::ins::kPasswordError: *error = kPasswordError; return false;
