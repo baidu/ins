@@ -453,6 +453,7 @@ bool InsSDK::Delete(const std::string& key, SDKError* error) {
         LOG(DEBUG, "rpc to %s", server_id.c_str());
         galaxy::ins::InsNode_Stub *stub, *stub2;
         rpc_client_->GetStub(server_id, &stub);
+        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::DelRequest request;
         galaxy::ins::DelResponse response;
         {

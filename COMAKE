@@ -21,6 +21,7 @@ CFLAGS('-g -pipe -W -Wall -fPIC')
 #C++编译参数.
 CXXFLAGS('-g -pipe -W -Wall -Werror -fPIC')
 
+PROTOC('../../../third-64/protobuf/bin/protoc')
 
 #链接参数.
 LDFLAGS('-lleveldb -lpthread -lcrypto -lrt -lz -L ./thirdparty/leveldb')
