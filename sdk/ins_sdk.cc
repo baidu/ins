@@ -1338,7 +1338,7 @@ std::string InsSDK::GetCurrentUserID() {
 
 bool InsSDK::IsLoggedIn() {
     MutexLock lock(mu_);
-    return !logged_uuid_.empty();
+    return !logged_uuid_.empty() && !loggin_expired_;
 }
 
 void InsSDK::RegisterSessionTimeout(void (*handle_session_timeout)(void *), void* ctx) {
