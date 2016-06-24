@@ -38,6 +38,8 @@ const std::string tag_last_applied_index = "#TAG_LAST_APPLIED_INDEX#";
 namespace galaxy {
 namespace ins {
 
+const static size_t sMaxPBSize = (26<<20);
+
 InsNodeImpl::InsNodeImpl(std::string& server_id,
                          const std::vector<std::string>& members
                          ) : stop_(false),
@@ -837,6 +839,7 @@ void InsNodeImpl::UpdateCommitIndex(int64_t a_index) {
 void InsNodeImpl::ReplicateLog(std::string follower_id) {
     MutexLock lock(&mu_);
     replicating_.insert(follower_id);
+    bool latest_replicating_ok = true;
     while (!stop_ && status_ == kLeader) {
         while (!stop_ && binlogger_->GetLength() <= next_index_[follower_id]) {
             LOG(DEBUG, "no new log entry for %s", follower_id.c_str());
@@ -860,6 +863,9 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         int64_t batch_span = binlogger_->GetLength() - index;
         batch_span = std::min(batch_span, 
                               static_cast<int64_t>(FLAGS_log_rep_batch_max));
+        if (!latest_replicating_ok) {
+            batch_span = std::min(1L, batch_span);
+        }
         std::string leader_id = self_id_;
         LogEntry prev_log_entry;
         if (prev_index > -1) {
@@ -927,11 +933,13 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
                 if (max_term == current_term_) {
                     UpdateCommitIndex(index + batch_span - 1);
                 }
+                latest_replicating_ok = true;
             } else if (response.is_busy()) {
                 mu_.Unlock();
                 LOG(FATAL, "delay replicate-rpc to %s , [busy]", 
                     follower_id.c_str());
                 ThisThread::Sleep(FLAGS_replication_retry_timespan);
+                latest_replicating_ok = true;
                 mu_.Lock();
             } else { // (index, term ) miss match
                 next_index_[follower_id] = std::min(next_index_[follower_id] - 1,
@@ -948,6 +956,7 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
             LOG(FATAL, "faild to send replicate-rpc to %s ", 
                 follower_id.c_str());
             ThisThread::Sleep(FLAGS_replication_retry_timespan);
+            latest_replicating_ok = false;
             mu_.Lock();
         }
     }
@@ -1364,10 +1373,15 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
     }
     bool has_more = false;
     int32_t count = 0;
+    size_t pb_size = 0;
     for (it->Seek(start_key);
          it->Valid() && (it->key() < end_key || end_key.empty());
          it->Next()) {
         if (count > size_limit) {
+            has_more = true;
+            break;
+        }
+        if (pb_size > sMaxPBSize ) {
             has_more = true;
             break;
         }
@@ -1387,6 +1401,8 @@ void InsNodeImpl::Scan(::google::protobuf::RpcController* controller,
         galaxy::ins::ScanItem* item = response->add_items();
         item->set_key(it->key());
         item->set_value(real_value);
+        pb_size += it->key().size();
+        pb_size += real_value.size();
         count ++;
     }
 
