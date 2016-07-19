@@ -844,14 +844,7 @@ bool InsSDK::Lock(const std::string& key, SDKError* error) {
             }
         }
     }
-    if (*error != kOK) {
-        return false;
-    }
-    {
-        MutexLock lock(mu_);
-        lock_keys_.insert(key);
-    }
-    return true;
+    return *error == kOK;
 }
 
 bool InsSDK::TryLock(const std::string& key, SDKError *error) {
@@ -892,48 +885,36 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
             continue;
         }
 
-        if (response.success() || response.uuid_expired()) {
+        if (!response.leader_id().empty()) {
+            server_id = response.leader_id();
+            LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
+            rpc_client_->GetStub(server_id, &stub2);
+            boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+            ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Lock,
+                                          &request, &response, 2, 1);
+            if (!ok) {
+                continue;
+            }
+        }
+
+        if (response.uuid_expired()) {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
+                loggin_expired_ = true;
             }
-            if (response.uuid_expired()) {
-                LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
-                *error = kUnknownUser;
-                {
-                    MutexLock lock(mu_);
-                    loggin_expired_ = true;
-                }
-                return false;
+            LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
+            *error = kUnknownUser;
+            return false;
+        }
+        if (response.success()) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+                lock_keys_.insert(key);
             }
             *error = kOK;
             return true;
-        } else {
-            if (!response.leader_id().empty()) {
-                server_id = response.leader_id();
-                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
-                rpc_client_->GetStub(server_id, &stub2);
-                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
-                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Lock,
-                                              &request, &response, 2, 1);
-                if (ok && (response.success() || response.uuid_expired())) {
-                    {
-                        MutexLock lock(mu_);
-                        leader_id_ = server_id;
-                    }
-                    if (response.uuid_expired()) {
-                        LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
-                        *error = kUnknownUser;
-                        {
-                            MutexLock lock(mu_);
-                            loggin_expired_ = true;
-                        }
-                        return false;
-                    }
-                    *error = kOK;
-                    return true;
-                }
-            }
         }
     }
     *error = kLockFail;
