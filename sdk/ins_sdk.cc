@@ -621,21 +621,26 @@ void InsSDK::KeepAliveTask() {
         }
     } // end of for
     
+    void* cb_ctx = NULL;
+    void (*cb)(void*);
+    cb = NULL;
     bool session_expire = false;
     {
         MutexLock lock(mu_);
         int64_t now = ins_common::timer::get_micros();
         int64_t span = now - last_succ_alive_timestamp_;
         if (span > FLAGS_ins_sdk_session_timeout) {
-            if (handle_session_timeout_) { //session timeout callback
-                LOG(INFO, "call user callback of session timeout: %x",
-                    handle_session_timeout_);
-                handle_session_timeout_(session_timeout_ctx_);
-            }
+            cb = handle_session_timeout_;
+            cb_ctx = session_timeout_ctx_;
             session_expire = true;
         }
     }
     if (session_expire) {
+        if (cb != NULL) {  // session timeout callback
+            LOG(INFO, "call user callback of session timeout: %x",
+                handle_session_timeout_);
+            cb(cb_ctx);
+        }
         MakeSessionID();
         LOG(INFO, "create a new session: %s", GetSessionID().c_str());
     }
@@ -658,28 +663,23 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
             return;
         }
     }
-    bool trigger_when_session_timeout = false;
     bool session_expired = (request->session_id() != GetSessionID());
-    if (session_expired) {
-        MutexLock lock(mu_);
-        if (lock_keys_.find(request->key()) != lock_keys_.end()) {
-            trigger_when_session_timeout = true;
-            response->set_watch_key(request->key());
-        }
-    }
-    if (trigger_when_session_timeout ||
-        (!failed && (response_ptr->success() || response->uuid_expired())) ){
-        if (trigger_when_session_timeout) {
+    if (session_expired ||
+        (!failed && (response->success() || response->uuid_expired())) ){
+        SDKError error = kOK;
+        if (session_expired) {
             LOG(INFO, "force trigger %s because session timeout", 
-                response_ptr->watch_key().c_str());
+                response->watch_key().c_str());
+            response->set_watch_key(request->key());
+            error = kClusterDown;
         }
         WatchCallback cb = NULL;
         void * cb_ctx = NULL;
         {
             MutexLock lock(mu_);
             leader_id_ = server_id;
-            cb = watch_cbs_[response_ptr->watch_key()];
-            cb_ctx = watch_ctx_[response_ptr->watch_key()];
+            cb = watch_cbs_[response->watch_key()];
+            cb_ctx = watch_ctx_[response->watch_key()];
         }
         if (cb) {
             {
@@ -699,28 +699,29 @@ void InsSDK::KeepWatchCallback(const galaxy::ins::WatchRequest* request,
                 param.key = "";
                 param.value = "";
                 param.deleted = false;
+                error = kUnknownUser;
                 {
                     MutexLock lock(mu_);
                     loggin_expired_ = true;
                 }
-                cb(param, kUnknownUser);
+                cb(param, error);
             } else {
-                param.key = response_ptr->key();
-                param.value = response_ptr->value();
-                param.deleted = response_ptr->deleted();
-                cb(param, kOK);
+                param.key = response->key();
+                param.value = response->value();
+                param.deleted = response->deleted();
+                cb(param, error);
             }
         }
         return;
-    } else if (!failed && !response_ptr->leader_id().empty()) {
-        server_id = response_ptr->leader_id();
+    } else if (!failed && !response->leader_id().empty()) {
+        server_id = response->leader_id();
     } else {
         std::vector<std::string> server_list;
         PrepareServerList(server_list);
         int s_no = (int32_t) (server_list.size() * rand()/(RAND_MAX+1.0));
         server_id = server_list[s_no];
     }
-    if (!response_ptr->canceled()) { //retry, if not cancel
+    if (!response->canceled()) { //retry, if not cancel
         if (session_expired) {
             LOG(INFO, "callback, no retry on expired watch");
             return;        
@@ -844,14 +845,7 @@ bool InsSDK::Lock(const std::string& key, SDKError* error) {
             }
         }
     }
-    if (*error != kOK) {
-        return false;
-    }
-    {
-        MutexLock lock(mu_);
-        lock_keys_.insert(key);
-    }
-    return true;
+    return *error == kOK;
 }
 
 bool InsSDK::TryLock(const std::string& key, SDKError *error) {
@@ -892,48 +886,36 @@ bool InsSDK::TryLock(const std::string& key, SDKError *error) {
             continue;
         }
 
-        if (response.success() || response.uuid_expired()) {
+        if (!response.leader_id().empty()) {
+            server_id = response.leader_id();
+            LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
+            rpc_client_->GetStub(server_id, &stub2);
+            boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
+            ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Lock,
+                                          &request, &response, 2, 1);
+            if (!ok) {
+                continue;
+            }
+        }
+
+        if (response.uuid_expired()) {
             {
                 MutexLock lock(mu_);
                 leader_id_ = server_id;
+                loggin_expired_ = true;
             }
-            if (response.uuid_expired()) {
-                LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
-                *error = kUnknownUser;
-                {
-                    MutexLock lock(mu_);
-                    loggin_expired_ = true;
-                }
-                return false;
+            LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
+            *error = kUnknownUser;
+            return false;
+        }
+        if (response.success()) {
+            {
+                MutexLock lock(mu_);
+                leader_id_ = server_id;
+                lock_keys_.insert(key);
             }
             *error = kOK;
             return true;
-        } else {
-            if (!response.leader_id().empty()) {
-                server_id = response.leader_id();
-                LOG(DEBUG, "redirect to leader :%s", server_id.c_str());
-                rpc_client_->GetStub(server_id, &stub2);
-                boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard2(stub2);
-                ok = rpc_client_->SendRequest(stub2, &InsNode_Stub::Lock,
-                                              &request, &response, 2, 1);
-                if (ok && (response.success() || response.uuid_expired())) {
-                    {
-                        MutexLock lock(mu_);
-                        leader_id_ = server_id;
-                    }
-                    if (response.uuid_expired()) {
-                        LOG(WARNING, "uuid is expired before lock :%s", key.c_str());
-                        *error = kUnknownUser;
-                        {
-                            MutexLock lock(mu_);
-                            loggin_expired_ = true;
-                        }
-                        return false;
-                    }
-                    *error = kOK;
-                    return true;
-                }
-            }
         }
     }
     *error = kLockFail;
