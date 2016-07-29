@@ -720,7 +720,7 @@ void InsNodeImpl::DoAppendEntries(const ::galaxy::ins::AppendEntriesRequest* req
                 done->Run();
                 return;
             }
-            if (request->prev_log_index() - last_applied_index_ 
+            if (commit_index_ - last_applied_index_ 
                 > FLAGS_max_commit_pending) {
                 response->set_current_term(current_term_);
                 response->set_success(false);
@@ -891,10 +891,11 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         request.set_prev_log_term(prev_term);
         request.set_leader_commit_index(cur_commit_index);
         bool has_bad_slot = false;
-        for (int idx = index; idx < (index + batch_span); idx++) {
+        for (int64_t idx = index; idx < (index + batch_span); idx++) {
             LogEntry log_entry;
             bool slot_ok = binlogger_->ReadSlot(idx, &log_entry);
             if (!slot_ok) {
+                LOG(INFO, "bad slot at %ld", idx);
                 has_bad_slot = true;
                 break;
             }
