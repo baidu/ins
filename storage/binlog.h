@@ -18,7 +18,7 @@ struct LogEntry {
     std::string key;
     std::string value;
     int64_t term;
-    LogEntry() : op(kNop), user("") {
+    LogEntry() : op(kNop), user(""), term(-1) {
     }
 };
 

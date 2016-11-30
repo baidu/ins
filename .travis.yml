@@ -7,3 +7,22 @@ install:
     - sudo apt-get install libboost-dev libsnappy-dev zlib1g-dev
 script: 
     - sh -x ubuntu_build.sh
+
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "fk8ZMcLDYG+fTkSzLrNDWbMjqk+XojEaTZ4ozHg2oEH5P8zylRvPHaK9SU1fzZ3im6aPoiIJa8HYB/gE3niWOwhfZgw09OZZKJ+f1JfUyzH0OhJ7tGidy90kQ3c589nxadiGSGmtoEmy52sxYCg2G7Hf4gUkF1/Rkv++JM/GF5Y="
+
+before_install:
+      - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+
+addons:
+  coverity_scan:
+    project:
+      name: "baidu/ins"
+      description: "iNexus, coordinate large scale services"
+    notification_email: j.zhangkai1994@gmail.com
+    build_command_prepend: "sh ./ubuntu_build.sh"
+    build_command:   "make -j 2"
+    branch_pattern: master

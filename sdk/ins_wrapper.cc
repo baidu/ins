@@ -107,7 +107,7 @@ bool SDKGet(InsSDK* sdk, const char* key, int key_len, char** buf_ptr, int32_t* 
             SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
-        return "";
+        return false;
     }
     std::string value;
     bool ret = sdk->Get(std::string(key, key_len), &value, error);
@@ -202,17 +202,21 @@ bool SDKRegister(InsSDK* sdk, const char* username, const char* password, SDKErr
 }
 
 const char* SDKGetSessionID(InsSDK* sdk) {
+    static char id_buf[64];
     if (sdk == NULL) {
         return "";
     }
-    return sdk->GetSessionID().c_str();
+    strncpy(id_buf, sdk->GetSessionID().c_str(), 64);
+    return id_buf;
 }
 
 const char* SDKGetCurrentUserID(InsSDK* sdk) {
+    static char id_buf[64];
     if (sdk == NULL) {
         return "";
     }
-    return sdk->GetCurrentUserID().c_str();
+    strncpy(id_buf, sdk->GetCurrentUserID().c_str(), 64);
+    return id_buf;
 }
 
 bool SDKIsLoggedIn(InsSDK* sdk) {
@@ -233,7 +237,7 @@ void SDKRegisterSessionTimeout(InsSDK* sdk, SessionTimeoutCallback handle_sessio
     pack->callback_wrapper = reinterpret_cast<AbstractFunc>(handle_session_timeout);
     pack->callback_id = callback_id;
     pack->ctx = ctx;
-    sdk->RegisterSessionTimeout(handle_session_timeout, ctx);
+    sdk->RegisterSessionTimeout(TimeoutWrapper, ctx);
 }
 
 // ----- ScanResult Wrappers -----

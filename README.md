@@ -11,6 +11,7 @@ iNexus的理论基础是Raft一致性协议，这个协议主要解决了多个�
 
 
 [![Build Status](https://travis-ci.org/baidu/ins.svg?branch=master)](https://travis-ci.org/baidu/ins)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/10966/badge.svg)](https://scan.coverity.com/projects/10966)
 
 # API使用说明
 https://github.com/baidu/ins/wiki

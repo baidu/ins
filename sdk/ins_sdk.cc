@@ -49,15 +49,10 @@ InsSDK::InsSDK(const std::string& server_list) { //sperated by comma
     Init(members);
 }
 
-InsSDK::InsSDK(const std::vector<std::string>& members) : rpc_client_(NULL),
-                                                          mu_(NULL),
-                                                          keep_alive_pool_(NULL),
-                                                          stop_(false),
-                                                          keep_watch_pool_(NULL),
-                                                          session_timeout_ctx_(NULL),
-                                                          loggin_expired_(false) {
+InsSDK::InsSDK(const std::vector<std::string>& members) {
     Init(members);
 }
+
 void InsSDK::Init(const std::vector<std::string>& members) {
     rpc_client_ = NULL;
     mu_ = NULL;
@@ -66,6 +61,7 @@ void InsSDK::Init(const std::vector<std::string>& members) {
     keep_watch_pool_ = NULL;
     handle_session_timeout_ = NULL;
     session_timeout_ctx_ = NULL;
+    loggin_expired_ = false;
     watch_task_id_ = 0;
     last_succ_alive_timestamp_ = ins_common::timer::get_micros();
     if (members.size() < 1) {
