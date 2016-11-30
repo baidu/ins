@@ -202,17 +202,21 @@ bool SDKRegister(InsSDK* sdk, const char* username, const char* password, SDKErr
 }
 
 const char* SDKGetSessionID(InsSDK* sdk) {
+    static char id_buf[64];
     if (sdk == NULL) {
         return "";
     }
-    return sdk->GetSessionID().c_str();
+    strncpy(id_buf, sdk->GetSessionID().c_str(), 64);
+    return id_buf;
 }
 
 const char* SDKGetCurrentUserID(InsSDK* sdk) {
+    static char id_buf[64];
     if (sdk == NULL) {
         return "";
     }
-    return sdk->GetCurrentUserID().c_str();
+    strncpy(id_buf, sdk->GetCurrentUserID().c_str(), 64);
+    return id_buf;
 }
 
 bool SDKIsLoggedIn(InsSDK* sdk) {

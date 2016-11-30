@@ -64,7 +64,7 @@ TEST(BinLogTest, SlotReadTest) {
     char value_buf[1024] = {'\0'};
     for (int i=1; i<=200; i++) {
         LogEntry log_entry;
-        bin_logger.ReadSlot(i-1, &log_entry);
+        EXPECT_TRUE(bin_logger.ReadSlot(i-1, &log_entry));
         snprintf(key_buf, sizeof(key_buf), "key_%d", i);
         snprintf(value_buf, sizeof(value_buf), "value_%d", i);
         EXPECT_EQ(log_entry.key, std::string(key_buf));
