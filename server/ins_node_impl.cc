@@ -21,7 +21,7 @@ DECLARE_string(ins_binlog_dir);
 DECLARE_int32(max_cluster_size);
 DECLARE_int32(log_rep_batch_max);
 DECLARE_int32(replication_retry_timespan);
-DECLARE_int32(elect_timeout_min);
+DECLARE_int64(elect_timeout_min);
 DECLARE_int32(elect_timeout_max);
 DECLARE_int64(session_expire_timeout);
 DECLARE_int32(ins_gc_interval);
@@ -229,7 +229,6 @@ void InsNodeImpl::CommitIndexObserv() {
             Status s;
             std::string type_and_value;
             std::string new_uuid;
-            bool lock_succ = true;
             Status log_status = kError;
             switch(log_entry.op) {
                 case kPut:
@@ -357,13 +356,8 @@ void InsNodeImpl::CommitIndexObserv() {
                     ack.done->Run(); //client del ok;   
                 }
                 if (ack.lock_response) {
-                    if (lock_succ) {
-                        ack.lock_response->set_success(true);
-                        ack.lock_response->set_leader_id("");
-                    } else {
-                        ack.lock_response->set_success(false);
-                        ack.lock_response->set_leader_id("");
-                    }
+                    ack.lock_response->set_success(true);
+                    ack.lock_response->set_leader_id("");
                     ack.done->Run(); //client lock ok;   
                 }
                 if (ack.unlock_response) {

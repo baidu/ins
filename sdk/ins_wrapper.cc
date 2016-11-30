@@ -107,7 +107,7 @@ bool SDKGet(InsSDK* sdk, const char* key, int key_len, char** buf_ptr, int32_t* 
             SDKError* error) {
     if (sdk == NULL) {
         *error = kPermissionDenied;
-        return "";
+        return false;
     }
     std::string value;
     bool ret = sdk->Get(std::string(key, key_len), &value, error);
@@ -233,7 +233,7 @@ void SDKRegisterSessionTimeout(InsSDK* sdk, SessionTimeoutCallback handle_sessio
     pack->callback_wrapper = reinterpret_cast<AbstractFunc>(handle_session_timeout);
     pack->callback_id = callback_id;
     pack->ctx = ctx;
-    sdk->RegisterSessionTimeout(handle_session_timeout, ctx);
+    sdk->RegisterSessionTimeout(TimeoutWrapper, ctx);
 }
 
 // ----- ScanResult Wrappers -----
