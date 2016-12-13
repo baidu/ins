@@ -4,8 +4,10 @@
 //
 // Author: yanshiguang02@baidu.com
 
-#ifndef  COMMON_LOGGING_H_
-#define  COMMON_LOGGING_H_
+#ifndef  BAIDU_COMMON_LOGGING_H_
+#define  BAIDU_COMMON_LOGGING_H_
+
+#include <sstream>
 
 namespace ins_common {
 
@@ -17,18 +19,39 @@ enum LogLevel {
 };
 
 void SetLogLevel(int level);
+bool SetLogFile(const char* path, bool append = false);
+bool SetWarningFile(const char* path, bool append = false);
+bool SetLogSize(int size); // in MB
+bool SetLogCount(int count);
+bool SetLogSizeLimit(int size); // in MB
 
 void Log(int level, const char* fmt, ...);
 
-}
+class LogStream {
+public:
+    LogStream(int level);
+    template<class T>
+    LogStream& operator<<(const T& t) {
+        oss_ << t;
+        return *this;
+    }
+    ~LogStream();
+private:
+    int level_;
+    std::ostringstream oss_;
+};
 
-#define LOG(level, fmt, args...) Log(level, "[%s:%d] "fmt, __FILE__, __LINE__, ##args)
+} // namespace ins_common
 
 using ins_common::DEBUG;
 using ins_common::INFO;
 using ins_common::WARNING;
 using ins_common::FATAL;
 
-#endif  // COMMON_LOGGING_H_
+
+#define LOG(level, fmt, args...) ins_common::Log(level, "[%s:%d] "fmt, __FILE__, __LINE__, ##args)
+#define LOGS(level) ins_common::LogStream(level)
+
+#endif  // BAIDU_COMMON_LOGGING_H_
 
 /* vim: set expandtab ts=4 sw=4 sts=4 tw=100: */

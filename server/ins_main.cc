@@ -16,6 +16,9 @@ DECLARE_int32(ins_port);
 DECLARE_int32(server_id);
 DECLARE_int32(ins_max_throughput_in);
 DECLARE_int32(ins_max_throughput_out);
+DECLARE_string(ins_log_file);
+DECLARE_int32(ins_log_size);
+DECLARE_int32(ins_log_total_size);
 
 static volatile bool s_quit = false;
 static void SignalIntHandler(int /*sig*/){
@@ -24,6 +27,11 @@ static void SignalIntHandler(int /*sig*/){
 
 int main(int argc, char* argv[]) {
     google::ParseCommandLineFlags(&argc, &argv, true);
+    if (FLAGS_ins_log_file != "stdout") {
+        ins_common::SetLogFile(FLAGS_ins_log_file.c_str(), true);
+        ins_common::SetLogSize(FLAGS_ins_log_size);
+        ins_common::SetLogSizeLimit(FLAGS_ins_log_total_size);
+    }
     std::string host_name;
     std::vector<std::string> members;
     boost::split(members, FLAGS_cluster_members,
@@ -56,7 +64,7 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, SignalIntHandler);
     signal(SIGTERM, SignalIntHandler);
     while (!s_quit) {
-    	sleep(1);
+        sleep(1);
     }
     return 0;
 }

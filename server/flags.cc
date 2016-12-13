@@ -24,6 +24,9 @@ DEFINE_int32(ins_binlog_write_buffer_size, 4, "for binlog, leveldb write_buffer_
 DEFINE_int32(performance_interval, 1000, "milliseconds of the interval of performance counter ticktock");
 DEFINE_int32(performance_buffer_size, 60, "size of the buffer to hold the history record of performance data");
 DEFINE_double(ins_trace_ratio, 0.001, "trace log printing ratio");
+DEFINE_string(ins_log_file, "stdout", "filename of log file");
+DEFINE_int32(ins_log_size, 1024, "max size of single log file");
+DEFINE_int32(ins_log_total_size, 10240, "max size of all log file");
 
 //ins_cli only
 DEFINE_string(ins_cmd, "", "the command of inc shell");
