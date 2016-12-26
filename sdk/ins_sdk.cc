@@ -26,6 +26,9 @@ DECLARE_string(cluster_members);
 DECLARE_int32(ins_watch_timeout);
 DECLARE_int32(ins_backup_watch_timeout);
 DECLARE_int64(ins_sdk_session_timeout);
+DECLARE_string(ins_log_file);
+DECLARE_int32(ins_log_size);
+DECLARE_int32(ins_log_total_size);
 
 namespace galaxy {
 namespace ins {
@@ -64,6 +67,11 @@ void InsSDK::Init(const std::vector<std::string>& members) {
     loggin_expired_ = false;
     watch_task_id_ = 0;
     last_succ_alive_timestamp_ = ins_common::timer::get_micros();
+    if (FLAGS_ins_log_file != "stdout") {
+        ins_common::SetLogFile(FLAGS_ins_log_file.c_str(), true);
+        ins_common::SetLogSize(FLAGS_ins_log_size);
+        ins_common::SetLogSizeLimit(FLAGS_ins_log_total_size);
+    }
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
         abort();

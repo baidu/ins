@@ -23,6 +23,23 @@ static inline int32_t now_time() {
     return static_cast<int32_t>(get_micros() / 1000000);
 }
 
+static inline int32_t now_time_str(char* buf, int32_t len) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    const time_t seconds = tv.tv_sec;
+    struct tm t;
+    localtime_r(&seconds, &t);
+    int32_t ret = 0;
+    ret = snprintf(buf, len, "%02d/%02d %02d:%02d:%02d.%06d",
+        t.tm_mon + 1,
+        t.tm_mday,
+        t.tm_hour,
+        t.tm_min,
+        t.tm_sec,
+        static_cast<int>(tv.tv_usec));
+    return ret;
+}
+
 class AutoTimer {
 public:
     AutoTimer(int64_t timeout_ms, const char* msg1, const char* msg2 = NULL)
