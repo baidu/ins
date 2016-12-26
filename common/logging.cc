@@ -376,9 +376,6 @@ void Log(int level, const char* fmt, ...) {
         Logv(level, fmt, ap);
     }
     va_end(ap);
-    if (level >= FATAL) {
-        abort();
-    }
 }
 
 void RpcLogHandler(sofa::pbrpc::LogLevel level, const char* filename, int line,
@@ -394,6 +391,9 @@ void RpcLogHandler(sofa::pbrpc::LogLevel level, const char* filename, int line,
     }
     strncat(buf + ret, fmt, 1024 - ret);
     ins_common::Logv(level_map[level], buf, ap);
+    if (level == sofa::pbrpc::LOG_LEVEL_FATAL) {
+        abort();
+    }
 }
 
 LogStream::LogStream(int level) : level_(level) {}
