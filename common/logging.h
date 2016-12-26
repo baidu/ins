@@ -8,6 +8,7 @@
 #define  BAIDU_COMMON_LOGGING_H_
 
 #include <sstream>
+#include <sofa/pbrpc/common.h>
 
 namespace ins_common {
 
@@ -26,6 +27,9 @@ bool SetLogCount(int count);
 bool SetLogSizeLimit(int size); // in MB
 
 void Log(int level, const char* fmt, ...);
+// handle sofa-pbrpc logging
+void RpcLogHandler(sofa::pbrpc::LogLevel level, const char* filename, int line,
+                   const char* fmt, va_list ap);
 
 class LogStream {
 public:
@@ -47,7 +51,6 @@ using ins_common::DEBUG;
 using ins_common::INFO;
 using ins_common::WARNING;
 using ins_common::FATAL;
-
 
 #define LOG(level, fmt, args...) ins_common::Log(level, "[%s:%d] "fmt, __FILE__, __LINE__, ##args)
 #define LOGS(level) ins_common::LogStream(level)
