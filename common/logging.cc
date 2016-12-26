@@ -214,6 +214,7 @@ bool RecoverHistory(const char* path) {
             std::string file_name = dir + std::string(entry->d_name);
             struct stat sta;
             if (-1 == lstat(file_name.c_str(), &sta)) {
+                closedir(dir_ptr);
                 return false;
             }
             if (S_ISREG(sta.st_mode)) {
