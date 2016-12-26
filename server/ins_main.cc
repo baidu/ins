@@ -27,6 +27,8 @@ static void SignalIntHandler(int /*sig*/){
 
 int main(int argc, char* argv[]) {
     google::ParseCommandLineFlags(&argc, &argv, true);
+    SOFA_PBRPC_SET_LOG_LEVEL(WARNING);
+    sofa::pbrpc::set_log_handler(ins_common::RpcLogHandler);
     if (FLAGS_ins_log_file != "stdout") {
         ins_common::SetLogFile(FLAGS_ins_log_file.c_str(), true);
         ins_common::SetLogSize(FLAGS_ins_log_size);

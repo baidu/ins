@@ -380,6 +380,21 @@ void Log(int level, const char* fmt, ...) {
     }
 }
 
+void RpcLogHandler(sofa::pbrpc::LogLevel level, const char* filename, int line,
+                   const char* fmt, va_list ap) {
+    // map sofa-pbrpc log level to logging level in common
+    static int level_map[] = {
+        16, 12, 8, 4, 4, 3, 2
+    };
+    char buf[1024];
+    int ret = snprintf(buf, 1024, "[%s:%d] ", filename, line);
+    if (ret <= 0) {
+        return;
+    }
+    strncat(buf + ret, fmt, 1024 - ret);
+    ins_common::Logv(level_map[level], buf, ap);
+}
+
 LogStream::LogStream(int level) : level_(level) {}
 
 LogStream::~LogStream() {

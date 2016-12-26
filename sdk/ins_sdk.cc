@@ -67,6 +67,8 @@ void InsSDK::Init(const std::vector<std::string>& members) {
     loggin_expired_ = false;
     watch_task_id_ = 0;
     last_succ_alive_timestamp_ = ins_common::timer::get_micros();
+    SOFA_PBRPC_SET_LOG_LEVEL(WARNING);
+    sofa::pbrpc::set_log_handler(ins_common::RpcLogHandler);
     if (FLAGS_ins_log_file != "stdout") {
         ins_common::SetLogFile(FLAGS_ins_log_file.c_str(), true);
         ins_common::SetLogSize(FLAGS_ins_log_size);
