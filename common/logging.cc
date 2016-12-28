@@ -369,6 +369,16 @@ void Logv(int log_level, const char* format, va_list ap) {
 }
 
 void Log(int level, const char* fmt, ...) {
+    size_t head_len = strlen("[%s:%d] ");
+    size_t fmt_len  = strlen(fmt); 
+	
+    char* fmtp = new char[head_len + fmt_len];
+
+    memcpy(fmtp, "[%s:%d] ", head_len);
+    memcpy(fmtp + head_len, fmt, fmt_len);
+	
+    fmt = fmtp;
+
     va_list ap;
     va_start(ap, fmt);
 
@@ -376,6 +386,8 @@ void Log(int level, const char* fmt, ...) {
         Logv(level, fmt, ap);
     }
     va_end(ap);
+    
+    delete fmtp;
 }
 
 void RpcLogHandler(sofa::pbrpc::LogLevel level, const char* filename, int line,
