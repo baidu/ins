@@ -52,7 +52,7 @@ using ins_common::INFO;
 using ins_common::WARNING;
 using ins_common::FATAL;
 
-#define LOG(level, fmt, args...) ins_common::Log(level, "[%s:%d] "fmt, __FILE__, __LINE__, ##args)
+#define LOG(level, fmt, args...) ins_common::Log(level, "[%s:%d] " fmt, __FILE__, __LINE__, ##args)
 #define LOGS(level) ins_common::LogStream(level)
 
 #endif  // BAIDU_COMMON_LOGGING_H_
