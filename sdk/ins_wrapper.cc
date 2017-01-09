@@ -90,7 +90,7 @@ NodeStatInfo* SDKShowStatistics(InsSDK* sdk, int* count) {
 
 void DeleteStatArray(NodeStatInfo* pointer) {
     if (pointer != NULL) {
-        delete pointer;
+        delete[] pointer;
     }
 }
 

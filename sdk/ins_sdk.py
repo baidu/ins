@@ -43,8 +43,12 @@ class InsSDK:
     def __init__(self, members):
         if isinstance(members, basestring):
             self._sdk = _ins.GetSDK(members)
+        elif isinstance(members, list):
+            mlist_t = c_char_p * len(members)
+            member_list = mlist_t(*members)
+            self._sdk = _ins.GetSDKFromArray(len(members), member_list)
         else:
-            self._sdk = _ins.GetSDKFromArray(members)
+            raise TypeError('nexus needs a string or a list of string')
         self._local = threading.local()
         self._local.errno = c_int()
 
@@ -255,6 +259,10 @@ class ScanResult:
 
 _ins = CDLL('./libins_py.so')
 def _set_function_sign():
+    _ins.GetSDK.argtypes = [c_char_p]
+    _ins.GetSDK.restype = c_void_p
+    _ins.GetSDKFromArray.argtypes = [c_int, c_void_p]
+    _ins.GetSDKFromArray.restype = c_void_p
     _ins.SDKShowCluster.argtypes = [c_void_p, POINTER(c_int)]
     _ins.SDKShowCluster.restype = c_void_p
     _ins.SDKShowStatistics.argtypes = [c_void_p, POINTER(c_int)]
@@ -298,7 +306,12 @@ def _set_function_sign():
     _ins.ScanResultKey.restype = c_bool
     _ins.ScanResultValue.argtypes = [c_void_p, POINTER(c_char_p), POINTER(c_int)]
     _ins.ScanResultValue.restype = c_bool
+    _ins.ScanResultNext.argtypes = [c_void_p]
     _ins.FreeString.argtypes = [c_char_p]
     _ins.FreeString.restype = c_void_p
+    _ins.DeleteSDK.argtypes = [c_void_p]
+    _ins.DeleteClusterArray.argtypes = [c_void_p]
+    _ins.DeleteStatArray.argtypes = [c_void_p]
+    _ins.DeleteScanResult.argtypes = [c_void_p]
 _set_function_sign()
 
