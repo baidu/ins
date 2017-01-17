@@ -177,6 +177,31 @@ std::string InsSDK::StatusToString(int32_t status) {
     return "UnKnown";
 }
 
+std::string InsSDK::ErrorToString(SDKError error) {
+    switch (error) {
+    case kOK:
+            return "Ok";
+    case kClusterDown:
+            return "ClusterDown";
+    case kNoSuchKey:
+            return "NoSuckKey";
+    case kTimeout:
+            return "Timeout";
+    case kLockFail:
+            return "LockFail";
+    case kCleanBinlogFail:
+            return "CleanBinlogFail";
+    case kUserExists:
+            return "UserExists";
+    case kPermissionDenied:
+            return "PermissionDenied";
+    case kPasswordError:
+            return "PasswordError";
+    case kUnknownUser:
+            return "UnknownUser";
+    }
+    return "Unknown";
+}
 
 bool InsSDK::Put(const std::string& key, const std::string& value, SDKError* error) {
     std::vector<std::string> server_list;

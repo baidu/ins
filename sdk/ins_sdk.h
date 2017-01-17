@@ -118,6 +118,7 @@ public:
     bool IsLoggedIn();
     void RegisterSessionTimeout(void (*handle_session_timeout)(void*), void* ctx );
     static std::string StatusToString(int32_t status);
+    static std::string ErrorToString(SDKError error);
 
 private:
     void Init(const std::vector<std::string>& members);
