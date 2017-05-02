@@ -34,6 +34,18 @@ namespace galaxy {
 namespace ins {
 namespace sdk {
 
+static pthread_once_t s_ponce = PTHREAD_ONCE_INIT;
+
+static void InitLog() {
+    SOFA_PBRPC_SET_LOG_LEVEL(WARNING);
+    sofa::pbrpc::set_log_handler(ins_common::RpcLogHandler);
+    if (FLAGS_ins_log_file != "stdout") {
+        ins_common::SetLogFile(FLAGS_ins_log_file.c_str(), true);
+        ins_common::SetLogSize(FLAGS_ins_log_size);
+        ins_common::SetLogSizeLimit(FLAGS_ins_log_total_size);
+    }
+}
+
 void InsSDK::ParseFlagFromArgs(int argc, char* argv[], 
                                std::vector<std::string> * members) {
     google::ParseCommandLineFlags(&argc, &argv, true);
@@ -67,13 +79,7 @@ void InsSDK::Init(const std::vector<std::string>& members) {
     loggin_expired_ = false;
     watch_task_id_ = 0;
     last_succ_alive_timestamp_ = ins_common::timer::get_micros();
-    SOFA_PBRPC_SET_LOG_LEVEL(WARNING);
-    sofa::pbrpc::set_log_handler(ins_common::RpcLogHandler);
-    if (FLAGS_ins_log_file != "stdout") {
-        ins_common::SetLogFile(FLAGS_ins_log_file.c_str(), true);
-        ins_common::SetLogSize(FLAGS_ins_log_size);
-        ins_common::SetLogSizeLimit(FLAGS_ins_log_total_size);
-    }
+    pthread_once(&s_ponce, InitLog);
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
         abort();
