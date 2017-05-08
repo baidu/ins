@@ -13,7 +13,6 @@
 #include <vector>
 #include <boost/function.hpp>
 #include "mutex.h"
-#include "timer.h"
 
 namespace ins_common {
 
@@ -89,7 +88,7 @@ public:
     }
     int64_t DelayTask(int64_t delay, const Task& task) {
         MutexLock lock(&mutex_);
-        int64_t now_time = timer::get_micros() / 1000;
+        int64_t now_time = get_micros() / 1000;
         int64_t exe_time = now_time + delay;
         BGItem bg_item = {++last_task_id_, exe_time, task, false};
         time_queue_.push(bg_item);
@@ -126,6 +125,12 @@ private:
     ThreadPool(const ThreadPool&);
     void operator=(const ThreadPool&);
 
+    int64_t get_micros() {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        return static_cast<int64_t>(ts.tv_sec) * 1000000 + static_cast<int64_t>(ts.tv_nsec) / 1000;
+    }
+
     static void* ThreadWrapper(void* arg) {
         reinterpret_cast<ThreadPool*>(arg)->ThreadProc();
         return NULL;
@@ -142,7 +147,7 @@ private:
             }
             // Timer task
             if (!time_queue_.empty()) {
-                int64_t now_time = timer::get_micros() / 1000;
+                int64_t now_time = get_micros() / 1000;
                 BGItem bg_item = time_queue_.top();
                 if (now_time >= bg_item.exe_time) {
                     time_queue_.pop();

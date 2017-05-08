@@ -119,10 +119,14 @@ private:
 class CondVar {
 public:
     explicit CondVar(Mutex* mu) : mu_(mu) {
-        PthreadCall("init condvar", pthread_cond_init(&cond_, NULL));
+        // use monotonic clock
+        PthreadCall("condattr init ", pthread_condattr_init(&attr_));
+        PthreadCall("condattr setclock ", pthread_condattr_setclock(&attr_, CLOCK_MONOTONIC));
+        PthreadCall("condvar init with attr", pthread_cond_init(&cond_, &attr_));
     }
     ~CondVar() {
-        PthreadCall("destroy condvar", pthread_cond_destroy(&cond_));
+        PthreadCall("condvar destroy", pthread_cond_destroy(&cond_));
+        PthreadCall("condattr destroy", pthread_condattr_destroy(&attr_));
     }
     void Wait(const char* msg = NULL) {
         int64_t msg_threshold = mu_->msg_threshold_;
@@ -130,19 +134,26 @@ public:
         PthreadCall("condvar wait", pthread_cond_wait(&cond_, &mu_->mu_));
         mu_->AfterLock(msg, msg_threshold);
     }
-    // Time wait in m
-    bool TimeWait(int timeout, const char* msg = NULL) {
-        timespec ts;
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        int64_t usec = tv.tv_usec + timeout * 1000LL;
-        ts.tv_sec = tv.tv_sec + usec / 1000000;
-        ts.tv_nsec = (usec % 1000000) * 1000;
+    // Time wait in us
+    // timeout < 0 would cause ETIMEOUT and return false immediately
+    bool TimeWaitInUs(int timeout, const char* msg = NULL) {
+        // ref: http://www.qnx.com/developers/docs/6.5.0SP1.update/com.qnx.doc.neutrino_lib_ref/p/pthread_cond_timedwait.html
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        int64_t nsec = ((int64_t)timeout) * 1000 + ts.tv_nsec;
+        ts.tv_sec += nsec / 1000000000;
+        ts.tv_nsec = nsec % 1000000000;
+
         int64_t msg_threshold = mu_->msg_threshold_;
         mu_->BeforeUnlock();
         int ret = pthread_cond_timedwait(&cond_, &mu_->mu_, &ts);
         mu_->AfterLock(msg, msg_threshold);
         return (ret == 0);
+    }
+    // Time wait in ms
+    // timeout < 0 would cause ETIMEOUT and return false immediately
+    bool TimeWait(int timeout, const char* msg = NULL) {
+        return TimeWaitInUs(timeout * 1000LL, msg);
     }
     void Signal() {
         PthreadCall("signal", pthread_cond_signal(&cond_));
@@ -156,6 +167,7 @@ private:
     void operator=(const CondVar&);
     Mutex* mu_;
     pthread_cond_t cond_;
+    pthread_condattr_t attr_;
 };
 }  // namespace common
 
