@@ -524,7 +524,6 @@ void InsNodeImpl::BroadCastHeartBeat() {
         }
         InsNode_Stub* stub;
         rpc_client_.GetStub(*it, &stub);
-        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         ::galaxy::ins::AppendEntriesRequest* request = 
                     new ::galaxy::ins::AppendEntriesRequest();
         ::galaxy::ins::AppendEntriesResponse* response =
@@ -646,7 +645,6 @@ void InsNodeImpl::TryToBeLeader() {
         }
         InsNode_Stub* stub;
         rpc_client_.GetStub(*it, &stub);
-        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         ::galaxy::ins::VoteRequest* request = new ::galaxy::ins::VoteRequest();
         ::galaxy::ins::VoteResponse* response = new ::galaxy::ins::VoteResponse();
         request->set_candidate_id(self_id_);
@@ -876,7 +874,6 @@ void InsNodeImpl::ReplicateLog(std::string follower_id) {
         InsNode_Stub* stub;
         int64_t max_term = -1;
         rpc_client_.GetStub(follower_id, &stub);
-        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         galaxy::ins::AppendEntriesRequest request;
         galaxy::ins::AppendEntriesResponse response;
         request.set_term(cur_term);
@@ -1022,7 +1019,6 @@ void InsNodeImpl::Get(::google::protobuf::RpcController* controller,
             }
             InsNode_Stub* stub;
             rpc_client_.GetStub(*it, &stub);
-            boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
             ::galaxy::ins::AppendEntriesRequest* request = 
                         new ::galaxy::ins::AppendEntriesRequest();
             ::galaxy::ins::AppendEntriesResponse* response =
@@ -1480,7 +1476,6 @@ void InsNodeImpl::ForwardKeepAlive(const ::galaxy::ins::KeepAliveRequest * reque
     for (it = followers.begin(); it != followers.end(); it++) {
         InsNode_Stub* stub;
         rpc_client_.GetStub(*it, &stub);
-        boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
         ::galaxy::ins::KeepAliveRequest* forward_request = 
             new ::galaxy::ins::KeepAliveRequest();
         ::galaxy::ins::KeepAliveResponse* forward_response =
@@ -2116,7 +2111,6 @@ void InsNodeImpl::GarbageClean() {
             galaxy::ins::InsNode_Stub* stub;
             std::string server_id = *it;
             rpc_client_.GetStub(server_id, &stub);
-            boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
             ::galaxy::ins::ShowStatusRequest request;
             ::galaxy::ins::ShowStatusResponse response;
             bool ok = rpc_client_.SendRequest(stub, &InsNode_Stub::ShowStatus, 
@@ -2143,7 +2137,6 @@ void InsNodeImpl::GarbageClean() {
                     galaxy::ins::InsNode_Stub* stub;
                     std::string server_id = *it;
                     rpc_client_.GetStub(server_id, &stub);
-                    boost::scoped_ptr<galaxy::ins::InsNode_Stub> stub_guard(stub);
                     ::galaxy::ins::CleanBinlogRequest request;
                     ::galaxy::ins::CleanBinlogResponse response;
                     request.set_end_index(safe_clean_index);
