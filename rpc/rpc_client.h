@@ -7,6 +7,7 @@
 #ifndef  RPC_CLIENT_H_
 #define  RPC_CLIENT_H_
 
+#include <algorithm>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <sofa/pbrpc/pbrpc.h>
@@ -18,11 +19,13 @@ namespace galaxy {
 namespace ins {
 class RpcClient {
 public:
-    RpcClient() {
+    RpcClient(int work_thread = 4, int callback_thread = 4) {
         // 定义 client 对象，一个 client 程序只需要一个 client 对象
         // 可以通过 client_options 指定一些配置参数，譬如线程数、流控等
         sofa::pbrpc::RpcClientOptions options;
         options.max_pending_buffer_size = 10;
+        options.work_thread_num = work_thread;
+        options.callback_thread_num = callback_thread;
         rpc_client_ = new sofa::pbrpc::RpcClient(options);
     }
     ~RpcClient() {
@@ -30,11 +33,16 @@ public:
     }
     template <class T>
     bool GetStub(const std::string server, T** stub) {
-        MutexLock lock(&host_map_lock_);
+        MutexLock lock(&map_lock_);
+        StubMap::iterator it = stub_map_.find(server);
+        if (it != stub_map_.end()) {
+            *stub = static_cast<T*>(it->second);
+            return true;
+        }
         sofa::pbrpc::RpcChannel* channel = NULL;
-        HostMap::iterator it = host_map_.find(server);
-        if (it != host_map_.end()) {
-            channel = it->second;
+        HostMap::iterator jt = host_map_.find(server);
+        if (jt != host_map_.end()) {
+            channel = jt->second;
         } else {
             // 定义 channel，代表通讯通道，每个服务器地址对应一个 channel
             // 可以通过 channel_options 指定一些配置参数
@@ -43,6 +51,7 @@ public:
             host_map_[server] = channel;
         }
         *stub = new T(channel);
+        stub_map_[server] = *stub;
         return true;
     }
     template <class Stub, class Request, class Response, class Callback>
@@ -57,6 +66,15 @@ public:
         for (int32_t retry = 0; retry < retry_times; ++retry) {
             (stub->*func)(&controller, request, response, NULL);
             if (controller.Failed()) {
+                if (controller.ErrorCode() == sofa::pbrpc::RPC_ERROR_RESOLVE_ADDRESS) {
+                    // 重新解析DNS
+                    MutexLock lock(&map_lock_);
+                    const StubMap::const_iterator it = std::find_if(
+                            stub_map_.begin(), stub_map_.end(),
+                            boost::bind(&StubMap::value_type::second, _1) == stub);
+                    const HostMap::const_iterator jt = host_map_.find(it->first);
+                    jt->second->Init();
+                }
                 if (retry < retry_times - 1) {
                     LOG(WARNING, "Send failed, retry ...\n");
                     usleep(1000000);
@@ -81,21 +99,29 @@ public:
         sofa::pbrpc::RpcController* controller = new sofa::pbrpc::RpcController();
         controller->SetTimeout(rpc_timeout * 1000L);
         google::protobuf::Closure* done = 
-            sofa::pbrpc::NewClosure(&RpcClient::template RpcCallback<Request, Response, Callback>,
-                                          controller, request, response, callback);
+            sofa::pbrpc::NewClosure(&RpcClient::template RpcCallback<Stub, Request, Response, Callback>,
+                                          this, stub, controller, request, response, callback);
         (stub->*func)(controller, request, response, done);
     }
-    template <class Request, class Response, class Callback>
-    static void RpcCallback(sofa::pbrpc::RpcController* rpc_controller,
+    template <class Stub, class Request, class Response, class Callback>
+    static void RpcCallback(RpcClient* self,
+                            Stub* stub, sofa::pbrpc::RpcController* rpc_controller,
                             const Request* request,
                             Response* response,
                             boost::function<void (const Request*, Response*, bool, int)> callback) {
-
         bool failed = rpc_controller->Failed();
         int error = rpc_controller->ErrorCode();
         if (failed || error) {
             if (error != sofa::pbrpc::RPC_ERROR_SEND_BUFFER_FULL) {
                 LOG(WARNING, "RpcCallback: %s\n", rpc_controller->ErrorText().c_str());
+            }
+            if (error == sofa::pbrpc::RPC_ERROR_RESOLVE_ADDRESS) {
+                MutexLock lock(&self->map_lock_);
+                const StubMap::const_iterator it = std::find_if(
+                        self->stub_map_.begin(), self->stub_map_.end(),
+                        boost::bind(&StubMap::value_type::second, _1) == stub);
+                const HostMap::const_iterator jt = self->host_map_.find(it->first);
+                jt->second->Init();
             }
         }
         delete rpc_controller;
@@ -104,8 +130,10 @@ public:
 private:
     sofa::pbrpc::RpcClient* rpc_client_;
     typedef std::map<std::string, sofa::pbrpc::RpcChannel*> HostMap;
+    typedef std::map<std::string, void*> StubMap;
     HostMap host_map_;
-    Mutex host_map_lock_;
+    StubMap stub_map_;
+    Mutex map_lock_;
 };
 
 } // namespace ins
