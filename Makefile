@@ -52,6 +52,8 @@ COMMON_OBJ = $(patsubst %.cc, %.o, $(wildcard src/common/*.cc))
 NEXUS_NODE_SRC = $(wildcard src/server/*.cc) $(wildcard src/storage/*.cc)
 NEXUS_NODE_OBJ = $(patsubst %.cc, %.o, $(NEXUS_NODE_SRC))
 
+CLIENT_OBJ = $(patsubst %.cc, %.o, src/client/ncli.cc)
+
 INS_CLI_OBJ = $(patsubst %.cc, %.o, src/client/ins_cli.cc)
 
 SAMPLE_OBJ = $(patsubst %.cc, %.o, src/client/sample.cc)
@@ -75,12 +77,12 @@ TEST_STORAGE_MANAGER_OBJ = $(patsubst %.cc, %.o, $(TEST_STORAGE_MANAGER_SRC))
 TEST_USER_MANAGER_SRC = src/test/user_manage_test.cc src/server/user_manage.cc
 TEST_USER_MANAGER_OBJ = $(patsubst %.cc, %.o, $(TEST_USER_MANAGER_SRC))
 
-OBJS = $(PROTO_OBJ) $(COMMON_OBJ) $(NEXUS_NODE_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) \
+OBJS = $(PROTO_OBJ) $(COMMON_OBJ) $(NEXUS_NODE_OBJ) $(CLIENT_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) \
        $(CXX_SDK_OBJ) $(PYTHON_SDK_OBJ) $(TEST_BINLOG_OBJ) $(TEST_PERFORMANCE_OBJ) \
        $(TEST_STORAGE_MANAGER_OBJ) $(TEST_USER_MANAGER_OBJ)
 DEPS = $(patsubst %.o, %.d, $(OBJS))
 TESTS = test_binlog test_performance_center test_storage_manager test_user_manager
-BIN = nexus ins_cli sample
+BIN = nexus ncli ins_cli sample
 LIB = libins_sdk.a
 PYTHON_LIB = libins_py.so
 
@@ -105,6 +107,9 @@ $(OBJS): $(PROTO_HEADER)
 
 nexus: $(NEXUS_NODE_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) nexus_ldb
 	$(CXX) $(NEXUS_NODE_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(NEXUS_LDB_FLAGS)
+
+ncli: $(CLIENT_OBJ) libins_sdk.a
+	$(CXX) $(CLIENT_OBJ) -o $@ -L. -lins_sdk $(LDFLAGS)
 
 ins_cli: $(INS_CLI_OBJ) libins_sdk.a
 	$(CXX) $(INS_CLI_OBJ) -o $@ -L. -lins_sdk $(LDFLAGS)
