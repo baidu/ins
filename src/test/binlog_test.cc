@@ -2,7 +2,7 @@
 #include <boost/bind.hpp>
 #include <string>
 #include <stdlib.h>
-#include "binlog.h"
+#include "storage/binlog.h"
 
 using namespace galaxy::ins;
 
