@@ -26,7 +26,7 @@ The `sandbox` directory holds a few scripts for starting a test cluster on local
 * Use `ins_shell.sh` for old-fasioned nexus client, which uses script to wrap a binary client
 * Use `run_sample.sh` to start a 100k write times test and a 100k read times test
 
-In addition to script version of client, we introduced a new C++ version client, providing more convenient functions for testing and online operations.
+In addition to script version of client, we introduced a new C++ version [client](src/client/ncli.cc), providing more convenient functions for testing and online operations. This client also gives an example on how to work with nexus SDK.
 
 When deploying to online servers, please use `control.sh` for a single node to start/stop/restart or check the status of health.
 
