@@ -28,7 +28,7 @@ function build_boost() {
     if [ ! -f "${FLAGS_DIR}/boost_1_57_0" ] \
         || [ ! -d "${DEPS_DST}/boost_1_57_0/boost" ]; then
         cd ${DEPS_SRC}
-        wget -O boost_1_57_0.tar.gz https://jaist.dl.sourceforge.net/project/boost/boost/1.57.0/boost_1_57_0.tar.gz
+        wget -O boost_1_57_0.tar.gz http://kent.dl.sourceforge.net/project/boost/boost/1.57.0/boost_1_57_0.tar.gz
         tar zxf boost_1_57_0.tar.gz
         rm -rf ${DEPS_DST}/boost_1_57_0
         mv boost_1_57_0 ${DEPS_DST}
