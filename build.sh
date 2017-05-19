@@ -33,8 +33,6 @@ function build_boost() {
         rm -rf ${DEPS_DST}/boost_1_57_0
         mv boost_1_57_0 ${DEPS_DST}
         cd -
-        cd ${DEPS_DST}/boost_1_57_0 && ./bootstrap.sh && ./b2 link=static
-        cd -
         touch "${FLAGS_DIR}/boost_1_57_0"
     fi
 }
