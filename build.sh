@@ -86,8 +86,8 @@ function build_protobuf() {
 
 function build_sofa_pbrpc() {
     if [ ! -f "${FLAGS_DIR}/sofa-pbrpc_1_1_3" ] \
-        || [ ! -f "${DEPS_PREFIX}/lib/libsofa-pbrpc.a" ] \
-        || [ ! -d "${DEPS_PREFIX}/include/sofa/pbrpc" ]; then
+        || [ ! -f "${DEPS_DIR}/lib/libsofa-pbrpc.a" ] \
+        || [ ! -d "${DEPS_DIR}/include/sofa/pbrpc" ]; then
         cd ${DEPS_SRC}
         wget -O sofa-pbrpc-1.1.3.tar.gz https://github.com/baidu/sofa-pbrpc/archive/v1.1.3.tar.gz
         tar zxf sofa-pbrpc-1.1.3.tar.gz
@@ -115,7 +115,7 @@ function build_gtest() {
         wget -O gtest_1_7_0.tar.gz https://github.com/google/googletest/archive/release-1.7.0.tar.gz
         tar zxf gtest_1_7_0.tar.gz
         cd googletest-release-1.7.0
-        sed -i 's/-Wno-missing-field-initializers//g' cmake/internal_util.cmake
+        sed -i 's/-Wno-missing-field-initializers//g' cmake/internal_utils.cmake
         cmake .
         make -j 4
         cp -af lib*.a ${DEPS_DST}/lib

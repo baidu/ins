@@ -9,12 +9,12 @@ OPT ?= -g2 -Wall          # (B) Debug mode, w/ full line-level debugging symbols
 # Thirdparty
 PROTOC ?= ./depends/bin/protoc
 SNAPPY_PATH ?= ./depends
-BOOST_PATH ?=./depends/boost_1_57_0/boost
+BOOST_PATH ?=./depends/boost_1_57_0
 GFLAGS_PATH ?= ./depends
 PROTOBUF_PATH ?= ./depends
 PBRPC_PATH ?=./depends
 GTEST_PATH ?= ./depends
-NEXUS_LDB_PATH = ./thirdparty/leveldb/
+NEXUS_LDB_PATH = ./thirdparty/leveldb
 
 # Compiler related
 INCPATH = -I./ -I./src -I$(NEXUS_LDB_PATH)/include \
@@ -35,7 +35,7 @@ LDFLAGS_SO = -L$(PROTOBUF_PATH)/lib -L$(PBRPC_PATH)/lib \
              -L$(SNAPPY_PATH)/lib -lsnappy \
              -lz -lpthread
 
-NEXUS_LDB_FLAGS = -L$(NEXUS_LDB_PATH)/lib -lleveldb
+NEXUS_LDB_FLAGS = -L$(NEXUS_LDB_PATH) -lleveldb
 
 TESTFLAGS = -L$(GTEST_PATH)/lib -lgtest
 
@@ -49,6 +49,8 @@ PROTO_OBJ = $(patsubst %.cc, %.o, $(PROTO_SRC))
 
 COMMON_OBJ = $(patsubst %.cc, %.o, $(wildcard src/common/*.cc))
 
+FLAGS_OBJ = $(patsubst %.cc, %.o, src/server/flags.cc)
+
 NEXUS_NODE_SRC = $(wildcard src/server/*.cc) $(wildcard src/storage/*.cc)
 NEXUS_NODE_OBJ = $(patsubst %.cc, %.o, $(NEXUS_NODE_SRC))
 
@@ -58,8 +60,9 @@ INS_CLI_OBJ = $(patsubst %.cc, %.o, src/client/ins_cli.cc)
 
 SAMPLE_OBJ = $(patsubst %.cc, %.o, src/client/sample.cc)
 
-CXX_SDK_SRC = src/sdk/ins_sdk.cc src/server/flags.cc
+CXX_SDK_SRC = src/sdk/ins_sdk.cc
 CXX_SDK_OBJ = $(patsubst %.cc, %.o, $(CXX_SDK_SRC))
+CXX_SDK_HEADER = src/sdk/ins_sdk.h
 
 PYTHON_SDK_SRC = src/sdk/ins_wrapper.cc
 PYTHON_SDK_OBJ = $(patsubst %.cc, %.o, $(PYTHON_SDK_SRC))
@@ -71,13 +74,14 @@ TEST_BINLOG_OBJ = $(patsubst %.cc, %.o, $(TEST_BINLOG_SRC))
 TEST_PERFORMANCE_CENTER_SRC = src/test/performance_center_test.cc src/server/performance_center.cc
 TEST_PERFORMANCE_CENTER_OBJ = $(patsubst %.cc, %.o, $(TEST_PERFORMANCE_CENTER_SRC))
 
-TEST_STORAGE_MANAGER_SRC = src/test/storage_manager_test.cc src/storage/storage_manage.cc
+TEST_STORAGE_MANAGER_SRC = src/test/storage_manage_test.cc src/storage/storage_manage.cc
 TEST_STORAGE_MANAGER_OBJ = $(patsubst %.cc, %.o, $(TEST_STORAGE_MANAGER_SRC))
 
 TEST_USER_MANAGER_SRC = src/test/user_manage_test.cc src/server/user_manage.cc
 TEST_USER_MANAGER_OBJ = $(patsubst %.cc, %.o, $(TEST_USER_MANAGER_SRC))
 
-OBJS = $(PROTO_OBJ) $(COMMON_OBJ) $(NEXUS_NODE_OBJ) $(CLIENT_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) \
+OBJS = $(PROTO_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(NEXUS_NODE_OBJ) \
+	   $(CLIENT_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) \
        $(CXX_SDK_OBJ) $(PYTHON_SDK_OBJ) $(TEST_BINLOG_OBJ) $(TEST_PERFORMANCE_OBJ) \
        $(TEST_STORAGE_MANAGER_OBJ) $(TEST_USER_MANAGER_OBJ)
 DEPS = $(patsubst %.o, %.d, $(OBJS))
@@ -90,8 +94,10 @@ PYTHON_LIB = libins_py.so
 default: $(BIN) $(LIB) $(PYTHON_LIB)
 	mkdir -p output/bin
 	mkdir -p output/lib
+	mkdir -p output/include
 	cp -f $(BIN) ./output/bin
-	cp -f $(LIB) $(PYTHON_LIB) $(PYTHON_LIB_PY) ./output/lib
+	cp -f $(LIB) $(PYTHON_LIB) $(PYTHON_SDK_PY) ./output/lib
+	cp -f $(CXX_SDK_HEADER) ./output/include
 	@echo 'make done'
 
 # Dependencies
@@ -100,12 +106,12 @@ $(OBJS): $(PROTO_HEADER)
 
 # Building targets
 %.pb.h %.pb.cc: %.proto
-	$(PROTOC) --proto_path=./proto/ --proto_path=/usr/local/include --cpp_out=./proto/ $<
+	$(PROTOC) --proto_path=./src/proto/ --proto_path=/usr/local/include --cpp_out=./src/proto/ $<
 
 %.o: %.cc
-	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCPATH) -c $< -o $@
 
-nexus: $(NEXUS_NODE_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) nexus_ldb
+nexus: $(NEXUS_NODE_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ) nexus_ldb
 	$(CXX) $(NEXUS_NODE_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(NEXUS_LDB_FLAGS)
 
 ncli: $(CLIENT_OBJ) libins_sdk.a
@@ -117,23 +123,23 @@ ins_cli: $(INS_CLI_OBJ) libins_sdk.a
 sample: $(SAMPLE_OBJ) libins_sdk.a
 	$(CXX) $(SAMPLE_OBJ) -o $@ -L. -lins_sdk $(LDFLAGS)
 
-libins_sdk.a: $(CXX_SDK_OBJ) $(COMMON_OBJ) $(PROTO_OBJ)
+libins_sdk.a: $(CXX_SDK_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ)
 	ar -rs $@ $^
 
-libins_py.so: $(PYTHON_SDK_OBJ) $(CXX_SDK_OBJ) $(COMMON_OBJ) $(PROTO_OBJ)
+libins_py.so: $(PYTHON_SDK_OBJ) $(CXX_SDK_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ)
 	$(CXX) -shared -fPIC -Wl,-soname,$@ -o $@ $(LDFLAGS_SO) $^
 
-test_binlog: $(TEST_BINLOG_OBJ) $(COMMON_OBJ) $(PROTO_OBJ)
+test_binlog: $(TEST_BINLOG_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) nexus_ldb
+	$(CXX) $(TEST_BINLOG_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(TESTFLAGS) $(NEXUS_LDB_FLAGS)
+
+test_performance_center: $(TEST_PERFORMANCE_CENTER_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ)
 	$(CXX) $^ -o $@ $(LDFLAGS) $(TESTFLAGS)
 
-test_performance_center: $(TEST_PERFORMANCE_CENTER_OBJ) $(COMMON_OBJ)
-	$(CXX) $^ -o $@ $(LDFLAGS) $(TESTFLAGS)
+test_storage_manager: $(TEST_STORAGE_MANAGER_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ) nexus_ldb
+	$(CXX) $(TEST_STORAGE_MANAGER_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(TESTFLAGS) $(NEXUS_LDB_FLAGS)
 
-test_storage_manager: $(TEST_STORAGE_MANAGER_OBJ) $(COMMON_OBJ) $(PROTO_OBJ)
-	$(CXX) $^ -o $@ $(LDFLAGS) $(TESTFLAGS)
-
-test_user_manager: $(TEST_USER_MANAGER_OBJ) $(COMMON_OBJ) $(PROTO_OBJ)
-	$(CXX) $^ -o $@ $(LDFLAGS) $(TESTFLAGS)
+test_user_manager: $(TEST_USER_MANAGER_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) nexus_ldb
+	$(CXX) $(TEST_USER_MANAGER_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(TESTFLAGS) $(NEXUS_LDB_FLAGS)
 
 # Phony targets
 .PHONY: nexus_ldb all test sdk python install install_sdk uninstall clean
@@ -143,9 +149,11 @@ nexus_ldb:
 all: $(BIN) $(LIB) $(PYTHON_LIB) $(TESTS)
 	mkdir -p output/bin
 	mkdir -p output/lib
+	mkdir -p output/include
 	mkdir -p output/test
 	cp -f $(BIN) ./output/bin
-	cp -f $(LIB) $(PYTHON_LIB) ./output/lib
+	cp -f $(LIB) $(PYTHON_LIB) $(PYTHON_SDK_PY) ./output/lib
+	cp -f $(CXX_SDK_HEADER) ./output/include
 	cp -f $(TESTS) ./output/test
 	@echo 'make all done'
 
@@ -158,7 +166,9 @@ test: $(TESTS)
 
 sdk: $(LIB) $(PYTHON_LIB)
 	mkdir -p output/lib
+	mkdir -p output/include
 	cp -f $^ $(PYTHON_SDK_PY) ./output/lib
+	cp -f $(CXX_SDK_HEADER) ./output/include
 	@echo 'make sdk done'
 
 python: $(PYTHON_LIB)
@@ -173,12 +183,15 @@ install: $(BIN) install_sdk
 
 install_sdk: $(LIB) $(PYTHON_LIB)
 	mkdir -p $(PREFIX)/lib
+	mkdir -p $(PREFIX)/include
 	cp -f $(LIB) $(PYTHON_LIB) $(PYTHON_SDK_PY) $(PREFIX)/lib
+	cp -f $(CXX_SDK_HEADER) $(PREFIX)/include
 	@echo 'make install sdk done'
 
 uninstall:
 	rm -f $(addprefix $(PREFIX)/bin/, $(BIN))
-	rm -f $(addprefix $(PREFIX)/lib/, $(LIB) $(PYTHON_LIB))
+	rm -f $(addprefix $(PREFIX)/lib/, $(LIB) $(PYTHON_LIB), ins_sdk.py)
+	rm -f $(addprefix $(PREFIX)/include/, ins_sdk.h)
 	@echo 'make uninstall done'
 
 clean:
