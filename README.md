@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/baidu/ins.svg?branch=master)](https://travis-ci.org/baidu/ins)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/10966/badge.svg)](https://scan.coverity.com/projects/10966)
+[![Documentation Status](https://img.shields.io/badge/中文文档-最新-brightgreen.svg)](doc/introduction_cn.md)
 
 **nexus**, used to be known as *i name service(ins)*, is a high available key-value store to hold crucial meta data, which also support mechanism to coordinate large scale services.
 
