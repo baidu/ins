@@ -7,7 +7,7 @@
 using namespace galaxy::ins;
 
 TEST(BinLogTest, LogEntryDumpLoad) {
-    BinLogger bin_logger("/tmp/");
+    BinLogger bin_logger("/tmp/nexus_unittest/");
     LogEntry log_entry, log_entry2;
     log_entry.op = kNop;
     log_entry.key = "abc";
@@ -25,7 +25,7 @@ TEST(BinLogTest, LogEntryDumpLoad) {
 }
 
 TEST(BinLogTest, SlotWriteTest) {
-    BinLogger bin_logger("/tmp/");
+    BinLogger bin_logger("/tmp/nexus_unittest/");
     char key_buf[1024] = {'\0'};
     char value_buf[1024] = {'\0'};
     for (int i=1; i<=100; i++) {
@@ -41,7 +41,7 @@ TEST(BinLogTest, SlotWriteTest) {
 }
 
 TEST(BinLogTest, SlotBatchWriteTest) {
-    BinLogger bin_logger("/tmp/", true);
+    BinLogger bin_logger("/tmp/nexus_unittest/", true);
     char key_buf[1024] = {'\0'};
     char value_buf[1024] = {'\0'};
     ::google::protobuf::RepeatedPtrField< ::galaxy::ins::Entry > entries;
@@ -59,7 +59,7 @@ TEST(BinLogTest, SlotBatchWriteTest) {
 
 
 TEST(BinLogTest, SlotReadTest) {
-    BinLogger bin_logger("/tmp/");
+    BinLogger bin_logger("/tmp/nexus_unittest/");
     char key_buf[1024] = {'\0'};
     char value_buf[1024] = {'\0'};
     for (int i=1; i<=200; i++) {
@@ -76,7 +76,7 @@ TEST(BinLogTest, SlotReadTest) {
 
 
 TEST(BinLogTest, SlotTruncate) {
-    BinLogger bin_logger("/tmp/");
+    BinLogger bin_logger("/tmp/nexus_unittest/");
     EXPECT_EQ( bin_logger.GetLength(), 200 );
     bin_logger.Truncate(49);
     EXPECT_EQ( bin_logger.GetLength(), 50);

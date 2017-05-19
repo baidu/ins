@@ -158,6 +158,7 @@ all: $(BIN) $(LIB) $(PYTHON_LIB) $(TESTS)
 	@echo 'make all done'
 
 test: $(TESTS)
+	-rm -rf /tmp/nexus_unittest
 	./test_binlog
 	./test_performance_center
 	./test_storage_manager
