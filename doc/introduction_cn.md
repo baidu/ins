@@ -6,7 +6,7 @@
 
 nexus原本是[Galaxy集群管理系统](https://github.com/baidu/galaxy)的一个组件，用于寻址、元数据存储和分布式锁服务，提供类似*Google Chubby*的服务。之后也被用于包括[Tera分布式表格数据库](https://github.com/baidu/tera)等项目中。
 
-nexus可以用来管理集群服务，提供naming、元数据存储以及集群单例保证等功能。[这里](doc/usage_cn.md)列出了一些常见的使用方法，可以用做参考。
+nexus可以用来管理集群服务，提供naming、元数据存储以及集群单例保证等功能。[这里](usage_cn.md)列出了一些常见的使用方法，可以用做参考。
 
 ## 安装与使用
 
@@ -20,6 +20,8 @@ nexus可以用来管理集群服务，提供naming、元数据存储以及集群
 * `ins_shell.sh`会启动一个用脚本包装c++实现的nexus客户端。
 * `run_sample.sh`用于启动一个写入10万次后读取10万次的测试任务。
 
+集群和客户端使用GFlags来处理命令行参数，通过参数来控制内部的参数和行为。[这里](configuration_cn.md)列出了所有使用的参数。
+
 为方便部署和使用，除了最初设计的脚本形式的客户端外，新增了一个纯c++版本的[客户端](src/client/ncli.cc)，可以用于测试以及对线上集群的操作，也可以作为使用nexus SDK的参考。
 
 `control.sh`可以用于上线时控制单个节点的状态，设置正确的环境变量之后，可以控制起停以及检查节点的状态，方便自动上线。
@@ -28,8 +30,8 @@ nexus可以用来管理集群服务，提供naming、元数据存储以及集群
 
 目前nexus提供了c++和python两种语言的SDK，方便日常使用和web界面的开发。
 
-* c++的用户可以通过`make install_sdk`来将sdk发布到`PRFIX`指定的路径。[这里](doc/cxx_api_cn.md)是c++ API的手册可供参考。
-* python用户可以通过`make python`来发布python的库。[这里](doc/python_api_cn.md)是python的API手册。
+* c++的用户可以通过`make install_sdk`来将sdk发布到`PRFIX`指定的路径。[这里](cxx_api_cn.md)是c++ API的手册可供参考。
+* python用户可以通过`make python`来发布python的库。[这里](python_api_cn.md)是python的API手册。
 
 ## 编译依赖
 
