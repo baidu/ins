@@ -36,6 +36,8 @@ void command_help_message() {
         << "  clean [start key] [end key]   remove data by key range" << std::endl
         << "  scan [start key] [end key]    scan data by key range" << std::endl
         << "  keys [start key] [end key]    scan keys by key range" << std::endl
+        << "  ls [dir]                      list directory" << std::endl
+        << "  keyls [dir]                   list directory without value" << std::endl
         << "  watch [key]                   get event when value changed" << std::endl
         << "  lock [key]                    lock key" << std::endl
         << "  unlock [key]                  unlock key" << std::endl
