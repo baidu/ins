@@ -187,6 +187,7 @@ message KeepAliveRequest {
     optional string uuid = 2;
     repeated string locks = 3;
     optional bool forward_from_leader = 4 [default = false];
+    optional int64 timeout_milliseconds = 5 [default = 6000000];
 }
 
 message KeepAliveResponse {

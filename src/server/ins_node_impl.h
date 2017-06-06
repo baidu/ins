@@ -71,14 +71,14 @@ struct ClientReadAck
 struct Session {
     std::string session_id;
     std::string uuid;
-    int64_t last_report_time;
-    Session() : last_report_time(0) {
+    int64_t last_timeout_time;
+    Session() : last_timeout_time(0) {
 
     }
     Session(const std::string& sid,
             const std::string& uid) : session_id(sid),
                                       uuid(uid),
-                                      last_report_time(0) {
+                                      last_timeout_time(0) {
     }
 };
 
@@ -89,7 +89,7 @@ typedef multi_index_container<
          member<Session, std::string, &Session::session_id>
        >,
        ordered_non_unique<
-         member<Session, int64_t, &Session::last_report_time>
+         member<Session, int64_t, &Session::last_timeout_time>
        >
     >
 > SessionContainer;

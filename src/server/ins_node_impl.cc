@@ -1429,7 +1429,9 @@ void InsNodeImpl::KeepAlive(::google::protobuf::RpcController* controller,
     } //end of global mutex
     Session session;
     session.session_id = request->session_id();
-    session.last_report_time = ins_common::timer::get_micros();
+    int64_t timeout_time = request->has_timeout_milliseconds() ?
+            request->timeout_milliseconds() : FLAGS_session_expire_timeout;
+    session.last_timeout_time = ins_common::timer::get_micros() + timeout_time;
     session.uuid = request->uuid();
     {
         MutexLock lock(&sessions_mu_);
@@ -1513,8 +1515,7 @@ void InsNodeImpl::RemoveExpiredSessions() {
         MutexLock lock_session(&sessions_mu_);
         SessionTimeIndex& time_index = sessions_.get<1>();
         if (!sessions_.empty()) {
-            int64_t expired_line = ins_common::timer::get_micros() -
-                                   FLAGS_session_expire_timeout;
+            int64_t expired_line = ins_common::timer::get_micros();
             SessionTimeIndex::iterator it = time_index.lower_bound(expired_line);
             if (it != time_index.begin()) {
                 LOG(INFO, "remove expired session");
