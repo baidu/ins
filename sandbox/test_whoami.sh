@@ -1,2 +1,2 @@
 #!/bin/bash
-../output/bin/ins_cli --ins_cmd=whoami --flagfile=ins.flag
+../output/bin/ins_cli --ins_cmd=whoami --flagfile=nexus.flag

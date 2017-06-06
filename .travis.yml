@@ -1,12 +1,10 @@
 language: cpp
 compiler: gcc
-sudo: required
 install:
-    - echo | sudo apt-add-repository ppa:boost-latest/ppa
-    - sudo apt-get update
-    - sudo apt-get install libboost-dev libsnappy-dev zlib1g-dev
+    - bash -x build.sh
 script: 
-    - sh -x ubuntu_build.sh
+    - make all
+    - make test
 
 env:
   global:
@@ -21,8 +19,8 @@ addons:
   coverity_scan:
     project:
       name: "baidu/ins"
-      description: "iNexus, coordinate large scale services"
-    notification_email: j.zhangkai1994@gmail.com
-    build_command_prepend: "sh ./ubuntu_build.sh; make clean"
+      description: "Raft protocol based cluster coordinator"
+    notification_email: cs.zhangkai@outlook.com
+    build_command_prepend: "bash ./build.sh; make clean"
     build_command:   "make -j 4"
     branch_pattern: master

@@ -8,7 +8,7 @@
 using namespace galaxy::ins;
 
 TEST(StorageManageTest, OpenCloseTest) {
-    StorageManager storage_manager("/tmp/storage_test1");
+    StorageManager storage_manager("/tmp/nexus_unittest/storage_test1");
     bool ok = storage_manager.OpenDatabase("user1");
     EXPECT_TRUE(ok);
     ok = storage_manager.OpenDatabase("user2");
@@ -25,7 +25,7 @@ TEST(StorageManageTest, OpenCloseTest) {
 }
 
 TEST(StorageManageTest, GetPutDeleteTest) {
-    StorageManager storage_manager("/tmp/storage_test2");
+    StorageManager storage_manager("/tmp/nexus_unittest/storage_test2");
     bool ok = storage_manager.OpenDatabase("user1");
     EXPECT_TRUE(ok);
     std::string value;
@@ -76,7 +76,7 @@ TEST(StorageManageTest, GetPutDeleteTest) {
 }
 
 TEST(StorageManageTest, IteratorTest) {
-    StorageManager storage_manager("/tmp/storage_test3");
+    StorageManager storage_manager("/tmp/nexus_unittest/storage_test3");
     bool ok = storage_manager.OpenDatabase("user1");
     EXPECT_TRUE(ok);
     const std::string value_str = "value";

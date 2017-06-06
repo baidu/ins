@@ -1,3 +1,3 @@
 #!/bin/bash
-killall -9 ins
+killall -9 nexus
 

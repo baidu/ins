@@ -1,157 +1,203 @@
+# modify prefix to specify the installation target
+PREFIX=./output
+
+# switch OPT for different purpose
 # OPT ?= -O2 -DNDEBUG     # (A) Production use (optimized mode)
-OPT ?= -g2 -Wall -fPIC         # (B) Debug mode, w/ full line-level debugging symbols
+OPT ?= -g2 -Wall          # (B) Debug mode, w/ full line-level debugging symbols
 # OPT ?= -O2 -g2 -DNDEBUG # (C) Profiling mode: opt, but w/debugging symbols
 
 # Thirdparty
-SNAPPY_PATH=./thirdparty/snappy/
-PROTOBUF_PATH=./thirdparty/protobuf/
-PROTOC_PATH=./thirdparty/protobuf/bin/
-PROTOC=protoc
-PBRPC_PATH ?=./thirdparty/sofa-pbrpc/output/
-BOOST_PATH ?=./thirdparty/boost/
-GFLAGS_PATH=./thirdparty/gflags/
-NEXUS_LDB_PATH=./thirdparty/leveldb/
-GTEST_PATH=./gtest-1.7.0/
-PREFIX=/usr/local/
-DEPENDS=./depends/
+PROTOC ?= ./depends/bin/protoc
+SNAPPY_PATH ?= ./depends
+BOOST_PATH ?=./depends/boost_1_57_0
+GFLAGS_PATH ?= ./depends
+PROTOBUF_PATH ?= ./depends
+PBRPC_PATH ?=./depends
+GTEST_PATH ?= ./depends
+NEXUS_LDB_PATH = ./thirdparty/leveldb
 
-INCLUDE_PATH = -I./ -I$(NEXUS_LDB_PATH)/include -I$(PREFIX)/include -I$(PROTOBUF_PATH)/include \
-               -I$(PBRPC_PATH)/include \
-               -I$(SNAPPY_PATH)/include \
-               -I$(GFLAGS_PATH)/include \
-               -I$(DEPENDS)/include \
-               -I$(BOOST_PATH)
+# Compiler related
+INCPATH = -I./ -I./src -I$(NEXUS_LDB_PATH)/include \
+          -I$(SNAPPY_PATH)/include \
+          -I$(BOOST_PATH) \
+          -I$(GFLAGS_PATH)/include \
+          -I$(PROTOBUF_PATH)/include \
+          -I$(PBRPC_PATH)/include
 
-LDFLAGS = -L$(DEPENDS)/lib -L$(PROTOBUF_PATH)/lib \
-          -L$(PBRPC_PATH)/lib -lsofa-pbrpc -lprotobuf \
-          -L$(SNAPPY_PATH)/lib -lsnappy \
-          -L$(GFLAGS_PATH)/lib -lgflags \
-          -L$(NEXUS_LDB_PATH) -lleveldb -L$(PREFIX)/lib \
-          -lrt -lz -lpthread
+LDFLAGS += -L$(PROTOBUF_PATH)/lib -L$(PBRPC_PATH)/lib -lsofa-pbrpc -lprotobuf \
+           -L$(GFLAGS_PATH)/lib -lgflags \
+           -L$(SNAPPY_PATH)/lib -lsnappy \
+           -lrt -lz -lpthread
 
-LDFLAGS_SO = -L$(DEPENDS)/lib -L$(PROTOBUF_PATH)/lib \
-          -L$(PBRPC_PATH)/lib -Wl,--whole-archive -lsofa-pbrpc -lprotobuf -Wl,--no-whole-archive \
-          -L$(SNAPPY_PATH)/lib -lsnappy \
-          -L$(GFLAGS_PATH)/lib -Wl,--whole-archive -lgflags -Wl,--no-whole-archive \
-          -L$(NEXUS_LDB_PATH) -lleveldb -L$(PREFIX)/lib \
-          -lz -lpthread
+LDFLAGS_SO = -L$(PROTOBUF_PATH)/lib -L$(PBRPC_PATH)/lib \
+             -Wl,--whole-archive -lsofa-pbrpc -lprotobuf -Wl,--no-whole-archive \
+             -L$(GFLAGS_PATH)/lib -Wl,--whole-archive -lgflags -Wl,--no-whole-archive \
+             -L$(SNAPPY_PATH)/lib -lsnappy \
+             -lz -lpthread
 
-CXXFLAGS += $(OPT)
+NEXUS_LDB_FLAGS = -L$(NEXUS_LDB_PATH) -lleveldb
 
-PROTO_FILE = $(wildcard proto/*.proto)
-PROTO_SRC = $(patsubst %.proto,%.pb.cc,$(PROTO_FILE))
-PROTO_HEADER = $(patsubst %.proto,%.pb.h,$(PROTO_FILE))
-PROTO_OBJ = $(patsubst %.proto,%.pb.o,$(PROTO_FILE))
+TESTFLAGS = -L$(GTEST_PATH)/lib -lgtest
 
-UTIL_SRC = $(filter-out $(wildcard */*test.cc) $(wildcard */*main.cc) server/flags.cc, \
-             $(wildcard server/*.cc) $(wildcard storage/*.cc))
-UTIL_OBJ = $(patsubst %.cc, %.o, $(UTIL_SRC))
-UTIL_HEADER = $(wildcard server/*.h) $(wildcard storage/*.h)
+CXXFLAGS += $(OPT) -pipe -MMD -W -Wall -fPIC -DHAVE_SNAPPY
 
-INS_SRC = $(filter-out $(UTIL_SRC) $(wildcard */*test.cc), $(wildcard server/ins_*.cc) \
-            $(wildcard storage/*.cc))
-INS_OBJ = $(patsubst %.cc, %.o, $(INS_SRC))
+# Source releated constants
+PROTO_FILE = $(wildcard src/proto/*.proto)
+PROTO_SRC = $(patsubst %.proto, %.pb.cc, $(PROTO_FILE))
+PROTO_HEADER = $(patsubst %.proto, %.pb.h, $(PROTO_FILE))
+PROTO_OBJ = $(patsubst %.cc, %.o, $(PROTO_SRC))
 
-INS_CLI_SRC = $(wildcard sdk/ins_*.cc)
-INS_CLI_OBJ = $(patsubst %.cc, %.o, $(INS_CLI_SRC))
-INS_CLI_HEADER = $(wildcard sdk/*.h)
+COMMON_OBJ = $(patsubst %.cc, %.o, $(wildcard src/common/*.cc))
 
-SAMPLE_SRC = sdk/sample.cc
-SAMPLE_OBJ = $(patsubst %.cc, %.o, $(SAMPLE_SRC))
-SAMPLE_HEADER = $(wildcard sdk/*.h)
+FLAGS_OBJ = $(patsubst %.cc, %.o, src/server/flags.cc)
 
-FLAGS_OBJ = $(patsubst %.cc, %.o, $(wildcard server/flags.cc))
-COMMON_OBJ = $(patsubst %.cc, %.o, $(wildcard common/*.cc))
-OBJS = $(FLAGS_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) $(UTIL_OBJ)
-SDK_OBJ = $(patsubst %.cc, %.o, sdk/ins_sdk.cc) $(PROTO_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ)
-TEST_SRC = $(wildcard server/*_test.cc) $(wildcard storage/*_test.cc)
-TEST_OBJ = $(patsubst %.cc, %.o, $(TEST_SRC))
-TESTS = test_binlog test_storage_manager test_user_manager test_performance_center
-BIN = ins ins_cli sample
+NEXUS_NODE_SRC = $(wildcard src/server/*.cc) $(wildcard src/storage/*.cc)
+NEXUS_NODE_OBJ = $(patsubst %.cc, %.o, $(NEXUS_NODE_SRC))
+
+CLIENT_OBJ = $(patsubst %.cc, %.o, src/client/ncli.cc)
+
+INS_CLI_OBJ = $(patsubst %.cc, %.o, src/client/ins_cli.cc)
+
+SAMPLE_OBJ = $(patsubst %.cc, %.o, src/client/sample.cc)
+
+CXX_SDK_SRC = src/sdk/ins_sdk.cc
+CXX_SDK_OBJ = $(patsubst %.cc, %.o, $(CXX_SDK_SRC))
+CXX_SDK_HEADER = src/sdk/ins_sdk.h
+
+PYTHON_SDK_SRC = src/sdk/ins_wrapper.cc
+PYTHON_SDK_OBJ = $(patsubst %.cc, %.o, $(PYTHON_SDK_SRC))
+PYTHON_SDK_PY = src/sdk/ins_sdk.py
+
+TEST_BINLOG_SRC = src/test/binlog_test.cc src/storage/binlog.cc
+TEST_BINLOG_OBJ = $(patsubst %.cc, %.o, $(TEST_BINLOG_SRC))
+
+TEST_PERFORMANCE_CENTER_SRC = src/test/performance_center_test.cc src/server/performance_center.cc
+TEST_PERFORMANCE_CENTER_OBJ = $(patsubst %.cc, %.o, $(TEST_PERFORMANCE_CENTER_SRC))
+
+TEST_STORAGE_MANAGER_SRC = src/test/storage_manage_test.cc src/storage/storage_manage.cc
+TEST_STORAGE_MANAGER_OBJ = $(patsubst %.cc, %.o, $(TEST_STORAGE_MANAGER_SRC))
+
+TEST_USER_MANAGER_SRC = src/test/user_manage_test.cc src/server/user_manage.cc
+TEST_USER_MANAGER_OBJ = $(patsubst %.cc, %.o, $(TEST_USER_MANAGER_SRC))
+
+OBJS = $(PROTO_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(NEXUS_NODE_OBJ) \
+	   $(CLIENT_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) \
+       $(CXX_SDK_OBJ) $(PYTHON_SDK_OBJ) $(TEST_BINLOG_OBJ) $(TEST_PERFORMANCE_OBJ) \
+       $(TEST_STORAGE_MANAGER_OBJ) $(TEST_USER_MANAGER_OBJ)
+DEPS = $(patsubst %.o, %.d, $(OBJS))
+TESTS = test_binlog test_performance_center test_storage_manager test_user_manager
+BIN = nexus ncli ins_cli sample
 LIB = libins_sdk.a
-PY_LIB = libins_py.so
+PYTHON_LIB = libins_py.so
 
-all: $(BIN) cp $(LIB)
-
-nexus_ldb: 
-	cd ./thirdparty/leveldb && make
-# Depends
-$(INS_OBJ) $(INS_CLI_OBJ) $(TEST_OBJ) $(UTIL_OBJ): $(PROTO_HEADER)
-$(UTIL_OBJ): $(UTIL_HEADER)
-$(INS_CLI_OBJ): $(INS_CLI_HEADER)
-$(SAMPLE_OBJ): $(SAMPLE_HEADER)
-
-# Targets
-ins: $(INS_OBJ) $(UTIL_OBJS) $(OBJS) nexus_ldb
-	$(CXX) $(INS_OBJ) $(UTIL_OBJS) $(OBJS) -o $@ $(LDFLAGS)
-
-ins_cli: $(INS_CLI_OBJ) $(OBJS) nexus_ldb
-	$(CXX) $(INS_CLI_OBJ) $(OBJS) -o $@ $(LDFLAGS)
-
-sample: $(SAMPLE_OBJ) $(SDK_OBJ) $(LIB) nexus_ldb
-	$(CXX) $(SAMPLE_OBJ) $(LIB) -o $@ $(LDFLAGS)
-
-$(LIB): $(SDK_OBJ)
-	ar -rs $@ $(SDK_OBJ)
-
-%.o: %.cc
-	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) -c $< -o $@
-
-%.pb.h %.pb.cc: %.proto
-	$(PROTOC) --proto_path=./proto/ --proto_path=/usr/local/include --cpp_out=./proto/ $<
-
-clean:
-	rm -rf $(BIN) $(LIB) $(TESTS) $(PY_LIB)
-	rm -rf $(INS_OBJ) $(INS_CLI_OBJ) $(SAMPLE_OBJ) $(SDK_OBJ) $(TEST_OBJ) $(UTIL_OBJ)
-	rm -rf $(PROTO_SRC) $(PROTO_HEADER)
-	rm -rf output/
-
-cp: $(BIN) $(LIB)
+# Build binaries and libs by default
+default: $(BIN) $(LIB) $(PYTHON_LIB)
 	mkdir -p output/bin
 	mkdir -p output/lib
 	mkdir -p output/include
-	cp ins output/bin
-	cp ins_cli output/bin
-	cp sample output/bin
-	cp sdk/ins_sdk.h output/include
-	cp libins_sdk.a output/lib
+	cp -f $(BIN) ./output/bin
+	cp -f $(LIB) $(PYTHON_LIB) $(PYTHON_SDK_PY) ./output/lib
+	cp -f $(CXX_SDK_HEADER) ./output/include
+	@echo 'make done'
 
-sdk: $(LIB)
-	mkdir -p output/include
+# Dependencies
+$(OBJS): $(PROTO_HEADER)
+-include $(DEPS)
+
+# Building targets
+%.pb.h %.pb.cc: %.proto
+	$(PROTOC) --proto_path=./src/proto/ --proto_path=/usr/local/include --cpp_out=./src/proto/ $<
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) $(INCPATH) -c $< -o $@
+
+nexus: $(NEXUS_NODE_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ) nexus_ldb
+	$(CXX) $(NEXUS_NODE_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(NEXUS_LDB_FLAGS)
+
+ncli: $(CLIENT_OBJ) libins_sdk.a
+	$(CXX) $(CLIENT_OBJ) -o $@ -L. -lins_sdk $(LDFLAGS)
+
+ins_cli: $(INS_CLI_OBJ) libins_sdk.a
+	$(CXX) $(INS_CLI_OBJ) -o $@ -L. -lins_sdk $(LDFLAGS)
+
+sample: $(SAMPLE_OBJ) libins_sdk.a
+	$(CXX) $(SAMPLE_OBJ) -o $@ -L. -lins_sdk $(LDFLAGS)
+
+libins_sdk.a: $(CXX_SDK_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ)
+	ar -rs $@ $^
+
+libins_py.so: $(PYTHON_SDK_OBJ) $(CXX_SDK_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ)
+	$(CXX) -shared -fPIC -Wl,-soname,$@ -o $@ $(LDFLAGS_SO) $^
+
+test_binlog: $(TEST_BINLOG_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) nexus_ldb
+	$(CXX) $(TEST_BINLOG_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(TESTFLAGS) $(NEXUS_LDB_FLAGS)
+
+test_performance_center: $(TEST_PERFORMANCE_CENTER_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ)
+	$(CXX) $^ -o $@ $(LDFLAGS) $(TESTFLAGS)
+
+test_storage_manager: $(TEST_STORAGE_MANAGER_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ) nexus_ldb
+	$(CXX) $(TEST_STORAGE_MANAGER_OBJ) $(COMMON_OBJ) $(FLAGS_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(TESTFLAGS) $(NEXUS_LDB_FLAGS)
+
+test_user_manager: $(TEST_USER_MANAGER_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) nexus_ldb
+	$(CXX) $(TEST_USER_MANAGER_OBJ) $(COMMON_OBJ) $(PROTO_OBJ) -o $@ $(LDFLAGS) $(TESTFLAGS) $(NEXUS_LDB_FLAGS)
+
+# Phony targets
+.PHONY: nexus_ldb all test sdk python install install_sdk uninstall clean
+nexus_ldb: 
+	make -C ./thirdparty/leveldb
+
+all: $(BIN) $(LIB) $(PYTHON_LIB) $(TESTS)
+	mkdir -p output/bin
 	mkdir -p output/lib
-	cp sdk/ins_sdk.h output/include
-	cp libins_sdk.a output/lib
+	mkdir -p output/include
+	mkdir -p output/test
+	cp -f $(BIN) ./output/bin
+	cp -f $(LIB) $(PYTHON_LIB) $(PYTHON_SDK_PY) ./output/lib
+	cp -f $(CXX_SDK_HEADER) ./output/include
+	cp -f $(TESTS) ./output/test
+	@echo 'make all done'
 
-python: $(SDK_OBJ) sdk/ins_wrapper.o
-	$(CXX) -shared -fPIC -Wl,-soname,$(PY_LIB) -o $(PY_LIB) $(LDFLAGS_SO) $^
-	mkdir -p output/python
-	cp $(PY_LIB) sdk/ins_sdk.py output/python
-	
-install: $(LIB)
-	cp sdk/ins_sdk.h $(PREFIX)/include
-	cp $(LIB) $(PREFIX)/lib
-
-install_sdk: $(LIB)
-	cp sdk/ins_sdk.h $(PREFIX)/include
-	cp libins_sdk.a $(PREFIX)/lib
-
-.PHONY: test test_binlog test_storage_manager test_user_manager test_performance_center
 test: $(TESTS)
+	-rm -rf /tmp/nexus_unittest
 	./test_binlog
+	./test_performance_center
 	./test_storage_manager
 	./test_user_manager
-	./test_performance_center
-	echo "Test done"
+	@echo 'all tests done'
 
-test_binlog: storage/binlog_test.o $(UTIL_OBJ) $(OBJS)
-	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
+sdk: $(LIB) $(PYTHON_LIB)
+	mkdir -p output/lib
+	mkdir -p output/include
+	cp -f $^ $(PYTHON_SDK_PY) ./output/lib
+	cp -f $(CXX_SDK_HEADER) ./output/include
+	@echo 'make sdk done'
 
-test_storage_manager: storage/storage_manage_test.o $(UTIL_OBJ) $(OBJS)
-	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
+python: $(PYTHON_LIB)
+	mkdir -p output/lib
+	cp -f $^ $(PYTHON_SDK_PY) ./output/lib
+	@echo 'make python sdk done'
 
-test_user_manager: server/user_manage_test.o $(UTIL_OBJ) $(OBJS)
-	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
+install: $(BIN) install_sdk
+	mkdir -p $(PREFIX)/bin
+	cp -f $(BIN) $(PREFIX)/bin
+	@echo 'make install done'
 
-test_performance_center: server/performance_center_test.o $(UTIL_OBJ) $(OBJS)
-	$(CXX) $^ -o $@ $(LDFLAGS) -L$(GTEST_PATH) -lgtest
+install_sdk: $(LIB) $(PYTHON_LIB)
+	mkdir -p $(PREFIX)/lib
+	mkdir -p $(PREFIX)/include
+	cp -f $(LIB) $(PYTHON_LIB) $(PYTHON_SDK_PY) $(PREFIX)/lib
+	cp -f $(CXX_SDK_HEADER) $(PREFIX)/include
+	@echo 'make install sdk done'
+
+uninstall:
+	rm -f $(addprefix $(PREFIX)/bin/, $(BIN))
+	rm -f $(addprefix $(PREFIX)/lib/, $(LIB) $(PYTHON_LIB), ins_sdk.py)
+	rm -f $(addprefix $(PREFIX)/include/, ins_sdk.h)
+	@echo 'make uninstall done'
+
+clean:
+	rm -rf $(BIN) $(LIB) $(PYTHON_LIB) $(TESTS) $(OBJS) $(DEPS)
+	rm -rf $(PROTO_SRC) $(PROTO_HEADER)
+	rm -rf output/
+	@echo 'make clean done'
 

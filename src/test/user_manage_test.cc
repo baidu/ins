@@ -9,7 +9,7 @@ TEST(UserManageTest, CommonUserTest) {
     UserInfo root;
     root.set_username("root");
     root.set_passwd("rootpassword");
-    UserManager user_manager("/tmp/user_test1", root);
+    UserManager user_manager("/tmp/nexus_unittest/user_test1", root);
     // Try to login an inexisting user
     std::string uuid1 = UserManager::CalcUuid("user1");
     Status ret = user_manager.Login("user1", "123456", uuid1);
@@ -89,7 +89,7 @@ TEST(UserManageTest, SuperUserTest) {
     UserInfo root;
     root.set_username("root");
     root.set_passwd("rootpassword");
-    UserManager user_manager("/tmp/user_test2", root);
+    UserManager user_manager("/tmp/nexus_unittest/user_test2", root);
     // Login root
     std::string rootid = UserManager::CalcUuid("root");
     Status ret = user_manager.Login("root", "rootpassword", rootid);
@@ -152,7 +152,7 @@ TEST(UserManageTest, ToolFunctionTest) {
     UserInfo root;
     root.set_username("root");
     root.set_passwd("rootpassword");
-    UserManager user_manager("/tmp/user_test3", root);
+    UserManager user_manager("/tmp/nexus_unittest/user_test3", root);
     Status ret = user_manager.Register("user1", "123456");
     EXPECT_EQ(ret, kOk);
     ret = user_manager.Register("user2", "123456");
