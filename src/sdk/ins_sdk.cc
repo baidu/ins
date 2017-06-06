@@ -79,6 +79,7 @@ void InsSDK::Init(const std::vector<std::string>& members) {
     loggin_expired_ = false;
     watch_task_id_ = 0;
     last_succ_alive_timestamp_ = ins_common::timer::get_micros();
+    timeout_time_ = FLAGS_ins_sdk_session_timeout;
     pthread_once(&s_ponce, InitLog);
     if (members.size() < 1) {
         LOG(FATAL, "invalid cluster size");
@@ -88,8 +89,8 @@ void InsSDK::Init(const std::vector<std::string>& members) {
     mu_ = new Mutex();
     logged_uuid_ = "";
     std::copy(members.begin(), members.end(), std::back_inserter(members_));
-    keep_alive_pool_ = new ins_common::ThreadPool();
-    keep_watch_pool_ = new ins_common::ThreadPool();
+    keep_alive_pool_ = new ins_common::ThreadPool(1);
+    keep_watch_pool_ = new ins_common::ThreadPool(2);
     is_keep_alive_bg_ = false;
     MakeSessionID();
 }
@@ -587,6 +588,7 @@ bool InsSDK::Watch(const std::string& key,
 
 void InsSDK::KeepAliveTask() {
     std::set<std::string> my_locks;
+    int64_t timeout_time = FLAGS_ins_sdk_session_timeout;
     {
         MutexLock lock(mu_);
         if (stop_) {
@@ -596,6 +598,7 @@ void InsSDK::KeepAliveTask() {
         for (it = lock_keys_.begin(); it != lock_keys_.end(); it++) {
             my_locks.insert(*it);
         }
+        timeout_time = timeout_time_;
     }
     std::vector<std::string> server_list;
     PrepareServerList(server_list);
@@ -614,6 +617,7 @@ void InsSDK::KeepAliveTask() {
             std::string* lock_key = request.add_locks();
             *lock_key = *si;
         }
+        request.set_timeout_milliseconds(timeout_time);
         bool ok = rpc_client_->SendRequest(stub, &InsNode_Stub::KeepAlive,
                                            &request, &response, 2, 1);
         if (!ok) {
@@ -655,7 +659,7 @@ void InsSDK::KeepAliveTask() {
         MutexLock lock(mu_);
         int64_t now = ins_common::timer::get_micros();
         int64_t span = now - last_succ_alive_timestamp_;
-        if (span > FLAGS_ins_sdk_session_timeout) {
+        if (span > timeout_time_) {
             cb = handle_session_timeout_;
             cb_ctx = session_timeout_ctx_;
             session_expire = true;
@@ -1341,6 +1345,12 @@ void InsSDK::RegisterSessionTimeout(void (*handle_session_timeout)(void *), void
     handle_session_timeout_ = handle_session_timeout;
     session_timeout_ctx_ = ctx;
     LOG(INFO, "session timeout handler: %x", handle_session_timeout_);
+}
+
+void InsSDK::SetTimeoutTime(int64_t milliseconds) {
+    MutexLock lock(mu_);
+    timeout_time_ = milliseconds;
+    LOG(INFO, "timeout time: %ld", timeout_time_);
 }
 
 ScanResult::ScanResult(InsSDK* sdk) : offset_(0),

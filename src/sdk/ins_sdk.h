@@ -83,40 +83,43 @@ public:
                                   std::vector<std::string>* members);
     InsSDK(const std::vector<std::string>& members);
     InsSDK(const std::string& server_list); //seperated by comma
-    ~InsSDK();
-    bool ShowCluster(std::vector<ClusterNodeInfo>* cluster_info);
-    bool Put(const std::string& key, const std::string& value, SDKError* error);
-    bool Get(const std::string& key, std::string* value, 
-             SDKError* error);
-    bool Delete(const std::string& key, SDKError* error);
-    ScanResult* Scan(const std::string& start_key, 
-                     const std::string& end_key);
-    bool ScanOnce(const std::string& start_key,
-                  const std::string& end_key,
-                  std::vector<KVPair>* buffer,
-                  SDKError* error);
-    bool Watch(const std::string& key, 
-               WatchCallback user_callback,
-               void* context, 
-               SDKError* error);
-    bool Lock(const std::string& key, SDKError* error); //may block
-    bool TryLock(const std::string& key, SDKError* error); //none block
-    bool UnLock(const std::string& key, SDKError* error);
-    bool Login(const std::string& username,
-               const std::string& password,
-               SDKError* error);
-    bool Logout(SDKError* error);
-    bool Register(const std::string& username,
-                  const std::string& password,
-                  SDKError* error);
-    bool CleanBinlog(const std::string& server_id,
-                     int64_t end_index, 
+    virtual ~InsSDK();
+
+    virtual bool ShowCluster(std::vector<ClusterNodeInfo>* cluster_info);
+    virtual bool Put(const std::string& key, const std::string& value, SDKError* error);
+    virtual bool Get(const std::string& key, std::string* value,
                      SDKError* error);
-    bool ShowStatistics(std::vector<NodeStatInfo>* statistics);
-    std::string GetSessionID();
-    std::string GetCurrentUserID();
-    bool IsLoggedIn();
-    void RegisterSessionTimeout(void (*handle_session_timeout)(void*), void* ctx );
+    virtual bool Delete(const std::string& key, SDKError* error);
+    virtual ScanResult* Scan(const std::string& start_key,
+                             const std::string& end_key);
+    virtual bool ScanOnce(const std::string& start_key,
+                          const std::string& end_key,
+                          std::vector<KVPair>* buffer,
+                          SDKError* error);
+    virtual bool Watch(const std::string& key,
+                       WatchCallback user_callback,
+                       void* context,
+                       SDKError* error);
+    virtual bool Lock(const std::string& key, SDKError* error); //may block
+    virtual bool TryLock(const std::string& key, SDKError* error); //none block
+    virtual bool UnLock(const std::string& key, SDKError* error);
+    virtual bool Login(const std::string& username,
+                       const std::string& password,
+                       SDKError* error);
+    virtual bool Logout(SDKError* error);
+    virtual bool Register(const std::string& username,
+                          const std::string& password,
+                          SDKError* error);
+    virtual bool CleanBinlog(const std::string& server_id,
+                             int64_t end_index,
+                             SDKError* error);
+    virtual bool ShowStatistics(std::vector<NodeStatInfo>* statistics);
+    virtual std::string GetSessionID();
+    virtual std::string GetCurrentUserID();
+    virtual bool IsLoggedIn();
+    virtual void RegisterSessionTimeout(void (*handle_session_timeout)(void*), void* ctx );
+    virtual void SetTimeoutTime(int64_t milliseconds);
+
     static std::string StatusToString(int32_t status);
     static std::string ErrorToString(SDKError error);
 
@@ -161,18 +164,21 @@ private:
     int64_t watch_task_id_;
     std::set<int64_t> pending_watches_;
     bool loggin_expired_;
+    int64_t timeout_time_;
 };
 
 class ScanResult {
 public:
     ScanResult(InsSDK* sdk);
-    void Init(const std::string& start_key,
-              const std::string& end_key);
-    bool Done();
-    SDKError Error();
-    const std::string Key();
-    const std::string Value();
-    void Next();
+    virtual ~ScanResult() { }
+
+    virtual void Init(const std::string& start_key,
+                      const std::string& end_key);
+    virtual bool Done();
+    virtual SDKError Error();
+    virtual const std::string Key();
+    virtual const std::string Value();
+    virtual void Next();
 private:
     std::vector<KVPair> buffer_;
     size_t offset_;
