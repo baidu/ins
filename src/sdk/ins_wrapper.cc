@@ -237,7 +237,7 @@ void SDKRegisterSessionTimeout(InsSDK* sdk, SessionTimeoutCallback handle_sessio
     pack->callback_wrapper = reinterpret_cast<AbstractFunc>(handle_session_timeout);
     pack->callback_id = callback_id;
     pack->ctx = ctx;
-    sdk->RegisterSessionTimeout(TimeoutWrapper, ctx);
+    sdk->RegisterSessionTimeout(TimeoutWrapper, pack);
 }
 
 // ----- ScanResult Wrappers -----
