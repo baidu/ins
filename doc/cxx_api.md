@@ -70,7 +70,7 @@ Now all the interfaces will be listed below. All the functions are in a class na
 	* Return value: `bool` - suggests if the operation is succeeded
 
 3. `bool Get(const std::string& key, const std::string* value, SDKError* error)`  
-	Get the value of the key. Returns `true` when success, or `false` otherwise and `error` will be set  
+	Get the value of the key. Returns `true` when success or no such key, or `false` otherwise and `error` will be set  
 	* Parameter:
 		* `key` - key of the data
 		* `value` - pointer to the value of the data
