@@ -151,7 +151,7 @@ message ShowStatusResponse {
 
 message ScanRequest {
     required string start_key = 1;
-    required bytes end_key = 2;
+    required string end_key = 2;
     required int32 size_limit = 3;    
     optional string uuid = 4;
 }
