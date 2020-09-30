@@ -6,7 +6,7 @@
 
 **nexus**, used to be known as *i name service(ins)*, is a high available key-value store to hold crucial meta data, which also support mechanism to coordinate large scale services.
 
-nexus is based on [Raft protocol](https://raft.github.io/) to keep consistency between mulit-nodes, and provide key-value data access, distributed lock mechanism(lock) and event callback function(watch).
+nexus is based on [Raft protocol](https://raft.github.io/) to keep consistency between multi-nodes, and provide key-value data access, distributed lock mechanism(lock) and event callback function(watch).
 
 ## Who Is Using Nexus
 
